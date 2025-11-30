@@ -1,0 +1,11 @@
+[package]
+name = "sart"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ahash = "0.8.12"
+hashbrown = "0.16.1"
+libc = { package = "libsa", path = "../libsa" }
+pastey = "0.2.0"
+tokio = { version = "1.48.0", features = ["rt", "sync", "time"] }
