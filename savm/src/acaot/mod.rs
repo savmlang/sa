@@ -2,11 +2,9 @@
 //! `All Compiled Ahead-of-Time`
 //! It is a really quick compiler build to speed up like crazy
 
-use std::io::{BufReader, ErrorKind, Read, Seek};
-
+use crate::{BytecodeResolver, sync::*, unpack_u64};
 use sart::ctr::{Instruction, *};
-
-use crate::{BytecodeResolver, sync::*};
+use std::io::{BufReader, ErrorKind, Read, Seek};
 
 pub mod asyncmp;
 
@@ -15,7 +13,9 @@ pub fn sync_compile<T: BytecodeResolver + Send + Sync + 'static>(
   module: u32,
   region: u32,
 ) -> Box<[Instruction]> {
-  let mut bytecode = resolver.resolve_bytecode_exact(module, region);
+  let mut bytecode = resolver
+    .resolve_bytecode_exact(module, region)
+    .expect("This cannot error out");
 
   // Lets start with a good enough instruction size
   // Optimistic, 32-kb space
@@ -57,10 +57,45 @@ pub fn sync_compile<T: BytecodeResolver + Send + Sync + 'static>(
             fn_: (0, inst_clr_full),
           });
         }
+        INSTRUCTION_ADD => {
+          code.push(Instruction { fn_: (0, inst_add) });
+        }
+        INSTRUCTION_SUB => {
+          code.push(Instruction { fn_: (0, inst_sub) });
+        }
+        INSTRUCTION_MUL => {
+          code.push(Instruction { fn_: (0, inst_mul) });
+        }
+        INSTRUCTION_DIV => {
+          code.push(Instruction { fn_: (0, inst_div) });
+        }
+        INSTRUCTION_REM => {
+          code.push(Instruction { fn_: (0, inst_rem) });
+        }
+        INSTRUCTION_SHL => {
+          code.push(Instruction { fn_: (0, inst_shl) });
+        }
+        INSTRUCTION_SHR => {
+          code.push(Instruction { fn_: (0, inst_shr) });
+        }
         INSTRUCTION_LIBCALL => {
-          code.push(Instruction {
-            fn_: (0, inst_sync_libcall::<T>),
-          });
+          let mut register = [0u8; 8];
+
+          reader.read_exact(&mut register).expect("Error");
+          index += 8;
+
+          let id = u64::from_be_bytes(register);
+          let (modid, region) = unpack_u64(id);
+
+          if let Some(_) = resolver.resolve_bytecode_exact(modid, region) {
+            code.push(Instruction {
+              fn_: (id, inst_sync_libcall::<T>),
+            });
+          } else {
+            code.push(Instruction {
+              fn_: (0, resolver.resolve_native(modid, region)),
+            });
+          }
         }
         e => panic!("Unexpected {e} at {}", index + 1),
       }

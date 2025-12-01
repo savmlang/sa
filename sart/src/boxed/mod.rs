@@ -22,11 +22,20 @@ unsafe extern "C" fn mfree<T>(data: *mut c_void) {
 
 impl RTSafeBoxWrapper {
   pub fn new<T: FFISafe>(data: T) -> RTBox<T> {
+    RTBox {
+      _wrap: unsafe { Self::new_raw(data) },
+      _data: PhantomData,
+      poisoned: false,
+    }
+  }
+
+  pub unsafe fn new_raw<T: FFISafe>(data: T) -> *mut RTSafeBoxWrapper {
     unsafe {
       let alignment = align_of::<T>();
 
       let _data = libc::aligned_malloc(size_of::<T>(), alignment);
 
+      #[cfg(debug_assertions)]
       if _data.is_null() {
         panic!("Unable to construct");
       }
@@ -40,6 +49,7 @@ impl RTSafeBoxWrapper {
 
       let structdata_ptr = libc::aligned_malloc(size_of::<Self>(), align_of::<Self>()) as *mut Self;
 
+      #[cfg(debug_assertions)]
       if structdata_ptr.is_null() {
         libc::aligned_free(_data);
         panic!("Unable to construct");
@@ -47,11 +57,7 @@ impl RTSafeBoxWrapper {
 
       ptr::write(structdata_ptr, structdata);
 
-      RTBox {
-        _wrap: structdata_ptr,
-        _data: PhantomData,
-        poisoned: false,
-      }
+      structdata_ptr
     }
   }
 
@@ -73,6 +79,20 @@ pub unsafe fn drop_rtbox(wrap: *mut RTSafeBoxWrapper) {
     (boxed._free)(boxed._data);
     libc::aligned_free(wrap as *mut c_void);
   }
+}
+
+pub unsafe fn peek<T: Copy>(wrap: *const RTSafeBoxWrapper) -> T {
+  let boxed = unsafe { &*wrap };
+
+  *unsafe { &*(boxed._data as *const _ as *const T) }
+}
+
+pub unsafe fn reference<T>(wrap: *const RTSafeBoxWrapper) -> &'static T {
+  unsafe { &*(&*wrap)._data.cast::<T>() }
+}
+
+pub unsafe fn reference_mut<T>(wrap: *mut RTSafeBoxWrapper) -> &'static mut T {
+  unsafe { &mut *(&*wrap)._data.cast::<T>() }
 }
 
 pub struct ContainedRTBox {

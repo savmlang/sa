@@ -32,35 +32,45 @@ pub struct VMTaskState {
   pub r1: RegistryValue, // Dangerous, may hold dangling data + it is a pointer
   pub r2: RegistryValue, // Dangerous, may hold dangling data + it is a pointer
   pub r3: RegistryValue, // Dangerous, may hold dangling data + it is a pointer
-  pub r4: RegistryValue, // Dangerous, may hold dangling data + it is a pointer
-  pub r5: RegistryValue, // Dangerous, may hold dangling data + it is a pointer
   // Mutables
-  pub r6: *mut c_void, // Dangerous, may hold dangling data
-  pub r7: *mut c_void, // Dangerous, may hold dangling data
+  pub r4: *mut c_void, // Dangerous, may hold dangling data
+  pub r5: *mut c_void, // Dangerous, may hold dangling data
   // Owned Data
   // RTSafeBoxWrapper is a *mut c_void like type that theretically transfers ownership
-  pub r8: *mut RTSafeBoxWrapper,
-  pub curline: usize,
-  pub counter: usize,
+  pub r6: *mut RTSafeBoxWrapper,
   pub super_: *mut VMTaskState, // If this is NULL, this means this itself is the super task
+  pub curline: usize,
+}
+
+impl VMTaskState {
+  pub unsafe fn set_r6(&mut self, data: *mut RTSafeBoxWrapper) {
+    unsafe {
+      if !self.r6.is_null() {
+        drop_rtbox(self.r6);
+      }
+
+      self.r6 = data;
+    }
+  }
 }
 
 impl Drop for VMTaskState {
   fn drop(&mut self) {
     unsafe {
-      if self.r8.is_null() {
-        drop_rtbox(self.r8);
+      if !self.r6.is_null() {
+        drop_rtbox(self.r6);
       }
     }
   }
 }
 
-const _VAL1: usize =
-  size_of::<VMTaskState>() - 2 * size_of::<usize>() - size_of::<*mut VMTaskState>();
-const _VAL2: usize =
-  5 * size_of::<u64>() + 2 * size_of::<*mut c_void>() + size_of::<*mut RTSafeBoxWrapper>();
+const _CHECK_REGISTER_SET_SIZE: usize =
+  size_of::<VMTaskState>() - 1 * size_of::<usize>() - size_of::<*mut VMTaskState>();
+pub const REGISTER_SET_SIZE: usize = 3 * size_of::<RegistryValue>()
+  + 2 * size_of::<*mut c_void>()
+  + size_of::<*mut RTSafeBoxWrapper>();
 
-const _OUT: bool = _VAL1 == _VAL2;
+const _OUT: bool = REGISTER_SET_SIZE == _CHECK_REGISTER_SET_SIZE;
 
 const _ENSURE_VMTASKSTATE_IS_VALID: () = debug_assert!(_OUT);
 

@@ -1,0 +1,22 @@
+{
+  "name": "Rust Development",
+  // Use a pre-built image with Rust, or one from the official dev containers
+  "image": "mcr.microsoft.com/devcontainers/rust:latest",
+
+  "features": {
+    // Optional: Add a feature for Rust tools if the base image doesn't include everything
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer" // **Crucial: Installs Rust Analyzer**
+      ],
+      "settings": {
+        "rust-analyzer.checkOnSave.enable": true,
+        "rust-analyzer.check.allTargets": false, // Faster diagnostics
+        "rust-analyzer.cargo.autoreload": true // Reloads workspace automatically after Cargo.toml changes
+      }
+    }
+  }
+}
