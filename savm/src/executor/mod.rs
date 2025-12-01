@@ -1,6 +1,6 @@
 use std::mem::zeroed;
 
-use sart::ctr::VMTaskState;
+use sart::ctr::{Instruction, VMTaskState};
 
 use crate::{BytecodeResolver, VM};
 
@@ -23,6 +23,8 @@ impl<T: BytecodeResolver + Send + Sync + 'static> VM<T> {
       let module = self.code.get(&region).unwrap_unchecked();
 
       state.curline = 0;
+
+      let module: &[Instruction] = &module;
 
       loop {
         if state.curline == module.len() {

@@ -3,8 +3,7 @@
   portable_simd,
   unchecked_shifts,
   exact_div,
-  int_roundings,
-  core_intrinsics
+  int_roundings
 )]
 
 pub mod acaot;
@@ -33,6 +32,8 @@ static TOTAL_THREADS: LazyLock<usize> = LazyLock::new(|| available_parallelism()
 static VMMADE: OnceLock<()> = OnceLock::new();
 
 pub trait BytecodeResolver {
+  type Output: Read + Seek;
+
   fn modules(&self) -> &[u32];
 
   /// We'll outselves parse it
@@ -46,7 +47,7 @@ pub trait BytecodeResolver {
   /// We'll outselves compile it
   ///
   /// Return `None` ONLY IF it is a native module (like a dylib)
-  fn resolve_bytecode_exact(&self, module: u32, region: u32) -> Option<impl Read + Seek>;
+  fn resolve_bytecode_exact(&self, module: u32, region: u32) -> Option<Self::Output>;
 
   /// No other error can be accepted
   fn resolve_native(&self, module: u32, func: u32) -> DispatchFn;

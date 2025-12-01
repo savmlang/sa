@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+ahash = "0.8.12"
 pastey = "0.2.0"
 sart = { path = "../sart" }
 tokio = { version = "1.48.0", features = ["rt", "rt-multi-thread", "sync", "time"] }

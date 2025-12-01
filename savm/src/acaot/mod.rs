@@ -2,11 +2,23 @@
 //! `All Compiled Ahead-of-Time`
 //! It is a really quick compiler build to speed up like crazy
 
-use crate::{BytecodeResolver, sync::*, unpack_u64};
-use sart::ctr::{Instruction, *};
-use std::io::{BufReader, ErrorKind, Read, Seek};
+use crate::{
+  BytecodeResolver,
+  acaot::compiler::{CurrentModuleInfo, SyncCompiler},
+};
+use sart::ctr::Instruction;
+use std::{
+  collections::HashMap,
+  io::{BufReader, Seek},
+};
 
 pub mod asyncmp;
+pub mod compiler;
+
+pub enum FirstPassInstruction {
+  Inst(Instruction),
+  Jmp { marker: u128 },
+}
 
 pub fn sync_compile<T: BytecodeResolver + Send + Sync + 'static>(
   resolver: &T,
@@ -21,89 +33,22 @@ pub fn sync_compile<T: BytecodeResolver + Send + Sync + 'static>(
   // Optimistic, 32-kb space
   let length = bytecode.stream_len().expect("ERROR") as usize;
 
-  let mut code = Vec::with_capacity(length);
+  let reader = BufReader::new(bytecode);
 
-  let mut reader = BufReader::new(bytecode);
+  let mut compiler = SyncCompiler {
+    code: Vec::with_capacity(length),
+    resolver,
+    reader,
+    markers: HashMap::default(),
+    depth: 0,
+    index: 0,
+    module: CurrentModuleInfo {
+      id: 0,
+      instadded: 0,
+    },
+  };
 
-  let mut index = 0usize;
-  let mut byte = [0u8];
+  compiler.first_pass();
 
-  loop {
-    if let Err(e) = reader.read_exact(&mut byte) {
-      match e.kind() {
-        ErrorKind::Interrupted => continue,
-        ErrorKind::UnexpectedEof => break,
-        _ => panic!("{}", e),
-      }
-    }
-
-    unsafe {
-      // Unsafe for speed
-      match *byte.get_unchecked(0) {
-        INSTRUCTION_CLR => {
-          let mut register = [0u8; 1];
-
-          reader.read_exact(&mut register).expect("Error");
-          index += 1;
-
-          let [register] = register;
-
-          code.push(Instruction {
-            fn_: (register as u64, inst_clr),
-          });
-        }
-        INSTRUCTION_CLRS => {
-          code.push(Instruction {
-            fn_: (0, inst_clr_full),
-          });
-        }
-        INSTRUCTION_ADD => {
-          code.push(Instruction { fn_: (0, inst_add) });
-        }
-        INSTRUCTION_SUB => {
-          code.push(Instruction { fn_: (0, inst_sub) });
-        }
-        INSTRUCTION_MUL => {
-          code.push(Instruction { fn_: (0, inst_mul) });
-        }
-        INSTRUCTION_DIV => {
-          code.push(Instruction { fn_: (0, inst_div) });
-        }
-        INSTRUCTION_REM => {
-          code.push(Instruction { fn_: (0, inst_rem) });
-        }
-        INSTRUCTION_SHL => {
-          code.push(Instruction { fn_: (0, inst_shl) });
-        }
-        INSTRUCTION_SHR => {
-          code.push(Instruction { fn_: (0, inst_shr) });
-        }
-        INSTRUCTION_LIBCALL => {
-          let mut register = [0u8; 8];
-
-          reader.read_exact(&mut register).expect("Error");
-          index += 8;
-
-          let id = u64::from_be_bytes(register);
-          let (modid, region) = unpack_u64(id);
-
-          if let Some(_) = resolver.resolve_bytecode_exact(modid, region) {
-            code.push(Instruction {
-              fn_: (id, inst_sync_libcall::<T>),
-            });
-          } else {
-            code.push(Instruction {
-              fn_: (0, resolver.resolve_native(modid, region)),
-            });
-          }
-        }
-        e => panic!("Unexpected {e} at {}", index + 1),
-      }
-    }
-
-    index += 1;
-  }
-
-  // Discards extra space & closes
-  code.into_boxed_slice()
+  compiler.second_pass()
 }

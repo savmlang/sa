@@ -38,6 +38,14 @@ pub extern "C" fn inst_clr(_: *mut c_void, task: *mut VMTaskState, u1: u64) {
   }
 }
 
+pub extern "C" fn inst_jmp(_: *mut c_void, task: *mut VMTaskState, index: u64) {
+  unsafe {
+    let task = &mut *task;
+
+    task.curline = index as usize;
+  }
+}
+
 pub extern "C" fn inst_clr_full(_: *mut c_void, task: *mut VMTaskState, _: u64) {
   unsafe {
     let task = &mut *task;
