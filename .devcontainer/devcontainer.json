@@ -2,6 +2,7 @@
   "name": "Rust Development",
   // Use a pre-built image with Rust, or one from the official dev containers
   "image": "mcr.microsoft.com/devcontainers/rust:latest",
+  "initializeCommand": "rustup toolchain install nightly; rustup default nightly",
 
   "features": {
     // Optional: Add a feature for Rust tools if the base image doesn't include everything
