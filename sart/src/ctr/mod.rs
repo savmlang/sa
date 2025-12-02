@@ -14,6 +14,7 @@ pub union Instruction {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub union RegistryValue {
   pub ptr: *const c_void,
   pub data: u64,
@@ -109,7 +110,7 @@ instruction! {
   0x02 => clr,
   0x03 => clrs,
   0x04 => alloc,
-  0x05 => aralc,
+  // 0x05 => aralc,
   0x06 => load,
   0x07 => free,
   0x08 => own,
@@ -151,9 +152,9 @@ instruction! {
 
   // FFI
   0x22 => libcall,
-  // Threading
-  0x23 => fork,
-  0x24 => join,
+  // Threading (Future)
+  0x23 => spawn,
+  // 0x24 => join,
   0x25 => yield,
   0x26 => await,
 
@@ -166,33 +167,31 @@ instruction! {
 
   // Library only instructions
   0x2B => super_mov,
-  0x2C => super_clr,
-  0x2D => super_clrs,
-  0x2E => super_alloc,
-  0x2F => super_aralc,
-  0x30 => super_load,
-  0x31 => super_free,
-  0x32 => super_own,
+  0x2C => super_alloc,
+  // 0x2D => super_aralc,
+  0x2E => super_load,
+  0x2F => super_free,
+  0x30 => super_own,
 
   // --- NEW INSTRUCTIONS (Assigned Opcode 0x33 onwards) ---
 
   // Bitwise Pointer (ALU)
   // Treat r1, r2 as pointers
-  0x33 => and_ptr,
-  0x34 => or_ptr,
-  0x35 => xor_ptr,
+  0x31 => and_ptr,
+  0x32 => or_ptr,
+  0x33 => xor_ptr,
 
   // Bitshift Pointer (ALU)
   // Treat r1 as pointer, r2 as shift amount
-  0x36 => shl_ptr,
-  0x37 => shr_ptr,
+  0x34 => shl_ptr,
+  0x35 => shr_ptr,
 
   // remainer (but as pointer)
-  0x38 => rem_ptr,
+  0x36 => rem_ptr,
 
   // Put value in register r1 or r2 or r3
-  0x39 => put_reg,
+  0x37 => put_reg,
   // Copy a 64-bit value to r1 or r2 or r3
-  0x3A => copy,
-  0x3B => cmp_ptr
+  0x38 => copy,
+  0x39 => cmp_ptr
 }

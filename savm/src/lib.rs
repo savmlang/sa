@@ -10,20 +10,25 @@ pub mod acaot;
 
 use std::{
   io::{Read, Seek},
+  mem::zeroed,
+  ptr::null_mut,
   sync::{
     Arc, LazyLock, OnceLock,
     atomic::{AtomicUsize, Ordering},
+    mpsc::{Receiver, Sender, channel},
   },
   thread::available_parallelism,
 };
 
 use crate::acaot::sync_compile;
 use sart::{
+  boxed::ContainedRTBox,
   ctr::{DispatchFn, Instruction},
-  map::{CompiledCode, HashMap, Heap},
+  map::{CompiledCode, HashMap},
 };
 
 pub use sart;
+use tokio::runtime::{Builder, Runtime};
 
 pub mod executor;
 pub mod sync;
@@ -55,13 +60,17 @@ pub trait BytecodeResolver {
   fn resolve_native(&self, module: u32, func: u32) -> DispatchFn;
 }
 
+pub static GLOBAL_RUNTIME: LazyLock<Runtime> =
+  LazyLock::new(|| Builder::new_multi_thread().enable_all().build().unwrap());
+
 /// We create a VM for each thread executed
 pub struct VM<T: BytecodeResolver + Send + Sync + 'static> {
-  pub(crate) resolve: Arc<T>,
-  pub(crate) heap: Heap,
-  pub(crate) counter: usize,
-  cursection: u64,
-  code: Arc<CompiledCode>,
+  pub resolve: Arc<T>,
+  pub counter: usize,
+  pub code: Arc<CompiledCode>,
+  pub heaprestore: *mut [ContainedRTBox; 128],
+  pub recv: Option<Receiver<ContainedRTBox>>,
+  pub heapmap: [ContainedRTBox; 128],
 }
 
 pub fn pack_u32(high_u32: u32, low_u32: u32) -> u64 {
@@ -100,8 +109,9 @@ impl<T: BytecodeResolver + Send + Sync + 'static> VM<T> {
     Self {
       resolve: resolve,
       counter: 0,
-      heap: HashMap::default(),
-      cursection: 0,
+      recv: None,
+      heapmap: unsafe { zeroed() },
+      heaprestore: { null_mut() },
       code: {
         let mut out: CompiledCode = HashMap::default();
 
@@ -149,26 +159,36 @@ impl<T: BytecodeResolver + Send + Sync + 'static> VM<T> {
   }
 
   /// This returns a Boxed copy is there are more than 5 VMs already
-  pub fn create_copy(&self) -> MaybeBoxed<Self> {
+  pub fn create_copy(&self) -> (Sender<ContainedRTBox>, MaybeBoxed<Self>) {
     let old = VMS.fetch_add(1, Ordering::SeqCst);
 
+    let (tx, rx) = channel::<ContainedRTBox>();
+
     if old >= *TOTAL_THREADS {
-      return MaybeBoxed::Boxed(Box::new(Self {
-        code: self.code.clone(),
-        heap: HashMap::default(),
-        counter: 0,
-        cursection: 0,
-        resolve: self.resolve.clone(),
-      }));
+      return (
+        tx,
+        MaybeBoxed::Boxed(Box::new(Self {
+          code: self.code.clone(),
+          heapmap: unsafe { zeroed() },
+          counter: 0,
+          recv: Some(rx),
+          heaprestore: { null_mut() },
+          resolve: self.resolve.clone(),
+        })),
+      );
     }
 
-    MaybeBoxed::Unboxed(Self {
-      code: self.code.clone(),
-      heap: HashMap::default(),
-      counter: 0,
-      cursection: 0,
-      resolve: self.resolve.clone(),
-    })
+    (
+      tx,
+      MaybeBoxed::Unboxed(Self {
+        code: self.code.clone(),
+        heapmap: unsafe { zeroed() },
+        counter: 0,
+        recv: Some(rx),
+        heaprestore: { null_mut() },
+        resolve: self.resolve.clone(),
+      }),
+    )
   }
 }
 

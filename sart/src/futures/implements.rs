@@ -1,4 +1,4 @@
-use core::{ffi::c_void, marker::PhantomData, ptr::null_mut, time::Duration};
+use core::{ffi::c_void, ptr::null_mut, time::Duration};
 
 use std::sync::Arc;
 
@@ -83,7 +83,7 @@ extern "C" fn clean_state(ptr: *mut c_void) {
   }
 }
 
-pub fn create_future<T: FFISafe + 'static>(fut: JoinHandle<RTBox<T>>) -> FutureTask<T> {
+pub fn create_future<T: FFISafe + 'static>(fut: JoinHandle<RTBox<T>>) -> FutureTask {
   let local_state = Arc::new(Mutex::new(FutState {
     output: None,
     finished: false,
@@ -130,7 +130,6 @@ pub fn create_future<T: FFISafe + 'static>(fut: JoinHandle<RTBox<T>>) -> FutureT
   })) as *mut c_void;
 
   FutureTask {
-    _output: PhantomData,
     _state: state,
     _collect: use_state,
     _ready: use_ready,

@@ -7,11 +7,11 @@ struct Resolver;
 impl BytecodeResolver for Resolver {
   type Output = File;
 
-  fn get_regions(&self, module: u32) -> Option<&[u32]> {
+  fn get_regions(&self, _module: u32) -> Option<&[u32]> {
     Some(&[0])
   }
 
-  fn get_native_regions(&self, module: u32) -> &[u32] {
+  fn get_native_regions(&self, _module: u32) -> &[u32] {
     &[]
   }
   fn modules(&self) -> &[u32] {
@@ -21,7 +21,7 @@ impl BytecodeResolver for Resolver {
     Some(File::open(format!("./out/{module}/{region}")).expect("Unknown err"))
   }
 
-  fn resolve_native(&self, module: u32, func: u32) -> DispatchFn {
+  fn resolve_native(&self, _module: u32, _func: u32) -> DispatchFn {
     todo!()
   }
 }

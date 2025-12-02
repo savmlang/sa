@@ -11,6 +11,7 @@ use std::{
 
 pub mod asyncmp;
 pub mod compiler;
+pub mod jit;
 
 pub enum FirstPassInstruction {
   Inst(Instruction),

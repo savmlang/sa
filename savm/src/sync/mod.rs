@@ -266,6 +266,8 @@ pub extern "C" fn inst_sync_libcall<T: BytecodeResolver + Send + Sync + 'static>
     let vm = &mut *(vm as *mut VM<T>);
     let task = &mut *task;
 
+    let real_heap = replace(&mut vm.heapmap, zeroed());
+
     vm.counter += 1;
 
     if vm.counter > 10 {
@@ -278,6 +280,8 @@ pub extern "C" fn inst_sync_libcall<T: BytecodeResolver + Send + Sync + 'static>
       drop(state);
 
       vm.counter -= 1;
+
+      drop(replace(&mut vm.heapmap, real_heap));
       return;
     }
 
@@ -288,14 +292,24 @@ pub extern "C" fn inst_sync_libcall<T: BytecodeResolver + Send + Sync + 'static>
     vm.run_module(&mut state, u);
 
     drop(state);
+
+    drop(replace(&mut vm.heapmap, real_heap));
     vm.counter -= 1;
   }
 }
 
 #[inline(never)]
 #[unsafe(link_section = ".vm_fast_instructions")]
-pub extern "C" fn new_context(_: *mut c_void, task: *mut VMTaskState, _: u64) {
+pub extern "C" fn new_context<T: BytecodeResolver + Send + Sync + 'static>(
+  vm: *mut c_void,
+  task: *mut VMTaskState,
+  _: u64,
+) {
   unsafe {
+    let vm = &mut *(vm as *mut VM<T>);
+
+    vm.heaprestore = Box::into_raw(Box::new(replace(&mut vm.heapmap, zeroed())));
+
     let new_task: VMTaskState = zeroed();
 
     let old_task = Box::into_raw(Box::new(replace(&mut *task, new_task)));
@@ -308,8 +322,20 @@ pub extern "C" fn new_context(_: *mut c_void, task: *mut VMTaskState, _: u64) {
 
 #[inline(never)]
 #[unsafe(link_section = ".vm_fast_instructions")]
-pub extern "C" fn restore_context(_: *mut c_void, task: *mut VMTaskState, _: u64) {
+pub extern "C" fn restore_context<T: BytecodeResolver + Send + Sync + 'static>(
+  vm: *mut c_void,
+  task: *mut VMTaskState,
+  _: u64,
+) {
   unsafe {
+    let vm = &mut *(vm as *mut VM<T>);
+
+    let old_heapmap = *Box::from_raw(vm.heaprestore);
+
+    drop(replace(&mut vm.heapmap, old_heapmap));
+
+    vm.heaprestore = null_mut();
+
     let old_task_moved_from_heap = *Box::from_raw((*task).super_);
 
     let new_task = &mut *task;

@@ -199,6 +199,8 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
         INSTRUCTION_JMP => self.handle_jmp(code),
         INSTRUCTION_JZ => self.handle_jz(code),
         INSTRUCTION_JNZ => self.handle_jnz(code),
+        INSTRUCTION_YIELD => self.handle_binary_op(inst_yield, code),
+        INSTRUCTION_AWAIT => self.handle_binary_op(inst_sync_await, code),
 
         // Register Control
         INSTRUCTION_CLR => self.handle_clr(code),
@@ -207,6 +209,12 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
         // Heap Control
         INSTRUCTION_ALLOC => self.handle_alloc(false, code),
         INSTRUCTION_SUPER_ALLOC => self.handle_alloc(true, code),
+        INSTRUCTION_LOAD => self.handle_load(false, code),
+        INSTRUCTION_SUPER_LOAD => self.handle_load(true, code),
+        INSTRUCTION_FREE => self.handle_free(false, code),
+        INSTRUCTION_SUPER_FREE => self.handle_free(true, code),
+        INSTRUCTION_OWN => self.handle_own(false, code),
+        INSTRUCTION_SUPER_OWN => self.handle_own(true, code),
 
         // Compare
         INSTRUCTION_CMP => self.handle_compare(code),
@@ -255,6 +263,67 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
         e => panic!("Unexpected {e}"),
       }
     }
+  }
+
+  unsafe fn handle_free(&mut self, use_super_: bool, code: &mut Vec<FirstPassInstruction>) {
+    let mut register = [0u8; 1];
+    self.reader.read_exact(&mut register).expect("Error");
+
+    let [addr] = register;
+
+    code.push(FirstPassInstruction::Inst(Instruction {
+      fn_: (
+        addr as _,
+        if use_super_ {
+          inst_free_super::<F>
+        } else {
+          inst_free::<F>
+        },
+      ),
+    }));
+  }
+
+  unsafe fn handle_own(&mut self, use_super_: bool, code: &mut Vec<FirstPassInstruction>) {
+    let mut register = [0u8; 1];
+    self.reader.read_exact(&mut register).expect("Error");
+
+    let [addr] = register;
+
+    code.push(FirstPassInstruction::Inst(Instruction {
+      fn_: (
+        addr as _,
+        if use_super_ {
+          inst_own_super::<F>
+        } else {
+          inst_own::<F>
+        },
+      ),
+    }));
+  }
+
+  unsafe fn handle_load(&mut self, use_super_: bool, code: &mut Vec<FirstPassInstruction>) {
+    let mut register = [0u8; 2];
+    self.reader.read_exact(&mut register).expect("Error");
+
+    let [register, addr] = register;
+
+    let inst = match (use_super_, register) {
+      (false, 1) => inst_load_to_r1::<F>,
+      (true, 1) => inst_load_to_r1_super::<F>,
+      (false, 2) => inst_load_to_r2::<F>,
+      (true, 2) => inst_load_to_r2_super::<F>,
+      (false, 3) => inst_load_to_r3::<F>,
+      (true, 3) => inst_load_to_r3_super::<F>,
+      (false, 4) => inst_load_to_r4::<F>,
+      (true, 4) => inst_load_to_r4_super::<F>,
+      (false, 5) => inst_load_to_r5::<F>,
+      (true, 5) => inst_load_to_r5_super::<F>,
+      _ => unreachable!(),
+    };
+
+    code.push(FirstPassInstruction::Inst(Instruction {
+      fn_: (addr as _, inst),
+    }));
   }
 
   unsafe fn handle_compare(&mut self, code: &mut Vec<FirstPassInstruction>) {
@@ -384,17 +453,17 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
   }
 
   unsafe fn handle_alloc(&mut self, use_super_: bool, code: &mut Vec<FirstPassInstruction>) {
-    let mut register = [0u8; 8];
+    let mut register = [0u8; 1];
     self.reader.read_exact(&mut register).expect("Error");
 
-    let address = u64::from_be_bytes(register);
+    let [address] = register;
     if use_super_ {
       code.push(FirstPassInstruction::Inst(Instruction {
-        fn_: (address, inst_alloc_super::<F>),
+        fn_: (address as _, inst_alloc_super::<F>),
       }));
     } else {
       code.push(FirstPassInstruction::Inst(Instruction {
-        fn_: (address, inst_alloc::<F>),
+        fn_: (address as _, inst_alloc::<F>),
       }));
     }
   }
@@ -529,7 +598,7 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
     let mut byte = [0u8];
 
     let mut tmp = vec![FirstPassInstruction::Inst(Instruction {
-      fn_: (0, new_context),
+      fn_: (0, new_context::<F>),
     })];
 
     tmp.reserve(200);
@@ -563,7 +632,7 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
     }
 
     tmp.push(FirstPassInstruction::Inst(Instruction {
-      fn_: (0, restore_context),
+      fn_: (0, restore_context::<F>),
     }));
 
     code.extend(tmp.into_iter());

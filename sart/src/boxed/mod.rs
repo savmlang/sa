@@ -5,6 +5,8 @@ use core::{
   ptr,
 };
 
+pub mod spawn;
+
 use crate::FFISafe;
 
 #[repr(C)]
@@ -64,6 +66,8 @@ impl RTSafeBoxWrapper {
   /// You, the developer is required to ensure that `T` is correct
   /// This constructs a Wrapper Type that's not FFI-able
   pub unsafe fn construct<T: FFISafe>(pointer: *mut RTSafeBoxWrapper) -> RTBox<T> {
+    debug_assert_eq!(pointer.is_null(), false);
+
     RTBox {
       _wrap: pointer,
       _data: PhantomData,
@@ -73,6 +77,7 @@ impl RTSafeBoxWrapper {
 }
 
 pub unsafe fn drop_rtbox(wrap: *mut RTSafeBoxWrapper) {
+  debug_assert_eq!(wrap.is_null(), false);
   let boxed = unsafe { &*wrap };
 
   unsafe {
@@ -82,16 +87,21 @@ pub unsafe fn drop_rtbox(wrap: *mut RTSafeBoxWrapper) {
 }
 
 pub unsafe fn peek<T: Copy>(wrap: *const RTSafeBoxWrapper) -> T {
+  debug_assert_eq!(wrap.is_null(), false);
   let boxed = unsafe { &*wrap };
 
   *unsafe { &*(boxed._data as *const _ as *const T) }
 }
 
 pub unsafe fn reference<T>(wrap: *const RTSafeBoxWrapper) -> &'static T {
+  debug_assert_eq!(wrap.is_null(), false);
+
   unsafe { &*(&*wrap)._data.cast::<T>() }
 }
 
 pub unsafe fn reference_mut<T>(wrap: *mut RTSafeBoxWrapper) -> &'static mut T {
+  debug_assert_eq!(wrap.is_null(), false);
+
   unsafe { &mut *(&*wrap)._data.cast::<T>() }
 }
 
@@ -109,6 +119,8 @@ impl ContainedRTBox {
   }
 
   pub fn get_const(&self) -> *const c_void {
+    debug_assert_eq!(self._wrap.is_null(), false);
+
     unsafe { (&*self._wrap)._data as _ }
   }
 
@@ -121,6 +133,7 @@ impl ContainedRTBox {
 impl Drop for ContainedRTBox {
   fn drop(&mut self) {
     if self.drop {
+      debug_assert_eq!(self._wrap.is_null(), false);
       let boxed = unsafe { &*self._wrap };
 
       unsafe {

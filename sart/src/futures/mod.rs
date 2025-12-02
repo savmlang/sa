@@ -1,5 +1,4 @@
 use std::{
-  marker::PhantomData,
   os::raw::c_void,
   ptr::{self, null_mut},
   task::{Poll, Waker},
@@ -7,13 +6,13 @@ use std::{
 
 use crate::{
   FFISafe,
-  boxed::{RTBox, RTSafeBoxWrapper},
+  boxed::{ContainedRTBox, RTBox, RTSafeBoxWrapper},
 };
 
 pub mod implements;
 
 #[repr(C)]
-pub struct FutureTask<T: FFISafe> {
+pub struct FutureTask {
   // We don't care about the state
   pub _state: *mut c_void,
   // We expect you to clear state here!
@@ -21,8 +20,9 @@ pub struct FutureTask<T: FFISafe> {
   pub _waker: extern "C" fn(*mut c_void, *mut WakerData) -> (),
   pub _ready: extern "C" fn(*mut c_void) -> bool,
   pub _clean: extern "C" fn(*mut c_void) -> (),
-  pub _output: PhantomData<T>,
 }
+
+unsafe impl FFISafe for FutureTask {}
 
 #[repr(C)]
 pub struct WakerData {
@@ -81,8 +81,8 @@ extern "C" fn wake(ptr: *mut c_void) {
   }
 }
 
-impl<T: FFISafe> Future for FutureTask<T> {
-  type Output = RTBox<T>;
+impl Future for RTBox<FutureTask> {
+  type Output = ContainedRTBox;
 
   fn poll(
     self: std::pin::Pin<&mut Self>,
@@ -120,7 +120,7 @@ impl<T: FFISafe> Future for FutureTask<T> {
 
       (self._clean)(self._state);
 
-      Poll::Ready(RTSafeBoxWrapper::construct(val))
+      Poll::Ready(ContainedRTBox::new(val))
     }
   }
 }
