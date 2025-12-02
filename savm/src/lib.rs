@@ -23,6 +23,8 @@ use sart::{
   map::{CompiledCode, HashMap, Heap},
 };
 
+pub use sart;
+
 pub mod executor;
 pub mod sync;
 
@@ -58,6 +60,7 @@ pub struct VM<T: BytecodeResolver + Send + Sync + 'static> {
   pub(crate) resolve: Arc<T>,
   pub(crate) heap: Heap,
   pub(crate) counter: usize,
+  cursection: u64,
   code: Arc<CompiledCode>,
 }
 
@@ -65,6 +68,14 @@ pub fn pack_u32(high_u32: u32, low_u32: u32) -> u64 {
   let high_u64 = high_u32 as u64;
   let shifted_high = high_u64 << 32;
   let low_u64 = low_u32 as u64;
+
+  shifted_high | low_u64
+}
+
+pub fn pack_u64(high_u64: u64, low_u64: u64) -> u128 {
+  let high_u64 = high_u64 as u128;
+  let shifted_high = high_u64 << 64;
+  let low_u64 = low_u64 as u128;
 
   shifted_high | low_u64
 }
@@ -90,6 +101,7 @@ impl<T: BytecodeResolver + Send + Sync + 'static> VM<T> {
       resolve: resolve,
       counter: 0,
       heap: HashMap::default(),
+      cursection: 0,
       code: {
         let mut out: CompiledCode = HashMap::default();
 
@@ -145,6 +157,7 @@ impl<T: BytecodeResolver + Send + Sync + 'static> VM<T> {
         code: self.code.clone(),
         heap: HashMap::default(),
         counter: 0,
+        cursection: 0,
         resolve: self.resolve.clone(),
       }));
     }
@@ -153,6 +166,7 @@ impl<T: BytecodeResolver + Send + Sync + 'static> VM<T> {
       code: self.code.clone(),
       heap: HashMap::default(),
       counter: 0,
+      cursection: 0,
       resolve: self.resolve.clone(),
     })
   }

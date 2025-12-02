@@ -17,7 +17,10 @@ impl<T: BytecodeResolver + Send + Sync + 'static> VM<T> {
     };
   }
 
-  pub unsafe fn run_module(&self, state: &mut VMTaskState, region: u64) {
+  pub unsafe fn run_module(&mut self, state: &mut VMTaskState, region: u64) {
+    let old = self.cursection;
+    self.cursection = region;
+
     // Absolute performance
     unsafe {
       let module = self.code.get(&region).unwrap_unchecked();
@@ -41,5 +44,8 @@ impl<T: BytecodeResolver + Send + Sync + 'static> VM<T> {
         state.curline += 1;
       }
     };
+
+    // Restore to old section
+    self.cursection = old;
   }
 }

@@ -1,4 +1,4 @@
-use std::{
+use core::{
   ops::Deref,
   ptr, slice,
   str::{self, Utf8Error},
@@ -16,10 +16,6 @@ impl SharableStr {
 
     let _raw =
       unsafe { libc::aligned_malloc(length * size_of::<u8>(), align_of::<u8>()) } as *mut u8;
-
-    if _raw.is_null() {
-      println!("ERR: Null");
-    }
 
     let pointer = data.as_ptr();
     unsafe { ptr::copy_nonoverlapping(pointer, _raw, length) };

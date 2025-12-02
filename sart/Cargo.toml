@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 ahash = "0.8.12"
+dashmap = "6.1.0"
 hashbrown = "0.16.1"
 libc = { package = "libsa", path = "../libsa" }
 pastey = "0.2.0"

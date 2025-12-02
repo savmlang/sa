@@ -1,6 +1,6 @@
 #![feature(type_alias_impl_trait)]
 
-use std::ffi::c_void;
+use core::ffi::c_void;
 
 pub mod arc;
 pub mod boxed;

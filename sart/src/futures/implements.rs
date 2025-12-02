@@ -1,4 +1,6 @@
-use std::{ffi::c_void, marker::PhantomData, ptr::null_mut, sync::Arc, time::Duration};
+use core::{ffi::c_void, marker::PhantomData, ptr::null_mut, time::Duration};
+
+use std::sync::Arc;
 
 use tokio::{
   spawn,

@@ -1,5 +1,5 @@
 use core::ffi::c_void;
-use std::{
+use core::{
   num::NonZeroUsize,
   ops::{Index, IndexMut},
   ptr,

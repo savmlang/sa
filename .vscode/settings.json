@@ -1,0 +1,8 @@
+{
+  "rust-analyzer.linkedProjects": [
+    "./bin/savmrun/Cargo.toml",
+    "./bin/savmcl/Cargo.toml",
+    "./savm/Cargo.toml",
+    "./sart/Cargo.toml"
+  ]
+}

@@ -1,4 +1,4 @@
-use std::os::raw::c_void;
+use core::ffi::c_void;
 
 use crate::boxed::{RTSafeBoxWrapper, drop_rtbox};
 
@@ -105,6 +105,7 @@ macro_rules! instruction {
 }
 
 instruction! {
+  0x01 => mark,
   0x02 => clr,
   0x03 => clrs,
   0x04 => alloc,
@@ -112,42 +113,42 @@ instruction! {
   0x06 => load,
   0x07 => free,
   0x08 => own,
-  // Math
-  // r1, r2 are treated as 64-bit unsigned values
+ // Math (r1, r2 are treated as 64-bit unsigned values)
   0x09 => add,
   0x0A => sub,
   0x0B => mul,
   0x0C => div,
   0x0D => rem,
-  // Math Mut
-  // r1 is treated as 64-bit unsigned values
-  // r6 is a pointer where the output is finally stored
+  // Math Mut (r1 is 64-bit unsigned, r6 is output pointer)
   0x0E => add_mut,
   0x0F => sub_mut,
   0x10 => mul_mut,
   0x11 => div_mut,
   0x12 => rem_mut,
-  // Bitwise
+
+  // Bitwise (r1, r2 are treated as 64-bit unsigned values)
   0x13 => and,
   0x14 => or,
   0x15 => xor,
-  // Bitwise Mut
+  // Bitwise Mut (r6 is output pointer)
   0x16 => and_mut,
   0x17 => or_mut,
   0x18 => xor_mut,
-  // Compare
-  0x19 => cmp,
-  // Bitshift
+  0x19 => cmp, // Compare (Original Opcode)
+
+  // Bitshift (Original Opcodes)
   0x1A => shl,
   0x1B => shr,
-  // Bitshift Mut
+  // Bitshift Mut (Original Opcodes)
   0x1C => shl_mut,
   0x1D => shr_mut,
+
   // Control
   0x1E => jmp,
   0x1F => jz,
   0x20 => jnz,
   0x21 => ret,
+
   // FFI
   0x22 => libcall,
   // Threading
@@ -155,17 +156,15 @@ instruction! {
   0x24 => join,
   0x25 => yield,
   0x26 => await,
-  // ALU:
+
+  // ALU: Pointer Arithmetic (Original Opcodes)
   // Treat r1, r2 as pointers
   0x27 => add_ptr,
   0x28 => sub_ptr,
   0x29 => mul_ptr,
   0x2A => div_ptr,
-  // Library only instructions
-  // These are equal to `load`, `free`, `own` but they
-  // access the super context to do all of them
 
-  // These instructions are only available under the library context
+  // Library only instructions
   0x2B => super_mov,
   0x2C => super_clr,
   0x2D => super_clrs,
@@ -174,4 +173,26 @@ instruction! {
   0x30 => super_load,
   0x31 => super_free,
   0x32 => super_own,
+
+  // --- NEW INSTRUCTIONS (Assigned Opcode 0x33 onwards) ---
+
+  // Bitwise Pointer (ALU)
+  // Treat r1, r2 as pointers
+  0x33 => and_ptr,
+  0x34 => or_ptr,
+  0x35 => xor_ptr,
+
+  // Bitshift Pointer (ALU)
+  // Treat r1 as pointer, r2 as shift amount
+  0x36 => shl_ptr,
+  0x37 => shr_ptr,
+
+  // remainer (but as pointer)
+  0x38 => rem_ptr,
+
+  // Put value in register r1 or r2 or r3
+  0x39 => put_reg,
+  // Copy a 64-bit value to r1 or r2 or r3
+  0x3A => copy,
+  0x3B => cmp_ptr
 }

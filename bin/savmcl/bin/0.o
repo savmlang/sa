@@ -1,0 +1,5 @@
+.0:
+  clrs
+  put_reg 8x2 64x8
+  jmp 64x1
+  mark 64x1

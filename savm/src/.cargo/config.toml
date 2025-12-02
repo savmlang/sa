@@ -1,0 +1,5 @@
+[build]
+# Assuming you are targeting a standard GNU-based linker (like the default Rust uses)
+rustflags = [
+    "-C", "link-arg=-Tlinker.ld",
+]

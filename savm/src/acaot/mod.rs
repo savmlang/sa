@@ -1,11 +1,8 @@
 //! This is the ACAoT compiler
-//! `All Compiled Ahead-of-Time`
+//! `Aggressive Cycle-Adaptive Ordered Threading`` Compiler
 //! It is a really quick compiler build to speed up like crazy
 
-use crate::{
-  BytecodeResolver,
-  acaot::compiler::{CurrentModuleInfo, SyncCompiler},
-};
+use crate::{BytecodeResolver, acaot::compiler::SyncCompiler};
 use sart::ctr::Instruction;
 use std::{
   collections::HashMap,
@@ -18,6 +15,14 @@ pub mod compiler;
 pub enum FirstPassInstruction {
   Inst(Instruction),
   Jmp { marker: u128 },
+  Jz { marker: u128 },
+  JzP { marker: u128 },
+  JzR6 { marker: u128 },
+  JzR6U { marker: u128 },
+  Jnz { marker: u128 },
+  JnzP { marker: u128 },
+  JnzR6 { marker: u128 },
+  JnzR6U { marker: u128 },
 }
 
 pub fn sync_compile<T: BytecodeResolver + Send + Sync + 'static>(
@@ -41,11 +46,8 @@ pub fn sync_compile<T: BytecodeResolver + Send + Sync + 'static>(
     reader,
     markers: HashMap::default(),
     depth: 0,
-    index: 0,
-    module: CurrentModuleInfo {
-      id: 0,
-      instadded: 0,
-    },
+    to_add_to_vec_len: 0,
+    module: 0,
   };
 
   compiler.first_pass();

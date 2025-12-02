@@ -1,4 +1,4 @@
-use std::{
+use core::{
   ffi::c_void,
   marker::PhantomData,
   ops::{Deref, DerefMut},

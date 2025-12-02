@@ -1,4 +1,6 @@
-use std::{ffi::c_void, marker::PhantomData, ops::Deref, sync::Arc};
+use core::{ffi::c_void, marker::PhantomData, ops::Deref};
+
+use std::sync::Arc;
 
 use crate::FFISafe;
 
