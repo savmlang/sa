@@ -15,14 +15,17 @@ use std::{
   sync::{
     Arc, LazyLock, OnceLock,
     atomic::{AtomicUsize, Ordering},
-    mpsc::{Receiver, Sender, channel},
+    mpsc::{Receiver, channel},
   },
   thread::available_parallelism,
 };
 
 use crate::acaot::sync_compile;
 use sart::{
-  boxed::ContainedRTBox,
+  boxed::{
+    ContainedRTBox, RTSafeBoxWrapper,
+    spawn::{SendWrapper, ThreadSpawnContext, send},
+  },
   ctr::{DispatchFn, Instruction},
   map::{CompiledCode, HashMap},
 };
@@ -69,7 +72,7 @@ pub struct VM<T: BytecodeResolver + Send + Sync + 'static> {
   pub counter: usize,
   pub code: Arc<CompiledCode>,
   pub heaprestore: *mut [ContainedRTBox; 128],
-  pub recv: Option<Receiver<ContainedRTBox>>,
+  pub recv: Option<Receiver<SendWrapper>>,
   pub heapmap: [ContainedRTBox; 128],
 }
 
@@ -159,10 +162,14 @@ impl<T: BytecodeResolver + Send + Sync + 'static> VM<T> {
   }
 
   /// This returns a Boxed copy is there are more than 5 VMs already
-  pub fn create_copy(&self) -> (Sender<ContainedRTBox>, MaybeBoxed<Self>) {
+  pub fn create_copy(&self) -> (*mut RTSafeBoxWrapper, MaybeBoxed<Self>) {
     let old = VMS.fetch_add(1, Ordering::SeqCst);
 
-    let (tx, rx) = channel::<ContainedRTBox>();
+    let (tx, rx) = channel::<SendWrapper>();
+
+    let tx = unsafe { RTSafeBoxWrapper::new_raw(tx) };
+
+    let tx = unsafe { RTSafeBoxWrapper::new_raw(ThreadSpawnContext { send, sender: tx }) };
 
     if old >= *TOTAL_THREADS {
       return (

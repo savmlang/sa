@@ -12,6 +12,8 @@ pub struct ThreadSpawnContext {
   pub send: extern "C" fn(pt: *mut RTSafeBoxWrapper, data: *mut RTSafeBoxWrapper),
 }
 
+unsafe impl FFISafe for ThreadSpawnContext {}
+
 #[repr(C)]
 pub struct SendWrapper(*mut RTSafeBoxWrapper);
 
