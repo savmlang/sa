@@ -115,76 +115,13 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
             fn_: (target_index as u64, inst_jmp),
           }
         }
-        FirstPassInstruction::Jnz { marker } => {
+        FirstPassInstruction::JumpCond { marker, inst } => {
           let target_index = *markers
             .get(&marker)
             .expect("ACAoT Linker Error: Undefined JMP target marker!");
 
           Instruction {
-            fn_: (target_index as u64, inst_jnz_data),
-          }
-        }
-        FirstPassInstruction::JnzP { marker } => {
-          let target_index = *markers
-            .get(&marker)
-            .expect("ACAoT Linker Error: Undefined JMP target marker!");
-
-          Instruction {
-            fn_: (target_index as u64, inst_jnz_ptr),
-          }
-        }
-        FirstPassInstruction::JnzR6 { marker } => {
-          let target_index = *markers
-            .get(&marker)
-            .expect("ACAoT Linker Error: Undefined JMP target marker!");
-
-          Instruction {
-            fn_: (target_index as u64, inst_jnz_r6),
-          }
-        }
-        FirstPassInstruction::Jz { marker } => {
-          let target_index = *markers
-            .get(&marker)
-            .expect("ACAoT Linker Error: Undefined JMP target marker!");
-
-          Instruction {
-            fn_: (target_index as u64, inst_jz_data),
-          }
-        }
-        FirstPassInstruction::JzP { marker } => {
-          let target_index = *markers
-            .get(&marker)
-            .expect("ACAoT Linker Error: Undefined JMP target marker!");
-
-          Instruction {
-            fn_: (target_index as u64, inst_jz_ptr),
-          }
-        }
-        FirstPassInstruction::JzR6 { marker } => {
-          let target_index = *markers
-            .get(&marker)
-            .expect("ACAoT Linker Error: Undefined JMP target marker!");
-
-          Instruction {
-            fn_: (target_index as u64, inst_jz_r6),
-          }
-        }
-        FirstPassInstruction::JzR6U { marker } => {
-          let target_index = *markers
-            .get(&marker)
-            .expect("ACAoT Linker Error: Undefined JMP target marker!");
-
-          Instruction {
-            fn_: (target_index as u64, inst_jz_r6_unsure),
-          }
-        }
-        FirstPassInstruction::JnzR6U { marker } => {
-          let target_index = *markers
-            .get(&marker)
-            .expect("ACAoT Linker Error: Undefined JMP target marker!");
-
-          Instruction {
-            fn_: (target_index as u64, inst_jnz_r6_unsure),
+            fn_: (target_index as u64, inst),
           }
         }
       })
@@ -201,6 +138,7 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
         INSTRUCTION_JNZ => self.handle_jnz(code),
         INSTRUCTION_YIELD => self.handle_binary_op(inst_yield, code),
         INSTRUCTION_AWAIT => self.handle_binary_op(inst_sync_await, code),
+        INSTRUCTION_SPAWN => self.handle_spawn(code),
 
         // Register Control
         INSTRUCTION_CLR => self.handle_clr(code),
@@ -269,25 +207,55 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
     let mut register = [0u8; 1];
     self.reader.read_exact(&mut register).expect("Error");
 
-    let [addr] = register;
+    let [register] = register;
 
-    code.push(FirstPassInstruction::Inst(Instruction {
-      fn_: (
-        addr as _,
-        if use_super_ {
-          inst_free_super::<F>
-        } else {
-          inst_free::<F>
-        },
-      ),
-    }));
+    if register >= 7 {
+      let mut addr = [0u8; 2];
+      self.reader.read_exact(&mut addr).expect("Error");
+
+      let addr = u16::from_be_bytes(addr);
+
+      code.push(FirstPassInstruction::Inst(Instruction {
+        fn_: (addr as _, inst_free_addr),
+      }));
+      return;
+    }
+
+    let inst = if use_super_ {
+      match register {
+        1 => inst_free_r1,
+        2 => inst_free_r2,
+        3 => inst_free_r3,
+        4 => inst_free_r4,
+        5 => inst_free_r5,
+        6 => inst_free_r6,
+        _ => unreachable!(),
+      }
+    } else {
+      match register {
+        1 => inst_free_super_r1,
+        2 => inst_free_super_r2,
+        3 => inst_free_super_r3,
+        4 => inst_free_super_r4,
+        5 => inst_free_super_r5,
+        6 => inst_free_super_r6,
+        _ => unreachable!(),
+      }
+    };
+
+    code.push(FirstPassInstruction::Inst(Instruction { fn_: (0, inst) }));
   }
 
   unsafe fn handle_own(&mut self, use_super_: bool, code: &mut Vec<FirstPassInstruction>) {
     let mut register = [0u8; 1];
     self.reader.read_exact(&mut register).expect("Error");
 
-    let [addr] = register;
+    let [register] = register;
+
+    let mut addr = [0u8; 2];
+    self.reader.read_exact(&mut addr).expect("Error");
+
+    let addr = u16::from_be_bytes(addr);
 
     code.push(FirstPassInstruction::Inst(Instruction {
       fn_: (
@@ -487,6 +455,17 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
       );
   }
 
+  unsafe fn handle_spawn(&mut self, code: &mut Vec<FirstPassInstruction>) {
+    let mut module = [0u8; 8];
+    self.reader.read_exact(&mut module).expect("Error");
+
+    let addr = u64::from_be_bytes(module);
+
+    code.push(FirstPassInstruction::Inst(Instruction {
+      fn_: (addr, inst_sync_spawn::<F>),
+    }));
+  }
+
   unsafe fn handle_jmp(&mut self, code: &mut Vec<FirstPassInstruction>) {
     let mut register = [0u8; 8];
     self.reader.read_exact(&mut register).expect("Error");
@@ -546,7 +525,6 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
       4 => inst_clr_r4,
       5 => inst_clr_r5,
       6 => inst_clr_r6,
-      7 => inst_clr_r6_unsure,
       _ => unreachable!(),
     };
 

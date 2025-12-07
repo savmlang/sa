@@ -47,7 +47,7 @@ macro_rules! value_based {
             let r1 = *(task.r1.ptr as *const u64);
             let r4 = &mut *(task.r4 as *mut u64);
 
-            *r4 = r4.[<unchecked_ $name>](r1 as _);
+            *r4 = r1.[<unchecked_ $name>](*r4 as _);
           }
         }
       )+
@@ -94,7 +94,7 @@ pub extern "C" fn inst_div_mut(_: *mut c_void, task: *mut VMTaskState, _: u64) {
     let r1 = *(task.r1.ptr as *const u64);
     let r4 = &mut *(task.r4 as *mut u64);
 
-    *r4 = *r4 / r1;
+    *r4 = r1 / *r4;
   }
 }
 
@@ -122,7 +122,7 @@ pub extern "C" fn inst_rem_mut(_: *mut c_void, task: *mut VMTaskState, _: u64) {
     let r1 = *(task.r1.ptr as *const u64);
     let r4 = &mut *(task.r4 as *mut u64);
 
-    *r4 = r4.wrapping_rem(r1);
+    *r4 = r1.wrapping_rem(*r4);
   }
 }
 

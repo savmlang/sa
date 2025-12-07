@@ -3,31 +3,36 @@
   portable_simd,
   unchecked_shifts,
   exact_div,
-  int_roundings
+  int_roundings,
+  nonpoison_rwlock,
+  sync_nonpoison,
+  unsafe_cell_access
 )]
 
 pub mod acaot;
 
 use std::{
+  fs::File,
   io::{Read, Seek},
   mem::zeroed,
-  ptr::null_mut,
   sync::{
     Arc, LazyLock, OnceLock,
     atomic::{AtomicUsize, Ordering},
     mpsc::{Receiver, channel},
+    nonpoison::RwLock,
   },
   thread::available_parallelism,
 };
 
 use crate::acaot::sync_compile;
+use dashmap::DashMap;
 use sart::{
   boxed::{
-    ContainedRTBox, RTSafeBoxWrapper,
+    RTSafeBoxWrapper,
     spawn::{SendWrapper, ThreadSpawnContext, send},
   },
   ctr::{DispatchFn, Instruction},
-  map::{CompiledCode, HashMap},
+  map::{CompiledCode, HeapStructure},
 };
 
 pub use sart;
@@ -62,19 +67,74 @@ pub trait BytecodeResolver {
   /// No other error can be accepted
   fn resolve_native(&self, module: u32, func: u32) -> DispatchFn;
 }
+impl BytecodeResolver for Box<dyn BytecodeResolver<Output = File> + Send + Sync + 'static> {
+  type Output = File;
+
+  fn get_native_regions(&self, module: u32) -> &[u32] {
+    BytecodeResolver::get_native_regions(self.as_ref(), module)
+  }
+
+  fn get_regions(&self, module: u32) -> Option<&[u32]> {
+    BytecodeResolver::get_regions(self.as_ref(), module)
+  }
+
+  fn modules(&self) -> &[u32] {
+    BytecodeResolver::modules(self.as_ref())
+  }
+
+  fn resolve_bytecode_exact(&self, module: u32, region: u32) -> Option<Self::Output> {
+    BytecodeResolver::resolve_bytecode_exact(self.as_ref(), module, region)
+  }
+
+  fn resolve_native(&self, module: u32, func: u32) -> DispatchFn {
+    BytecodeResolver::resolve_native(self.as_ref(), module, func)
+  }
+}
 
 pub static GLOBAL_RUNTIME: LazyLock<Runtime> =
   LazyLock::new(|| Builder::new_multi_thread().enable_all().build().unwrap());
 
+pub static VMCONF: RwLock<VmConfig> = RwLock::new(unsafe { zeroed() });
+
+#[derive(Debug)]
+#[repr(C)]
+pub struct VmConfig {
+  pub jit: bool,
+  pub cooperative: bool,
+}
+
 /// We create a VM for each thread executed
+#[repr(C)]
 pub struct VM<T: BytecodeResolver + Send + Sync + 'static> {
   pub resolve: Arc<T>,
-  pub counter: usize,
-  pub code: Arc<CompiledCode>,
-  pub heaprestore: *mut [ContainedRTBox; 128],
+  pub code: CompiledCode,
   pub recv: Option<Receiver<SendWrapper>>,
-  pub heapmap: [ContainedRTBox; 128],
+  pub counter: usize,
+  /// This is the 1st pointer to the heap structure
+  /// Ofc there are total `256` distinct addresses
+  pub heapmap: *mut HeapStructure,
 }
+
+pub const INNERBYTES: usize = 2 * size_of::<Arc<()>>() + size_of::<Option<Receiver<SendWrapper>>>();
+
+#[repr(C)]
+/// VM but optimized to use from C/FFI Boundaries
+pub struct CVM {
+  pub _inner: [u8; INNERBYTES],
+  pub counter: usize,
+  pub heapmap: *mut HeapStructure,
+}
+
+const _PASS1: bool = size_of::<CVM>()
+  == size_of::<VM<Box<dyn BytecodeResolver<Output = File> + Send + Sync + 'static>>>();
+const _VERIFY1: () = assert!(_PASS1);
+
+const _PASS2: bool = align_of::<CVM>()
+  == align_of::<VM<Box<dyn BytecodeResolver<Output = File> + Send + Sync + 'static>>>();
+const _VERIFY2: () = assert!(_PASS2);
+
+unsafe impl<T: BytecodeResolver + Send + Sync + 'static> Send for VM<T> {}
+unsafe impl<T: BytecodeResolver + Send + Sync + 'static> Sync for VM<T> {}
 
 pub fn pack_u32(high_u32: u32, low_u32: u32) -> u64 {
   let high_u64 = high_u32 as u64;
@@ -114,9 +174,8 @@ impl<T: BytecodeResolver + Send + Sync + 'static> VM<T> {
       counter: 0,
       recv: None,
       heapmap: unsafe { zeroed() },
-      heaprestore: { null_mut() },
       code: {
-        let mut out: CompiledCode = HashMap::default();
+        let out: CompiledCode = Arc::new(DashMap::with_hasher(ahash::RandomState::new()));
 
         let refsolver = resolver.as_ref();
         let refsolver_ptr = resolver.clone();
@@ -156,7 +215,7 @@ impl<T: BytecodeResolver + Send + Sync + 'static> VM<T> {
           }
         });
 
-        Arc::new(out)
+        out
       },
     }
   }
@@ -179,7 +238,6 @@ impl<T: BytecodeResolver + Send + Sync + 'static> VM<T> {
           heapmap: unsafe { zeroed() },
           counter: 0,
           recv: Some(rx),
-          heaprestore: { null_mut() },
           resolve: self.resolve.clone(),
         })),
       );
@@ -192,7 +250,6 @@ impl<T: BytecodeResolver + Send + Sync + 'static> VM<T> {
         heapmap: unsafe { zeroed() },
         counter: 0,
         recv: Some(rx),
-        heaprestore: { null_mut() },
         resolve: self.resolve.clone(),
       }),
     )

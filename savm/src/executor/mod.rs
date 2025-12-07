@@ -2,7 +2,7 @@ use std::mem::zeroed;
 
 use sart::ctr::{Instruction, VMTaskState};
 
-use crate::{BytecodeResolver, VM};
+use crate::{BytecodeResolver, VM, sync::heaps::SYNC_HEAP};
 
 impl<T: BytecodeResolver + Send + Sync + 'static> VM<T> {
   /// Please note that from this point onwards we'll purely compute the values
@@ -11,6 +11,8 @@ impl<T: BytecodeResolver + Send + Sync + 'static> VM<T> {
   /// This strictly runs module id `0` section `0`
   pub unsafe fn run(&mut self) {
     unsafe {
+      self.heapmap = SYNC_HEAP.with(|x| x.as_mut_unchecked().get());
+
       let mut task = zeroed::<VMTaskState>();
 
       self.run_module(&mut task, 0)

@@ -1,6 +1,6 @@
 use std::os::raw::c_void;
 
-use sart::ctr::{RegistryValue, VMTaskState};
+use sart::ctr::VMTaskState;
 
 macro_rules! value_based {
   (
@@ -16,8 +16,8 @@ macro_rules! value_based {
           unsafe {
             let task = &mut *task;
 
-            let r1 = task.$ra.data;
-            let r2 = task.$rb.data;
+            let r1 = task.$ra.heap().u64;
+            let r2 = task.$rb.heap().u64;
 
             let r3 = r1.$op(&r2);
 

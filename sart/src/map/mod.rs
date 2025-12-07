@@ -1,21 +1,51 @@
-use crate::{boxed::ContainedRTBox, ctr::Instruction};
-pub use hashbrown::HashMap;
+use crate::{boxed::RTSafeBoxWrapper, ctr::Instruction};
 
-use std::sync::LazyLock;
+use dashmap::DashMap;
 
-/// Please note that the heap is supposed to only have 32-bit data
-///
-/// It also is packaged data (oh my god how much optimizations)
-/// 1st 32=btis (i.e. u32) is module id
-/// 2nd 32=bits (i.e. u32) is Section id
-/// 3rd 64=bits (i.e. u64) is variable name
-pub type Heap = HashMap<u128, ContainedRTBox, ahash::RandomState>;
+use std::{
+  os::raw::c_void,
+  ptr::null,
+  sync::{Arc, LazyLock},
+};
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union HeapStructure {
+  pub u64: u64,
+  pub i64: i64,
+  pub u32: u32,
+  pub i32: i32,
+  pub u16: u16,
+  pub i16: i16,
+  pub u8: u8,
+  pub i8: i8,
+  pub f32: f32,
+  pub f64: f64,
+  pub complex: *mut RTSafeBoxWrapper,
+  pub _checknull: *const c_void,
+}
+
+impl HeapStructure {
+  #[inline(always)]
+  pub fn nullify(&mut self) {
+    self._checknull = null();
+  }
+
+  #[inline(always)]
+  pub fn heap(&mut self) -> &mut Self {
+    self
+  }
+}
+
+pub struct EnforceNoCopy;
 
 /// This `u64` is a packed data
 /// 1st 32=bits (i.e. u32) is module id
 /// 2nd 32=bit (i.e. u32) is module section
-pub type CompiledCode = HashMap<
-  u64,
-  LazyLock<Box<[Instruction]>, Box<dyn FnOnce() -> Box<[Instruction]>>>,
-  ahash::RandomState,
+pub type CompiledCode = Arc<
+  DashMap<
+    u64,
+    LazyLock<Box<[Instruction]>, Box<dyn FnOnce() -> Box<[Instruction]>>>,
+    ahash::RandomState,
+  >,
 >;

@@ -3,7 +3,7 @@
 //! It is a really quick compiler build to speed up like crazy
 
 use crate::{BytecodeResolver, acaot::compiler::SyncCompiler};
-use sart::ctr::Instruction;
+use sart::ctr::{DispatchFn, Instruction};
 use std::{
   collections::HashMap,
   io::{BufReader, Seek},
@@ -16,14 +16,7 @@ pub mod jit;
 pub enum FirstPassInstruction {
   Inst(Instruction),
   Jmp { marker: u128 },
-  Jz { marker: u128 },
-  JzP { marker: u128 },
-  JzR6 { marker: u128 },
-  JzR6U { marker: u128 },
-  Jnz { marker: u128 },
-  JnzP { marker: u128 },
-  JnzR6 { marker: u128 },
-  JnzR6U { marker: u128 },
+  JumpCond { marker: u128, inst: DispatchFn },
 }
 
 pub fn sync_compile<T: BytecodeResolver + Send + Sync + 'static>(
