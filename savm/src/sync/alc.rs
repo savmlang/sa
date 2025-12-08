@@ -21,7 +21,7 @@ pub extern "C" fn inst_alloc<T: BytecodeResolver + Send + Sync + 'static>(
 
     let wrap = replace(&mut task.r6, zeroed());
 
-    *(vm.heapmap as *mut HeapStructure).add(addr as usize) = *wrap.data;
+    *(vm.heapmap as *mut HeapStructure).add(addr as usize) = wrap.data;
   }
 }
 

@@ -16,66 +16,6 @@ pub struct SyncCompiler<'a, F: BytecodeResolver + Send + Sync + 'static> {
   pub module: u64,
 }
 
-macro_rules! cmphandler {
-  (
-    $t:ident, $ra:ident, $rb:ident
-    compute {
-      $(
-        action: $f:ident,
-        id: $e:expr,
-        involves: {
-          $(
-            ($a:ident { $a1:expr } and $b:ident { $a2:expr })
-          ),*
-        }
-      ),*
-    }
-  ) => {
-    pastey::paste! {
-      match ($t, $ra, $rb) {
-        $($(
-          ($e, $a1, $a2) => {
-            Instruction {
-              fn_: (0, [<inst_cmp_ $f _ $a _ $b>])
-            }
-          }
-        )*)*
-        _ => unreachable!(),
-      }
-    }
-  };
-}
-
-macro_rules! cmpptrhandler {
-  (
-    $t:ident, $ra:ident, $rb:ident
-    compute {
-      $(
-        action: $f:ident,
-        id: $e:expr,
-        involves: {
-          $(
-            ($a:ident { $a1:expr } and $b:ident { $a2:expr })
-          ),*
-        }
-      ),*
-    }
-  ) => {
-    pastey::paste! {
-      match ($t, $ra, $rb) {
-        $($(
-          ($e, $a1, $a2) => {
-            Instruction {
-              fn_: (0, [<inst_cmp_ $f _ $a _ $b _ptr>])
-            }
-          }
-        )*)*
-        _ => unreachable!(),
-      }
-    }
-  };
-}
-
 impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
   pub fn first_pass(&mut self) {
     let mut byte = [0u8];
@@ -145,54 +85,46 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
         INSTRUCTION_CLRS => self.handle_clrs(code),
 
         // Heap Control
-        INSTRUCTION_ALLOC => self.handle_alloc(false, code),
-        INSTRUCTION_SUPER_ALLOC => self.handle_alloc(true, code),
-        INSTRUCTION_LOAD => self.handle_load(false, code),
-        INSTRUCTION_SUPER_LOAD => self.handle_load(true, code),
-        INSTRUCTION_FREE => self.handle_free(false, code),
-        INSTRUCTION_SUPER_FREE => self.handle_free(true, code),
-        INSTRUCTION_OWN => self.handle_own(false, code),
-        INSTRUCTION_SUPER_OWN => self.handle_own(true, code),
+        INSTRUCTION_ALLOC => self.handle_alloc(code),
+        INSTRUCTION_LOAD => self.handle_load(code),
+        INSTRUCTION_FREE => self.handle_free(code),
+        INSTRUCTION_OWN => self.handle_own(code),
+        INSTRUCTION_MOV => self.handle_mov(false, code),
+        INSTRUCTION_SUPER_MOV => self.handle_mov(true, code),
 
         // Compare
         INSTRUCTION_CMP => self.handle_compare(code),
-        INSTRUCTION_CMP_PTR => self.handle_compare_ptr(code),
 
         // Arithmatic
-        INSTRUCTION_ADD => self.handle_binary_op(inst_add, code),
-        INSTRUCTION_SUB => self.handle_binary_op(inst_sub, code),
-        INSTRUCTION_MUL => self.handle_binary_op(inst_mul, code),
-        INSTRUCTION_DIV => self.handle_binary_op(inst_div, code),
-        INSTRUCTION_REM => self.handle_binary_op(inst_rem, code),
-        INSTRUCTION_ADD_MUT => self.handle_binary_op(inst_add_mut, code),
-        INSTRUCTION_SUB_MUT => self.handle_binary_op(inst_sub_mut, code),
-        INSTRUCTION_MUL_MUT => self.handle_binary_op(inst_mul_mut, code),
-        INSTRUCTION_DIV_MUT => self.handle_binary_op(inst_div_mut, code),
-        INSTRUCTION_REM_MUT => self.handle_binary_op(inst_rem_mut, code),
-        INSTRUCTION_ADD_PTR => self.handle_binary_op(inst_add_ptr, code),
-        INSTRUCTION_SUB_PTR => self.handle_binary_op(inst_sub_ptr, code),
-        INSTRUCTION_MUL_PTR => self.handle_binary_op(inst_mul_ptr, code),
-        INSTRUCTION_DIV_PTR => self.handle_binary_op(inst_div_ptr, code),
-        INSTRUCTION_REM_PTR => self.handle_binary_op(inst_rem_ptr, code),
+        INSTRUCTION_ADD => self.handle_alu(ADDOPS, code),
+        INSTRUCTION_SUB => self.handle_alu(SUBOPS, code),
+        INSTRUCTION_MUL => self.handle_alu(MULOPS, code),
+        INSTRUCTION_DIV => self.handle_alu(DIVOPS, code),
+        INSTRUCTION_REM => self.handle_alu(REMOPS, code),
+        INSTRUCTION_ADD_MUT => self.handle_alu(ADDMUTOPS, code),
+        INSTRUCTION_SUB_MUT => self.handle_alu(SUBMUTOPS, code),
+        INSTRUCTION_MUL_MUT => self.handle_alu(MULMUTOPS, code),
+        INSTRUCTION_DIV_MUT => self.handle_alu(DIVMUTOPS, code),
+        INSTRUCTION_REM_MUT => self.handle_alu(REMMUTOPS, code),
+
+        // Pointer Arithmatic
+        INSTRUCTION_ADD_PTR => self.handle_ptraith(PTRADDOP, code),
+        INSTRUCTION_SUB_PTR => self.handle_ptraith(PTRSUBOP, code),
+        INSTRUCTION_OFFSET_PTR => self.handle_ptraith(PTROFFSETOP, code),
 
         // Shifting
-        INSTRUCTION_SHL => self.handle_binary_op(inst_shl, code),
-        INSTRUCTION_SHR => self.handle_binary_op(inst_shr, code),
-        INSTRUCTION_SHL_PTR => self.handle_binary_op(inst_shl_ptr, code),
-        INSTRUCTION_SHR_PTR => self.handle_binary_op(inst_shr_ptr, code),
-        INSTRUCTION_SHL_MUT => self.handle_binary_op(inst_shl_mut, code),
-        INSTRUCTION_SHR_MUT => self.handle_binary_op(inst_shr_mut, code),
+        INSTRUCTION_SHL => self.handle_alu(SHROPS, code),
+        INSTRUCTION_SHR => self.handle_alu(SHLOPS, code),
+        INSTRUCTION_SHL_MUT => self.handle_alu(SHLMUTOPS, code),
+        INSTRUCTION_SHR_MUT => self.handle_alu(SHRMUTOPS, code),
 
         // Bitwise
-        INSTRUCTION_AND => self.handle_binary_op(inst_and, code),
-        INSTRUCTION_AND_PTR => self.handle_binary_op(inst_and_ptr, code),
-        INSTRUCTION_AND_MUT => self.handle_binary_op(inst_and_mut, code),
-        INSTRUCTION_OR => self.handle_binary_op(inst_or, code),
-        INSTRUCTION_OR_PTR => self.handle_binary_op(inst_or_ptr, code),
-        INSTRUCTION_OR_MUT => self.handle_binary_op(inst_or_mut, code),
-        INSTRUCTION_XOR => self.handle_binary_op(inst_xor, code),
-        INSTRUCTION_XOR_PTR => self.handle_binary_op(inst_xor_ptr, code),
-        INSTRUCTION_XOR_MUT => self.handle_binary_op(inst_xor_mut, code),
+        INSTRUCTION_AND => self.handle_bitwise(ANDOPS, code),
+        INSTRUCTION_AND_MUT => self.handle_bitwise(ANDMUTOPS, code),
+        INSTRUCTION_OR => self.handle_bitwise(OROPS, code),
+        INSTRUCTION_OR_MUT => self.handle_bitwise(ORMUTOPS, code),
+        INSTRUCTION_XOR => self.handle_bitwise(XOROPS, code),
+        INSTRUCTION_XOR_MUT => self.handle_bitwise(XORMUTOPS, code),
 
         // Library
         INSTRUCTION_LIBCALL => self.handle_libcall(code),
@@ -203,7 +135,51 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
     }
   }
 
-  unsafe fn handle_free(&mut self, use_super_: bool, code: &mut Vec<FirstPassInstruction>) {
+  unsafe fn handle_alu(&mut self, op: u8, code: &mut Vec<FirstPassInstruction>) {
+    let mut register = [0u8; 1];
+    self.reader.read_exact(&mut register).expect("Error");
+
+    let [typ] = register;
+
+    code.push(FirstPassInstruction::Inst(Instruction {
+      fn_: (0, inst_arithmetic_handler(typ, op)),
+    }))
+  }
+
+  unsafe fn handle_ptraith(&mut self, op: u8, code: &mut Vec<FirstPassInstruction>) {
+    let mut register = [0u8; 1];
+    self.reader.read_exact(&mut register).expect("Error");
+
+    let [typ] = register;
+
+    let mut data = [0u8; 8];
+    self.reader.read_exact(&mut data).expect("Error");
+
+    let data = if op == PTROFFSETOP {
+      let data1 = i64::from_be_bytes(data);
+
+      isize_to_u64(data1.try_into().expect("Unable to convert to isize"))
+    } else {
+      u64::from_be_bytes(data)
+    };
+
+    code.push(FirstPassInstruction::Inst(Instruction {
+      fn_: (data, inst_ptrarith_handler(typ, op)),
+    }))
+  }
+
+  unsafe fn handle_bitwise(&mut self, op: u8, code: &mut Vec<FirstPassInstruction>) {
+    let mut register = [0u8; 1];
+    self.reader.read_exact(&mut register).expect("Error");
+
+    let [typ] = register;
+
+    code.push(FirstPassInstruction::Inst(Instruction {
+      fn_: (0, inst_bitwise_handler(typ, op)),
+    }))
+  }
+
+  unsafe fn handle_free(&mut self, code: &mut Vec<FirstPassInstruction>) {
     let mut register = [0u8; 1];
     self.reader.read_exact(&mut register).expect("Error");
 
@@ -221,36 +197,49 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
       return;
     }
 
-    let inst = if use_super_ {
-      match register {
-        1 => inst_free_r1,
-        2 => inst_free_r2,
-        3 => inst_free_r3,
-        4 => inst_free_r4,
-        5 => inst_free_r5,
-        6 => inst_free_r6,
-        _ => unreachable!(),
-      }
-    } else {
-      match register {
-        1 => inst_free_super_r1,
-        2 => inst_free_super_r2,
-        3 => inst_free_super_r3,
-        4 => inst_free_super_r4,
-        5 => inst_free_super_r5,
-        6 => inst_free_super_r6,
-        _ => unreachable!(),
-      }
+    let inst = match register {
+      1 => inst_free_r1,
+      2 => inst_free_r2,
+      3 => inst_free_r3,
+      4 => inst_free_r4,
+      5 => inst_free_r5,
+      6 => inst_free_r6,
+      _ => unreachable!(),
     };
 
     code.push(FirstPassInstruction::Inst(Instruction { fn_: (0, inst) }));
   }
 
-  unsafe fn handle_own(&mut self, use_super_: bool, code: &mut Vec<FirstPassInstruction>) {
+  unsafe fn handle_mov(&mut self, super_: bool, code: &mut Vec<FirstPassInstruction>) {
+    let mut register = [0u8; 2];
+    self.reader.read_exact(&mut register).expect("Error");
+
+    let [from, to] = register;
+
+    let inst = if super_ {
+      generate_mov_super(from, to)
+    } else {
+      generate_mov(from, to)
+    };
+
+    code.push(FirstPassInstruction::Inst(Instruction { fn_: (0, inst) }));
+  }
+
+  unsafe fn handle_own(&mut self, code: &mut Vec<FirstPassInstruction>) {
     let mut register = [0u8; 1];
     self.reader.read_exact(&mut register).expect("Error");
 
     let [register] = register;
+
+    let inst = match register {
+      1 => inst_own_r1,
+      2 => inst_own_r2,
+      3 => inst_own_r3,
+      4 => inst_own_r4,
+      5 => inst_own_r5,
+      6 => inst_own_r6,
+      _ => unreachable!(),
+    };
 
     let mut addr = [0u8; 2];
     self.reader.read_exact(&mut addr).expect("Error");
@@ -258,34 +247,22 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
     let addr = u16::from_be_bytes(addr);
 
     code.push(FirstPassInstruction::Inst(Instruction {
-      fn_: (
-        addr as _,
-        if use_super_ {
-          inst_own_super::<F>
-        } else {
-          inst_own::<F>
-        },
-      ),
+      fn_: (addr as _, inst),
     }));
   }
 
-  unsafe fn handle_load(&mut self, use_super_: bool, code: &mut Vec<FirstPassInstruction>) {
+  unsafe fn handle_load(&mut self, code: &mut Vec<FirstPassInstruction>) {
     let mut register = [0u8; 2];
     self.reader.read_exact(&mut register).expect("Error");
 
     let [register, addr] = register;
 
-    let inst = match (use_super_, register) {
-      (false, 1) => inst_load_to_r1::<F>,
-      (true, 1) => inst_load_to_r1_super::<F>,
-      (false, 2) => inst_load_to_r2::<F>,
-      (true, 2) => inst_load_to_r2_super::<F>,
-      (false, 3) => inst_load_to_r3::<F>,
-      (true, 3) => inst_load_to_r3_super::<F>,
-      (false, 4) => inst_load_to_r4::<F>,
-      (true, 4) => inst_load_to_r4_super::<F>,
-      (false, 5) => inst_load_to_r5::<F>,
-      (true, 5) => inst_load_to_r5_super::<F>,
+    let inst = match register {
+      1 => inst_load_to_r1::<F>,
+      2 => inst_load_to_r2::<F>,
+      3 => inst_load_to_r3::<F>,
+      4 => inst_load_to_r4::<F>,
+      5 => inst_load_to_r5::<F>,
       _ => unreachable!(),
     };
 
@@ -295,145 +272,25 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
   }
 
   unsafe fn handle_compare(&mut self, code: &mut Vec<FirstPassInstruction>) {
-    let mut register = [0u8; 3];
+    let mut register = [0u8; 4];
     self.reader.read_exact(&mut register).expect("Error");
 
-    let [ty, ra, rb] = register;
+    let [ty, op, ra, rb] = register;
 
-    let instruction = cmphandler! {
-      ty, ra, rb
-      compute {
-        action: eq,
-        id: 0,
-        involves: {
-          (r1 { 1 } and r2 { 2 }),
-          (r2 { 2 } and r1 { 1 }),
-          (r2 { 2 } and r3 { 3 }),
-          (r3 { 3 } and r2 { 2 })
-        },
-        action: ne,
-        id: 1,
-        involves: {
-          (r1 { 1 } and r2 { 2 }),
-          (r2 { 2 } and r1 { 1 }),
-          (r2 { 2 } and r3 { 3 }),
-          (r3 { 3 } and r2 { 2 })
-        },
-        action: gt,
-        id: 2,
-        involves: {
-          (r1 { 1 } and r2 { 2 }),
-          (r2 { 2 } and r1 { 1 }),
-          (r2 { 2 } and r3 { 3 }),
-          (r3 { 3 } and r2 { 2 })
-        },
-        action: lt,
-        id: 3,
-        involves: {
-          (r1 { 1 } and r2 { 2 }),
-          (r2 { 2 } and r1 { 1 }),
-          (r2 { 2 } and r3 { 3 }),
-          (r3 { 3 } and r2 { 2 })
-        },
-        action: ge,
-        id: 4,
-        involves: {
-          (r1 { 1 } and r2 { 2 }),
-          (r2 { 2 } and r1 { 1 }),
-          (r2 { 2 } and r3 { 3 }),
-          (r3 { 3 } and r2 { 2 })
-        },
-        action: le,
-        id: 5,
-        involves: {
-          (r1 { 1 } and r2 { 2 }),
-          (r2 { 2 } and r1 { 1 }),
-          (r2 { 2 } and r3 { 3 }),
-          (r3 { 3 } and r2 { 2 })
-        }
-      }
-    };
+    let instruction = inst_cmp_handler(ty, op, ra, rb);
 
-    code.push(FirstPassInstruction::Inst(instruction));
+    code.push(FirstPassInstruction::Inst(Instruction { fn_: instruction }));
   }
 
-  unsafe fn handle_compare_ptr(&mut self, code: &mut Vec<FirstPassInstruction>) {
-    let mut register = [0u8; 3];
-    self.reader.read_exact(&mut register).expect("Error");
-
-    let [ty, ra, rb] = register;
-
-    let instruction = cmpptrhandler! {
-      ty, ra, rb
-      compute {
-        action: eq,
-        id: 0,
-        involves: {
-          (r1 { 1 } and r2 { 2 }),
-          (r2 { 2 } and r1 { 1 }),
-          (r2 { 2 } and r3 { 3 }),
-          (r3 { 3 } and r2 { 2 })
-        },
-        action: ne,
-        id: 1,
-        involves: {
-          (r1 { 1 } and r2 { 2 }),
-          (r2 { 2 } and r1 { 1 }),
-          (r2 { 2 } and r3 { 3 }),
-          (r3 { 3 } and r2 { 2 })
-        },
-        action: gt,
-        id: 2,
-        involves: {
-          (r1 { 1 } and r2 { 2 }),
-          (r2 { 2 } and r1 { 1 }),
-          (r2 { 2 } and r3 { 3 }),
-          (r3 { 3 } and r2 { 2 })
-        },
-        action: lt,
-        id: 3,
-        involves: {
-          (r1 { 1 } and r2 { 2 }),
-          (r2 { 2 } and r1 { 1 }),
-          (r2 { 2 } and r3 { 3 }),
-          (r3 { 3 } and r2 { 2 })
-        },
-        action: ge,
-        id: 4,
-        involves: {
-          (r1 { 1 } and r2 { 2 }),
-          (r2 { 2 } and r1 { 1 }),
-          (r2 { 2 } and r3 { 3 }),
-          (r3 { 3 } and r2 { 2 })
-        },
-        action: le,
-        id: 5,
-        involves: {
-          (r1 { 1 } and r2 { 2 }),
-          (r2 { 2 } and r1 { 1 }),
-          (r2 { 2 } and r3 { 3 }),
-          (r3 { 3 } and r2 { 2 })
-        }
-      }
-    };
-
-    code.push(FirstPassInstruction::Inst(instruction));
-  }
-
-  unsafe fn handle_alloc(&mut self, use_super_: bool, code: &mut Vec<FirstPassInstruction>) {
+  unsafe fn handle_alloc(&mut self, code: &mut Vec<FirstPassInstruction>) {
     let mut register = [0u8; 1];
     self.reader.read_exact(&mut register).expect("Error");
 
     let [address] = register;
-    if use_super_ {
-      code.push(FirstPassInstruction::Inst(Instruction {
-        fn_: (address as _, inst_alloc_super::<F>),
-      }));
-    } else {
-      code.push(FirstPassInstruction::Inst(Instruction {
-        fn_: (address as _, inst_alloc::<F>),
-      }));
-    }
+
+    code.push(FirstPassInstruction::Inst(Instruction {
+      fn_: (address as _, inst_alloc::<F>),
+    }));
   }
 
   unsafe fn handle_mark(&mut self, code: &mut Vec<FirstPassInstruction>) {
@@ -481,15 +338,19 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
 
     let key = pack_u64(u64::from_be_bytes(register), self.module);
 
-    let mut register = [0u8; 1];
+    let mut register = [0u8; 2];
     self.reader.read_exact(&mut register).expect("Error");
-    let [register] = register;
+    let [register, datatype] = register;
 
     match register {
-      0 => code.push(FirstPassInstruction::Jz { marker: key }),
-      1 => code.push(FirstPassInstruction::JzP { marker: key }),
-      6 => code.push(FirstPassInstruction::JzR6 { marker: key }),
-      7 => code.push(FirstPassInstruction::JzR6U { marker: key }),
+      0 => code.push(FirstPassInstruction::JumpCond {
+        marker: key,
+        inst: jz_map(datatype),
+      }),
+      1 => code.push(FirstPassInstruction::JumpCond {
+        marker: key,
+        inst: jz_ptr_map(datatype),
+      }),
       _ => unreachable!(),
     }
   }
@@ -500,15 +361,19 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
 
     let key = pack_u64(u64::from_be_bytes(register), self.module);
 
-    let mut register = [0u8; 1];
+    let mut register = [0u8; 2];
     self.reader.read_exact(&mut register).expect("Error");
-    let [register] = register;
+    let [register, datatype] = register;
 
     match register {
-      0 => code.push(FirstPassInstruction::Jnz { marker: key }),
-      1 => code.push(FirstPassInstruction::JnzP { marker: key }),
-      6 => code.push(FirstPassInstruction::JnzR6 { marker: key }),
-      7 => code.push(FirstPassInstruction::JnzR6U { marker: key }),
+      0 => code.push(FirstPassInstruction::JumpCond {
+        marker: key,
+        inst: jnz_map(datatype),
+      }),
+      1 => code.push(FirstPassInstruction::JumpCond {
+        marker: key,
+        inst: jnz_ptr_map(datatype),
+      }),
       _ => unreachable!(),
     }
   }

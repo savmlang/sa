@@ -6,7 +6,7 @@ use std::{
 
 use sart::{
   boxed::{RTSafeBoxWrapper, drop_rtbox},
-  ctr::{REGISTER_SET_SIZE, VMTaskState},
+  ctr::{DispatchFn, REGISTER_SET_SIZE, VMTaskState},
   map::HeapStructure,
 };
 
@@ -16,12 +16,16 @@ mod alc;
 mod arithmatic;
 mod bitwise;
 mod cmp;
+mod ptrarith;
+mod regmov;
 mod threading;
 
 pub use alc::*;
 pub use arithmatic::*;
 pub use bitwise::*;
 pub use cmp::*;
+pub use ptrarith::*;
+pub use regmov::*;
 pub use threading::*;
 
 use crate::{BytecodeResolver, CVM, VM, sync::heaps::SYNC_HEAP};
@@ -162,7 +166,7 @@ macro_rules! jumps {
 }
 
 jumps! {
-  r1, r2, r3, r4, r5, r6
+  r1
 }
 
 macro_rules! jumpptr {
@@ -233,7 +237,63 @@ macro_rules! jumpptr {
 }
 
 jumpptr! {
-  r5, r6
+  r6
+}
+
+pub fn jz_map(ty: u8) -> DispatchFn {
+  match ty {
+    1 => inst_jz_u8_register_r1,
+    2 => inst_jz_u16_register_r1,
+    3 => inst_jz_u32_register_r1,
+    4 => inst_jz_u64_register_r1,
+    5 => inst_jz_i8_register_r1,
+    6 => inst_jz_i16_register_r1,
+    7 => inst_jz_i32_register_r1,
+    8 => inst_jz_i64_register_r1,
+    _ => unreachable!(),
+  }
+}
+
+pub fn jnz_map(ty: u8) -> DispatchFn {
+  match ty {
+    1 => inst_jnz_u8_register_r1,
+    2 => inst_jnz_u16_register_r1,
+    3 => inst_jnz_u32_register_r1,
+    4 => inst_jnz_u64_register_r1,
+    5 => inst_jnz_i8_register_r1,
+    6 => inst_jnz_i16_register_r1,
+    7 => inst_jnz_i32_register_r1,
+    8 => inst_jnz_i64_register_r1,
+    _ => unreachable!(),
+  }
+}
+
+pub fn jz_ptr_map(ty: u8) -> DispatchFn {
+  match ty {
+    1 => inst_jz_ptr_u8_register_r6,
+    2 => inst_jz_ptr_u16_register_r6,
+    3 => inst_jz_ptr_u32_register_r6,
+    4 => inst_jz_ptr_u64_register_r6,
+    5 => inst_jz_ptr_i8_register_r6,
+    6 => inst_jz_ptr_i16_register_r6,
+    7 => inst_jz_ptr_i32_register_r6,
+    8 => inst_jz_ptr_i64_register_r6,
+    _ => unreachable!(),
+  }
+}
+
+pub fn jnz_ptr_map(ty: u8) -> DispatchFn {
+  match ty {
+    1 => inst_jnz_ptr_u8_register_r6,
+    2 => inst_jnz_ptr_u16_register_r6,
+    3 => inst_jnz_ptr_u32_register_r6,
+    4 => inst_jnz_ptr_u64_register_r6,
+    5 => inst_jnz_ptr_i8_register_r6,
+    6 => inst_jnz_ptr_i16_register_r6,
+    7 => inst_jnz_ptr_i32_register_r6,
+    8 => inst_jnz_ptr_i64_register_r6,
+    _ => unreachable!(),
+  }
 }
 
 #[inline(never)]
@@ -261,7 +321,7 @@ pub extern "C" fn inst_sync_libcall<T: BytecodeResolver + Send + Sync + 'static>
     let vm = &mut *(vm as *mut VM<T>);
     let task = &mut *task;
 
-    replace(
+    _ = replace(
       &mut vm.heapmap,
       SYNC_HEAP.with(|x| x.as_mut_unchecked().get()),
     );
@@ -279,7 +339,7 @@ pub extern "C" fn inst_sync_libcall<T: BytecodeResolver + Send + Sync + 'static>
 
       vm.counter -= 1;
 
-      replace(
+      _ = replace(
         &mut vm.heapmap,
         SYNC_HEAP.with(|x| x.as_mut_unchecked().collect()),
       );
@@ -294,7 +354,7 @@ pub extern "C" fn inst_sync_libcall<T: BytecodeResolver + Send + Sync + 'static>
 
     drop(state);
 
-    replace(
+    _ = replace(
       &mut vm.heapmap,
       SYNC_HEAP.with(|x| x.as_mut_unchecked().collect()),
     );
@@ -314,7 +374,7 @@ pub extern "C" fn new_context<T: BytecodeResolver + Send + Sync + 'static>(
     let vm = &mut *(vm as *mut VM<T>);
     let task = &mut *task;
 
-    replace(
+    _ = replace(
       &mut vm.heapmap,
       SYNC_HEAP.with(|x| x.as_mut_unchecked().get()),
     );
@@ -338,7 +398,7 @@ pub extern "C" fn restore_context<T: BytecodeResolver + Send + Sync + 'static>(
     let vm = &mut *(vm as *mut VM<T>);
     let task = &mut *task;
 
-    replace(
+    _ = replace(
       &mut vm.heapmap,
       SYNC_HEAP.with(|x| x.as_mut_unchecked().collect()),
     );
