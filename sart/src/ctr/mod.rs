@@ -111,55 +111,57 @@ instruction! {
     0x0A => jmp,     // Unconditional jump
     0x0B => jz,      // Jump if zero
     0x0C => jnz,     // Jump if not zero
-    0x0D => ret,     // TODO: FUTURE SPEC; Return from procedure
-    0x0E => cmp,     // Compare 64-bit unsigned values (r1, r2)
+    //`ret` instruction has been removed. Please use jump calls along with super_mov to simulate the same
+
+    0x0D => cmp,     // Compare 64-bit unsigned values (r1, r2)
     // Mov data b/w registers
-    0x0F => mov,
+    0x0E => mov,
 
     // --- IV. Arithmetic (r1, r2 are 64-bit unsigned inputs) ---
-    0x10 => add,
-    0x11 => sub,
-    0x12 => mul,
-    0x13 => div,
-    0x14 => rem, // Remainder
+    0x0F => add,
+    0x10 => sub,
+    0x11 => mul,
+    0x12 => div,
+    0x13 => rem, // Remainder
 
     // --- V. Arithmetic Mutating (r6 is output pointer) ---
-    0x15 => add_mut,
-    0x16 => sub_mut,
-    0x17 => mul_mut,
-    0x18 => div_mut,
-    0x19 => rem_mut,
+    0x14 => add_mut,
+    0x15 => sub_mut,
+    0x16 => mul_mut,
+    0x17 => div_mut,
+    0x18 => rem_mut,
 
     // --- VI. Bitwise (r1, r2 are 64-bit unsigned inputs) ---
-    0x1A => and,
-    0x1B => or,
-    0x1C => xor,
+    0x19 => and,
+    0x1A => or,
+    0x1B => xor,
 
     // --- VII. Bitwise Mutating (r6 is output pointer) ---
-    0x1D => and_mut,
-    0x1E => or_mut,
-    0x1F => xor_mut,
+    0x1C => and_mut,
+    0x1D => or_mut,
+    0x1E => xor_mut,
 
     // --- VIII. Bitshift (r1 is value, r2 is shift amount) ---
-    0x20 => shl, // Shift left
-    0x21 => shr, // Shift right
+    0x1F => shl, // Shift left
+    0x20 => shr, // Shift right
 
     // --- IX. Bitshift Mutating (r6 is output pointer) ---
-    0x22 => shl_mut,
-    0x23 => shr_mut,
+    0x21 => shl_mut,
+    0x22 => shr_mut,
 
     // --- X. Pointer Arithmetic (r1, r2 treated as pointers and deferenced to get 64-bit unsigned memory) ---
-    0x24 => add_ptr,
-    0x25 => sub_ptr,
-    0x26 => offset_ptr,
+    0x23 => add_ptr,
+    0x24 => sub_ptr,
+    0x25 => offset_ptr,
 
     // --- XII. System & Threading ---
-    0x27 => libcall,
-    0x28 => spawn,   // Threading: Create new thread
-    0x29 => join,    // TODO: FUTURE SPEC; Threading: Wait for thread
-    0x2A => yield,   // Threading: Give up time
-    0x2B => await,   // Threading: Asynchronous wait
+    0x26 => libcall,
+    0x27 => spawn,   // Threading: Create new thread
+    0x28 => join,    // TODO: FUTURE SPEC; Threading: Wait for thread
+    0x29 => yield,   // Threading: Give up time
+    0x2A => await,   // Threading: Asynchronous wait
 
     // --- XIII. Library-Only Instructions (Accesses Super Context) ---
-    0x2C => super_mov, // Load register data from the caller. Usage `super_mov <target register> <load from register>`
+    0x2B => super_mov, // Load register data from the caller. Usage `super_mov <target register> <load from register>`
+    0x2C => mov_to_super
 }

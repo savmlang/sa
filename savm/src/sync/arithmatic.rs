@@ -62,7 +62,17 @@ macro_rules! value_based {
       rem i8,
       rem i16,
       rem i32,
-      rem i64
+      rem i64,
+      add f32,
+      sub f32,
+      mul f32,
+      div f32,
+      rem f32,
+      add f64,
+      sub f64,
+      mul f64,
+      div f64,
+      rem f64
     }
   };
   (
@@ -125,7 +135,7 @@ pub fn inst_arithmetic_handler(typ: u8, op: u8) -> DispatchFn {
   // Helper macro to reduce repetition in the main function.
   // Maps the operation code to the correct function name suffix for a given type.
   macro_rules! map_op_to_func {
-    ($data:ident, $op:expr) => {
+    ($data:ident, $op:expr$(, $shl:ident)?) => {
       pastey::paste! {
         match $op {
           ADDOPS => [<inst_add_data_is_ $data>],
@@ -133,16 +143,20 @@ pub fn inst_arithmetic_handler(typ: u8, op: u8) -> DispatchFn {
           MULOPS => [<inst_mul_data_is_ $data>],
           DIVOPS => [<inst_div_data_is_ $data>],
           REMOPS => [<inst_rem_data_is_ $data>],
-          SHLOPS => [<inst_shl_data_is_ $data>],
-          SHROPS => [<inst_shr_data_is_ $data>],
+          $(
+            SHLOPS => [<inst_ $shl _data_is_ $data>],
+            SHROPS => [<inst_shr_data_is_ $data>],
+          )?
 
           ADDMUTOPS => [<inst_add_data_is_ $data _mut>],
           SUBMUTOPS => [<inst_sub_data_is_ $data _mut>],
           MULMUTOPS => [<inst_mul_data_is_ $data _mut>],
           DIVMUTOPS => [<inst_div_data_is_ $data _mut>],
           REMMUTOPS => [<inst_rem_data_is_ $data _mut>],
-          SHLMUTOPS => [<inst_shl_data_is_ $data _mut>],
-          SHRMUTOPS => [<inst_shr_data_is_ $data _mut>],
+          $(
+            SHLMUTOPS => [<inst_ $shl _data_is_ $data _mut>],
+            SHRMUTOPS => [<inst_shr_data_is_ $data _mut>],
+          )?
           _ => unreachable!("Invalid arithmetic operation code"),
         }
       }
@@ -151,21 +165,25 @@ pub fn inst_arithmetic_handler(typ: u8, op: u8) -> DispatchFn {
 
   let f = match typ {
     // 0 = u8
-    0 => map_op_to_func!(u8, op),
+    0 => map_op_to_func!(u8, op, shl),
     // 1 = u16
-    1 => map_op_to_func!(u16, op),
+    1 => map_op_to_func!(u16, op, shl),
     // 2 = u32
-    2 => map_op_to_func!(u32, op),
+    2 => map_op_to_func!(u32, op, shl),
     // 3 = u64
-    3 => map_op_to_func!(u64, op),
+    3 => map_op_to_func!(u64, op, shl),
     // 4 = i8
-    4 => map_op_to_func!(i8, op),
+    4 => map_op_to_func!(i8, op, shl),
     // 5 = i16
-    5 => map_op_to_func!(i16, op),
+    5 => map_op_to_func!(i16, op, shl),
     // 6 = i32
-    6 => map_op_to_func!(i32, op),
+    6 => map_op_to_func!(i32, op, shl),
     // 7 = i64
-    7 => map_op_to_func!(i64, op),
+    7 => map_op_to_func!(i64, op, shl),
+    // 8 = f32
+    8 => map_op_to_func!(f32, op),
+    // 9 = f64
+    9 => map_op_to_func!(f64, op),
     _ => unreachable!("Invalid data type code"),
   };
 

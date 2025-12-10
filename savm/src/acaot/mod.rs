@@ -2,7 +2,10 @@
 //! `Aggressive Cycle-Adaptive Ordered Threading`` Compiler
 //! It is a really quick compiler build to speed up like crazy
 
-use crate::{BytecodeResolver, acaot::compiler::SyncCompiler};
+use crate::{
+  BytecodeResolver,
+  acaot::compiler::{SyncCompiler, X2U128},
+};
 use sart::ctr::{DispatchFn, Instruction};
 use std::{
   collections::HashMap,
@@ -15,8 +18,8 @@ pub mod jit;
 
 pub enum FirstPassInstruction {
   Inst(Instruction),
-  Jmp { marker: u128 },
-  JumpCond { marker: u128, inst: DispatchFn },
+  Jmp { marker: X2U128 },
+  JumpCond { marker: X2U128, inst: DispatchFn },
 }
 
 pub fn sync_compile<T: BytecodeResolver + Send + Sync + 'static>(
@@ -39,6 +42,7 @@ pub fn sync_compile<T: BytecodeResolver + Send + Sync + 'static>(
     resolver,
     reader,
     markers: HashMap::default(),
+    instance_counter: HashMap::default(),
     depth: 0,
     to_add_to_vec_len: 0,
     module: 0,

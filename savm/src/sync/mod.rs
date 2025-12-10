@@ -115,7 +115,9 @@ macro_rules! jumps {
         i8 => $r,
         i16 => $r,
         i32 => $r,
-        i64 => $r
+        i64 => $r,
+        f32 => $r,
+        f64 => $r
       }
     )*
   };
@@ -142,7 +144,7 @@ macro_rules! jumps {
           let register = &mut task.$r;
 
           // Compare the inline 64-bit value directly. No pointer dereference.
-          if register.heap().$data == 0 {
+          if register.heap().$data.eq(&(0 as _)) {
             task.curline = index as usize;
           }
         }
@@ -156,7 +158,7 @@ macro_rules! jumps {
           let register = &mut task.$r;
 
           // Compare the inline 64-bit value directly. No pointer dereference.
-          if register.heap().$data != 0 {
+          if register.heap().$data.ne(&(0 as _)) {
             task.curline = index as usize;
           }
         }
@@ -183,6 +185,8 @@ macro_rules! jumpptr {
         i16 => $r,
         i32 => $r,
         i64 => $r,
+        f32 => $r,
+        f64 => $r
       }
     )*
   };
@@ -211,7 +215,7 @@ macro_rules! jumpptr {
           // Assumes R1.ptr is pointing to a valid single byte (u8) for comparison.
           let data = *(task.$r.ptr as *const $data);
 
-          if data == 0 {
+          if data.eq(&(0 as _)) {
             task.curline = index as usize;
           }
         }
@@ -227,7 +231,7 @@ macro_rules! jumpptr {
           // Assumes R1.ptr is pointing to a valid single byte (u8) for comparison.
           let data = *(task.$r.ptr as *const $data);
 
-          if data != 0 {
+          if data.ne(&(0 as _)) {
             task.curline = index as usize;
           }
         }
@@ -250,6 +254,8 @@ pub fn jz_map(ty: u8) -> DispatchFn {
     6 => inst_jz_i16_register_r1,
     7 => inst_jz_i32_register_r1,
     8 => inst_jz_i64_register_r1,
+    9 => inst_jz_f32_register_r1,
+    10 => inst_jz_f64_register_r1,
     _ => unreachable!(),
   }
 }
@@ -264,6 +270,8 @@ pub fn jnz_map(ty: u8) -> DispatchFn {
     6 => inst_jnz_i16_register_r1,
     7 => inst_jnz_i32_register_r1,
     8 => inst_jnz_i64_register_r1,
+    9 => inst_jnz_f32_register_r1,
+    10 => inst_jnz_f64_register_r1,
     _ => unreachable!(),
   }
 }
@@ -278,6 +286,8 @@ pub fn jz_ptr_map(ty: u8) -> DispatchFn {
     6 => inst_jz_ptr_i16_register_r6,
     7 => inst_jz_ptr_i32_register_r6,
     8 => inst_jz_ptr_i64_register_r6,
+    9 => inst_jz_ptr_f32_register_r6,
+    10 => inst_jz_ptr_f64_register_r6,
     _ => unreachable!(),
   }
 }
@@ -292,6 +302,8 @@ pub fn jnz_ptr_map(ty: u8) -> DispatchFn {
     6 => inst_jnz_ptr_i16_register_r6,
     7 => inst_jnz_ptr_i32_register_r6,
     8 => inst_jnz_ptr_i64_register_r6,
+    9 => inst_jnz_ptr_f32_register_r6,
+    10 => inst_jnz_ptr_f64_register_r6,
     _ => unreachable!(),
   }
 }

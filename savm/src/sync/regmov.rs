@@ -38,6 +38,15 @@ macro_rules! regmov {
         }
       }
 
+      pub fn [<generate_mov_from_ $reg _to_super>](to: u8) -> DispatchFn {
+        match to {
+          $(
+            $id => [<inst_mov_from_ $reg _to_super_ $intoreg>],
+          )*
+          _ => unreachable!()
+        }
+      }
+
       pub fn [<generate_mov_super_from_ $reg>](to: u8) -> DispatchFn {
         match to {
           $(
@@ -69,6 +78,17 @@ macro_rules! regmov {
             task.$intoreg = (&*task.super_).$reg;
           }
         }
+
+        #[inline(never)]
+        #[unsafe(link_section = ".vm_fast_instructions")]
+        pub extern "C" fn [<inst_mov_from_ $reg _to_super_ $intoreg>](_: *mut c_void, task: *mut VMTaskState, _: u64) {
+          unsafe {
+            let task = &mut *task;
+
+            // A simple copy!
+            (&mut *task.super_).$intoreg = task.$reg;
+          }
+        }
       )*
     }
   }
@@ -94,6 +114,18 @@ pub fn generate_mov_super(from: u8, to: u8) -> DispatchFn {
     4 => generate_mov_super_from_r4(to),
     5 => generate_mov_super_from_r5(to),
     6 => generate_mov_super_from_r6(to),
+    _ => unreachable!(),
+  }
+}
+
+pub fn generate_to_mov_super(from: u8, to: u8) -> DispatchFn {
+  match from {
+    1 => generate_mov_from_r1_to_super(to),
+    2 => generate_mov_from_r2_to_super(to),
+    3 => generate_mov_from_r3_to_super(to),
+    4 => generate_mov_from_r4_to_super(to),
+    5 => generate_mov_from_r5_to_super(to),
+    6 => generate_mov_from_r6_to_super(to),
     _ => unreachable!(),
   }
 }

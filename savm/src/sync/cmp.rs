@@ -53,7 +53,21 @@ macro_rules! value_based {
       gt i64,
       ne i64,
       le i64,
-      ge i64
+      ge i64,
+
+      eq f32,
+      lt f32,
+      gt f32,
+      ne f32,
+      le f32,
+      ge f32,
+
+      eq f64,
+      lt f64,
+      gt f64,
+      ne f64,
+      le f64,
+      ge f64
     }
   };
   (
@@ -67,7 +81,7 @@ macro_rules! value_based {
         #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn [<inst_cmp_ $op _data_is_ $data>](_: *mut c_void, task: *mut VMTaskState, regdata: u64) {
           unsafe {
-            let [r1loc, r2loc, _, _, _, _, _, _] = regdata.to_be_bytes();
+            let [r1loc, r2loc, _, _, _, _, _, _] = regdata.to_le_bytes();
 
             let task = &mut *task;
 
@@ -92,7 +106,7 @@ macro_rules! value_based {
 
             let r3 = r1.$op(&r2);
 
-            task.r1.heap().$data = if r3 {1} else {0};
+            task.r1.heap().$data = if r3 { 1 as _ } else { 0 as _ };
           }
         }
       )*
@@ -101,7 +115,7 @@ macro_rules! value_based {
 }
 
 pub fn inst_cmp_handler(typ: u8, op: u8, r1: u8, r2: u8) -> (u64, DispatchFn) {
-  let data64 = u64::from_be_bytes([r1, r2, 0, 0, 0, 0, 0, 0]);
+  let data64 = u64::from_le_bytes([r1, r2, 0, 0, 0, 0, 0, 0]);
 
   let f = match typ {
     // 0 = u8
@@ -182,6 +196,26 @@ pub fn inst_cmp_handler(typ: u8, op: u8, r1: u8, r2: u8) -> (u64, DispatchFn) {
       4 => inst_cmp_lt_data_is_i64,
       5 => inst_cmp_ge_data_is_i64,
       6 => inst_cmp_le_data_is_i64,
+      _ => unreachable!(),
+    },
+    // 8 = f32
+    8 => match op {
+      1 => inst_cmp_eq_data_is_f32,
+      2 => inst_cmp_ne_data_is_f32,
+      3 => inst_cmp_gt_data_is_f32,
+      4 => inst_cmp_lt_data_is_f32,
+      5 => inst_cmp_ge_data_is_f32,
+      6 => inst_cmp_le_data_is_f32,
+      _ => unreachable!(),
+    },
+    // 9 = f64
+    9 => match op {
+      1 => inst_cmp_eq_data_is_f64,
+      2 => inst_cmp_ne_data_is_f64,
+      3 => inst_cmp_gt_data_is_f64,
+      4 => inst_cmp_lt_data_is_f64,
+      5 => inst_cmp_ge_data_is_f64,
+      6 => inst_cmp_le_data_is_f64,
       _ => unreachable!(),
     },
     _ => unreachable!(),

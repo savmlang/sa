@@ -9,11 +9,20 @@ pub struct SyncCompiler<'a, F: BytecodeResolver + Send + Sync + 'static> {
   pub code: Vec<FirstPassInstruction>,
   pub resolver: &'a F,
   pub reader: BufReader<F::Output>,
-  pub markers: HashMap<u128, usize>,
+  pub markers: HashMap<X2U128, usize>,
+  // <instance id> - <counter of the instance>
+  pub instance_counter: HashMap<u64, u128>,
   pub depth: usize,
   // How much to add to the provided Vec<FirstPassInstruction> to calculate index (simple)
   pub to_add_to_vec_len: usize,
   pub module: u64,
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct X2U128 {
+  u128_1: u128,
+  u128_2: u128,
 }
 
 impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
@@ -91,6 +100,7 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
         INSTRUCTION_OWN => self.handle_own(code),
         INSTRUCTION_MOV => self.handle_mov(false, code),
         INSTRUCTION_SUPER_MOV => self.handle_mov(true, code),
+        INSTRUCTION_MOV_TO_SUPER => self.handle_mov_to(code),
 
         // Compare
         INSTRUCTION_CMP => self.handle_compare(code),
@@ -156,11 +166,11 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
     self.reader.read_exact(&mut data).expect("Error");
 
     let data = if op == PTROFFSETOP {
-      let data1 = i64::from_be_bytes(data);
+      let data1 = i64::from_le_bytes(data);
 
       isize_to_u64(data1.try_into().expect("Unable to convert to isize"))
     } else {
-      u64::from_be_bytes(data)
+      u64::from_le_bytes(data)
     };
 
     code.push(FirstPassInstruction::Inst(Instruction {
@@ -189,7 +199,7 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
       let mut addr = [0u8; 2];
       self.reader.read_exact(&mut addr).expect("Error");
 
-      let addr = u16::from_be_bytes(addr);
+      let addr = u16::from_le_bytes(addr);
 
       code.push(FirstPassInstruction::Inst(Instruction {
         fn_: (addr as _, inst_free_addr),
@@ -206,6 +216,17 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
       6 => inst_free_r6,
       _ => unreachable!(),
     };
+
+    code.push(FirstPassInstruction::Inst(Instruction { fn_: (0, inst) }));
+  }
+
+  unsafe fn handle_mov_to(&mut self, code: &mut Vec<FirstPassInstruction>) {
+    let mut register = [0u8; 2];
+    self.reader.read_exact(&mut register).expect("Error");
+
+    let [from, to] = register;
+
+    let inst = generate_to_mov_super(from, to);
 
     code.push(FirstPassInstruction::Inst(Instruction { fn_: (0, inst) }));
   }
@@ -244,7 +265,7 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
     let mut addr = [0u8; 2];
     self.reader.read_exact(&mut addr).expect("Error");
 
-    let addr = u16::from_be_bytes(addr);
+    let addr = u16::from_le_bytes(addr);
 
     code.push(FirstPassInstruction::Inst(Instruction {
       fn_: (addr as _, inst),
@@ -294,10 +315,16 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
   }
 
   unsafe fn handle_mark(&mut self, code: &mut Vec<FirstPassInstruction>) {
+    let instid = self
+      .instance_counter
+      .get(&self.module)
+      .map(|x| *x)
+      .unwrap_or_else(|| 1);
+
     let mut register = [0u8; 8];
     self.reader.read_exact(&mut register).expect("Error");
 
-    let reg = u64::from_be_bytes(register);
+    let reg = u64::from_le_bytes(register);
 
     let key = pack_u64(reg, self.module);
 
@@ -305,7 +332,7 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
       .markers
       // `-1` because the count is eagerly incremented after jump
       .insert(
-        key,
+        X2U128 { u128_1: key, u128_2: instid },
         (code.len() + self.to_add_to_vec_len)
           .checked_sub(1)
           .expect("Top level marks are not allowed as program counter is initially zero. You might want to add a `noop` instruction"),
@@ -316,7 +343,7 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
     let mut module = [0u8; 8];
     self.reader.read_exact(&mut module).expect("Error");
 
-    let addr = u64::from_be_bytes(module);
+    let addr = u64::from_le_bytes(module);
 
     code.push(FirstPassInstruction::Inst(Instruction {
       fn_: (addr, inst_sync_spawn::<F>),
@@ -324,19 +351,36 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
   }
 
   unsafe fn handle_jmp(&mut self, code: &mut Vec<FirstPassInstruction>) {
+    let instid = self
+      .instance_counter
+      .get(&self.module)
+      .map(|x| *x)
+      .unwrap_or_else(|| 1);
+
     let mut register = [0u8; 8];
     self.reader.read_exact(&mut register).expect("Error");
 
-    let key = pack_u64(u64::from_be_bytes(register), self.module);
+    let key = pack_u64(u64::from_le_bytes(register), self.module);
 
-    code.push(FirstPassInstruction::Jmp { marker: key })
+    code.push(FirstPassInstruction::Jmp {
+      marker: X2U128 {
+        u128_1: key,
+        u128_2: instid,
+      },
+    })
   }
 
   unsafe fn handle_jz(&mut self, code: &mut Vec<FirstPassInstruction>) {
+    let instid = self
+      .instance_counter
+      .get(&self.module)
+      .map(|x| *x)
+      .unwrap_or_else(|| 1);
+
     let mut register = [0u8; 8];
     self.reader.read_exact(&mut register).expect("Error");
 
-    let key = pack_u64(u64::from_be_bytes(register), self.module);
+    let key = pack_u64(u64::from_le_bytes(register), self.module);
 
     let mut register = [0u8; 2];
     self.reader.read_exact(&mut register).expect("Error");
@@ -344,11 +388,17 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
 
     match register {
       0 => code.push(FirstPassInstruction::JumpCond {
-        marker: key,
+        marker: X2U128 {
+          u128_1: key,
+          u128_2: instid,
+        },
         inst: jz_map(datatype),
       }),
       1 => code.push(FirstPassInstruction::JumpCond {
-        marker: key,
+        marker: X2U128 {
+          u128_1: key,
+          u128_2: instid,
+        },
         inst: jz_ptr_map(datatype),
       }),
       _ => unreachable!(),
@@ -356,10 +406,16 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
   }
 
   unsafe fn handle_jnz(&mut self, code: &mut Vec<FirstPassInstruction>) {
+    let instid = self
+      .instance_counter
+      .get(&self.module)
+      .map(|x| *x)
+      .unwrap_or_else(|| 1);
+
     let mut register = [0u8; 8];
     self.reader.read_exact(&mut register).expect("Error");
 
-    let key = pack_u64(u64::from_be_bytes(register), self.module);
+    let key = pack_u64(u64::from_le_bytes(register), self.module);
 
     let mut register = [0u8; 2];
     self.reader.read_exact(&mut register).expect("Error");
@@ -367,11 +423,17 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
 
     match register {
       0 => code.push(FirstPassInstruction::JumpCond {
-        marker: key,
+        marker: X2U128 {
+          u128_1: key,
+          u128_2: instid,
+        },
         inst: jnz_map(datatype),
       }),
       1 => code.push(FirstPassInstruction::JumpCond {
-        marker: key,
+        marker: X2U128 {
+          u128_1: key,
+          u128_2: instid,
+        },
         inst: jnz_ptr_map(datatype),
       }),
       _ => unreachable!(),
@@ -409,11 +471,17 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
   unsafe fn handle_libcall(&mut self, code: &mut Vec<FirstPassInstruction>) {
     let mut register = [0u8; 8];
     self.reader.read_exact(&mut register).expect("Error");
-    let id = u64::from_be_bytes(register);
+    let id = u64::from_le_bytes(register);
     let (modid, region) = unpack_u64(id);
 
     if let Some(bytecode) = self.resolver.resolve_bytecode_exact(modid, region) {
       self.depth += 1;
+
+      self
+        .instance_counter
+        .entry(id)
+        .and_modify(|x| *x += 1)
+        .or_insert(1);
 
       let old = self.module;
 

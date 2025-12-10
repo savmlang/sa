@@ -59,10 +59,10 @@ fn main() {
 
           match parta {
             "8" => {
-              code.extend(partb.parse::<u8>().unwrap().to_be_bytes());
+              code.extend(partb.parse::<u8>().unwrap().to_le_bytes());
             }
             "64" => {
-              code.extend(partb.parse::<u64>().unwrap().to_be_bytes());
+              code.extend(partb.parse::<u64>().unwrap().to_le_bytes());
             }
             _ => unimplemented!(),
           }
