@@ -101,6 +101,7 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
         INSTRUCTION_MOV => self.handle_mov(false, code),
         INSTRUCTION_SUPER_MOV => self.handle_mov(true, code),
         INSTRUCTION_MOV_TO_SUPER => self.handle_mov_to(code),
+        INSTRUCTION_PUT_REG => self.put_reg(code),
 
         // Compare
         INSTRUCTION_CMP => self.handle_compare(code),
@@ -143,6 +144,20 @@ impl<'a, F: BytecodeResolver + Send + Sync + 'static> SyncCompiler<'a, F> {
         e => panic!("Unexpected {e}"),
       }
     }
+  }
+
+  unsafe fn put_reg(&mut self, code: &mut Vec<FirstPassInstruction>) {
+    let mut register = [0u8; 2];
+    self.reader.read_exact(&mut register).expect("Error");
+
+    let [to, typ] = register;
+
+    let mut data = [0u8; 8];
+    self.reader.read_exact(&mut data).expect("Error");
+
+    code.push(FirstPassInstruction::Inst(Instruction {
+      fn_: (u64::from_le_bytes(data), put_reg_handler(to, typ)),
+    }))
   }
 
   unsafe fn handle_alu(&mut self, op: u8, code: &mut Vec<FirstPassInstruction>) {

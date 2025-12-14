@@ -155,6 +155,7 @@ instruction! {
     0x25 => offset_ptr,
 
     // --- XII. System & Threading ---
+    // TODO: Better Threading Management, eg. is_running <thread hwnd>
     0x26 => libcall,
     0x27 => spawn,   // Threading: Create new thread
     0x28 => join,    // TODO: FUTURE SPEC; Threading: Wait for thread

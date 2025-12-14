@@ -18,6 +18,7 @@ mod bitwise;
 mod cmp;
 mod ptrarith;
 mod regmov;
+mod regput;
 mod threading;
 
 pub use alc::*;
@@ -26,6 +27,7 @@ pub use bitwise::*;
 pub use cmp::*;
 pub use ptrarith::*;
 pub use regmov::*;
+pub use regput::*;
 pub use threading::*;
 
 use crate::{BytecodeResolver, CVM, VM, sync::heaps::SYNC_HEAP};
