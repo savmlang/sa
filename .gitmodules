@@ -1,3 +1,6 @@
 [submodule "saffi"]
 	path = saffi
 	url = https://github.com/savmlang/saffi.git
+[submodule "sart"]
+	path = sart
+	url = https://github.com/savmlang/sart.git
