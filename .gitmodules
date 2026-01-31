@@ -13,3 +13,6 @@
 [submodule "sajit"]
 	path = sajit
 	url = https://github.com/savmlang/sajit.git
+[submodule "architecture"]
+	path = architecture
+	url = https://github.com/savmlang/saarch.git
