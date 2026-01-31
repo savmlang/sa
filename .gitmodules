@@ -13,3 +13,6 @@
 [submodule "bin/savmc"]
 	path = bin/savmc
 	url = https://github.com/savmlang/savmc.git
+[submodule "sajit"]
+	path = sajit
+	url = https://github.com/savmlang/sajit.git
