@@ -6,7 +6,7 @@ use sart::{ctr::VMTaskState, map::HeapStructure};
 use crate::{BytecodeResolver, MaybeBoxed, VM};
 
 #[inline(never)]
-#[unsafe(link_section = ".vm_fast_instructions")]
+
 pub extern "C" fn inst_sync_spawn<T: BytecodeResolver + Send + Sync + 'static>(
   vm: *mut c_void,
   task: *mut VMTaskState,

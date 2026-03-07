@@ -1,8 +1,0 @@
-[package]
-name = "ahqjit"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-cranelift = { version = "0.128", features = ["jit", "module"] }
-target-lexicon = "*"

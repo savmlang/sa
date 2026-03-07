@@ -58,7 +58,6 @@ macro_rules! regmov {
 
       $(
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn [<inst_mov_from_ $reg _to_ $intoreg>](_: *mut c_void, task: *mut VMTaskState, _: u64) {
           unsafe {
             let task = &mut *task;
@@ -69,7 +68,6 @@ macro_rules! regmov {
         }
 
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn [<inst_mov_from_super_ $reg _to_ $intoreg>](_: *mut c_void, task: *mut VMTaskState, _: u64) {
           unsafe {
             let task = &mut *task;
@@ -80,7 +78,6 @@ macro_rules! regmov {
         }
 
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn [<inst_mov_from_ $reg _to_super_ $intoreg>](_: *mut c_void, task: *mut VMTaskState, _: u64) {
           unsafe {
             let task = &mut *task;

@@ -881,7 +881,6 @@ pub mod sync {
         };
         use crate::{BytecodeResolver, GLOBAL_RUNTIME, VM};
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_alloc<T: BytecodeResolver + Send + Sync + 'static>(
             vm: *mut c_void,
             task: *mut VMTaskState,
@@ -895,7 +894,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_load_to_r1<T: BytecodeResolver + Send + Sync + 'static>(
             vm: *mut c_void,
             task: *mut VMTaskState,
@@ -911,7 +909,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_load_to_r2<T: BytecodeResolver + Send + Sync + 'static>(
             vm: *mut c_void,
             task: *mut VMTaskState,
@@ -927,7 +924,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_load_to_r3<T: BytecodeResolver + Send + Sync + 'static>(
             vm: *mut c_void,
             task: *mut VMTaskState,
@@ -943,7 +939,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_load_to_r4<T: BytecodeResolver + Send + Sync + 'static>(
             vm: *mut c_void,
             task: *mut VMTaskState,
@@ -956,7 +951,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_load_to_r5<T: BytecodeResolver + Send + Sync + 'static>(
             vm: *mut c_void,
             task: *mut VMTaskState,
@@ -970,12 +964,10 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_yield(_: *mut c_void, _: *mut VMTaskState, _: u64) {
             yield_now();
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_sync_await(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1278,7 +1270,6 @@ pub mod sync {
             f
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_add_data_is_u8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1293,7 +1284,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_add_data_is_u8_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1307,7 +1297,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_add_data_is_u16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1322,7 +1311,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_add_data_is_u16_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1336,7 +1324,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_add_data_is_u32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1351,7 +1338,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_add_data_is_u32_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1365,7 +1351,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_add_data_is_u64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1380,7 +1365,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_add_data_is_u64_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1394,7 +1378,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_add_data_is_i8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1409,7 +1392,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_add_data_is_i8_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1423,7 +1405,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_add_data_is_i16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1438,7 +1419,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_add_data_is_i16_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1452,7 +1432,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_add_data_is_i32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1467,7 +1446,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_add_data_is_i32_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1481,7 +1459,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_add_data_is_i64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1496,7 +1473,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_add_data_is_i64_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1510,7 +1486,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_sub_data_is_u8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1525,7 +1500,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_sub_data_is_u8_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1539,7 +1513,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_sub_data_is_u16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1554,7 +1527,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_sub_data_is_u16_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1568,7 +1540,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_sub_data_is_u32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1583,7 +1554,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_sub_data_is_u32_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1597,7 +1567,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_sub_data_is_u64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1612,7 +1581,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_sub_data_is_u64_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1626,7 +1594,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_sub_data_is_i8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1641,7 +1608,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_sub_data_is_i8_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1655,7 +1621,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_sub_data_is_i16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1670,7 +1635,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_sub_data_is_i16_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1684,7 +1648,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_sub_data_is_i32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1699,7 +1662,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_sub_data_is_i32_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1713,7 +1675,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_sub_data_is_i64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1728,7 +1689,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_sub_data_is_i64_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1742,7 +1702,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mul_data_is_u8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1757,7 +1716,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mul_data_is_u8_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1771,7 +1729,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mul_data_is_u16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1786,7 +1743,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mul_data_is_u16_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1800,7 +1756,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mul_data_is_u32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1815,7 +1770,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mul_data_is_u32_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1829,7 +1783,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mul_data_is_u64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1844,7 +1797,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mul_data_is_u64_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1858,7 +1810,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mul_data_is_i8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1873,7 +1824,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mul_data_is_i8_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1887,7 +1837,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mul_data_is_i16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1902,7 +1851,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mul_data_is_i16_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1916,7 +1864,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mul_data_is_i32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1931,7 +1878,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mul_data_is_i32_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1945,7 +1891,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mul_data_is_i64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1960,7 +1905,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mul_data_is_i64_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1974,7 +1918,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shl_data_is_u8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -1989,7 +1932,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shl_data_is_u8_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2003,7 +1945,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shl_data_is_u16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2018,7 +1959,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shl_data_is_u16_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2032,7 +1972,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shl_data_is_u32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2047,7 +1986,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shl_data_is_u32_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2061,7 +1999,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shl_data_is_u64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2076,7 +2013,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shl_data_is_u64_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2090,7 +2026,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shl_data_is_i8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2105,7 +2040,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shl_data_is_i8_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2119,7 +2053,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shl_data_is_i16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2134,7 +2067,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shl_data_is_i16_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2148,7 +2080,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shl_data_is_i32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2163,7 +2094,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shl_data_is_i32_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2177,7 +2107,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shl_data_is_i64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2192,7 +2121,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shl_data_is_i64_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2206,7 +2134,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shr_data_is_u8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2221,7 +2148,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shr_data_is_u8_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2235,7 +2161,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shr_data_is_u16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2250,7 +2175,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shr_data_is_u16_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2264,7 +2188,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shr_data_is_u32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2279,7 +2202,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shr_data_is_u32_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2293,7 +2215,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shr_data_is_u64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2308,7 +2229,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shr_data_is_u64_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2322,7 +2242,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shr_data_is_i8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2337,7 +2256,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shr_data_is_i8_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2351,7 +2269,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shr_data_is_i16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2366,7 +2283,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shr_data_is_i16_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2380,7 +2296,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shr_data_is_i32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2395,7 +2310,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shr_data_is_i32_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2409,7 +2323,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shr_data_is_i64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2424,7 +2337,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_shr_data_is_i64_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2438,7 +2350,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_div_data_is_u8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2453,7 +2364,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_div_data_is_u8_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2467,7 +2377,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_div_data_is_u16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2482,7 +2391,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_div_data_is_u16_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2496,7 +2404,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_div_data_is_u32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2511,7 +2418,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_div_data_is_u32_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2525,7 +2431,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_div_data_is_u64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2540,7 +2445,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_div_data_is_u64_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2554,7 +2458,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_div_data_is_i8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2569,7 +2472,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_div_data_is_i8_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2583,7 +2485,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_div_data_is_i16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2598,7 +2499,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_div_data_is_i16_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2612,7 +2512,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_div_data_is_i32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2627,7 +2526,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_div_data_is_i32_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2641,7 +2539,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_div_data_is_i64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2656,7 +2553,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_div_data_is_i64_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2670,7 +2566,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_rem_data_is_u8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2685,7 +2580,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_rem_data_is_u8_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2699,7 +2593,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_rem_data_is_u16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2714,7 +2607,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_rem_data_is_u16_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2728,7 +2620,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_rem_data_is_u32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2743,7 +2634,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_rem_data_is_u32_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2757,7 +2647,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_rem_data_is_u64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2772,7 +2661,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_rem_data_is_u64_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2786,7 +2674,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_rem_data_is_i8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2801,7 +2688,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_rem_data_is_i8_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2815,7 +2701,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_rem_data_is_i16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2830,7 +2715,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_rem_data_is_i16_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2844,7 +2728,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_rem_data_is_i32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2859,7 +2742,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_rem_data_is_i32_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2873,7 +2755,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_rem_data_is_i64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2888,7 +2769,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_rem_data_is_i64_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2902,7 +2782,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_add_data_is_f32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2917,7 +2796,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_add_data_is_f32_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2931,7 +2809,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_sub_data_is_f32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2946,7 +2823,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_sub_data_is_f32_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2960,7 +2836,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mul_data_is_f32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2975,7 +2850,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mul_data_is_f32_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -2989,7 +2863,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_div_data_is_f32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3004,7 +2877,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_div_data_is_f32_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3018,7 +2890,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_rem_data_is_f32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3033,7 +2904,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_rem_data_is_f32_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3047,7 +2917,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_add_data_is_f64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3062,7 +2931,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_add_data_is_f64_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3076,7 +2944,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_sub_data_is_f64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3091,7 +2958,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_sub_data_is_f64_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3105,7 +2971,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mul_data_is_f64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3120,7 +2985,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mul_data_is_f64_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3134,7 +2998,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_div_data_is_f64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3149,7 +3012,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_div_data_is_f64_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3163,7 +3025,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_rem_data_is_f64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3178,7 +3039,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_rem_data_is_f64_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3329,7 +3189,6 @@ pub mod sync {
             f
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_and_data_is_u8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3344,7 +3203,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_and_data_is_u8_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3358,7 +3216,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_or_data_is_u8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3373,7 +3230,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_or_data_is_u8_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3387,7 +3243,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_xor_data_is_u8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3402,7 +3257,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_xor_data_is_u8_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3416,7 +3270,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_and_data_is_u16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3431,7 +3284,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_and_data_is_u16_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3445,7 +3297,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_or_data_is_u16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3460,7 +3311,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_or_data_is_u16_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3474,7 +3324,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_xor_data_is_u16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3489,7 +3338,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_xor_data_is_u16_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3503,7 +3351,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_and_data_is_u32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3518,7 +3365,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_and_data_is_u32_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3532,7 +3378,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_or_data_is_u32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3547,7 +3392,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_or_data_is_u32_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3561,7 +3405,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_xor_data_is_u32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3576,7 +3419,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_xor_data_is_u32_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3590,7 +3432,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_and_data_is_u64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3605,7 +3446,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_and_data_is_u64_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3619,7 +3459,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_or_data_is_u64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3634,7 +3473,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_or_data_is_u64_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3648,7 +3486,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_xor_data_is_u64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3663,7 +3500,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_xor_data_is_u64_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3677,7 +3513,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_and_data_is_i8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3692,7 +3527,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_and_data_is_i8_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3706,7 +3540,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_or_data_is_i8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3721,7 +3554,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_or_data_is_i8_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3735,7 +3567,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_xor_data_is_i8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3750,7 +3581,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_xor_data_is_i8_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3764,7 +3594,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_and_data_is_i16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3779,7 +3608,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_and_data_is_i16_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3793,7 +3621,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_or_data_is_i16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3808,7 +3635,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_or_data_is_i16_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3822,7 +3648,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_xor_data_is_i16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3837,7 +3662,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_xor_data_is_i16_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3851,7 +3675,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_and_data_is_i32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3866,7 +3689,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_and_data_is_i32_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3880,7 +3702,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_or_data_is_i32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3895,7 +3716,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_or_data_is_i32_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3909,7 +3729,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_xor_data_is_i32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3924,7 +3743,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_xor_data_is_i32_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3938,7 +3756,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_and_data_is_i64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3953,7 +3770,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_and_data_is_i64_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3967,7 +3783,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_or_data_is_i64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3982,7 +3797,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_or_data_is_i64_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -3996,7 +3810,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_xor_data_is_i64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -4011,7 +3824,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_bitwise_xor_data_is_i64_mut(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -4186,7 +3998,6 @@ pub mod sync {
             (data64, f)
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_eq_data_is_u8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -4226,7 +4037,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_lt_data_is_u8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -4266,7 +4076,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_gt_data_is_u8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -4306,7 +4115,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_ne_data_is_u8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -4346,7 +4154,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_le_data_is_u8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -4386,7 +4193,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_ge_data_is_u8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -4426,7 +4232,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_eq_data_is_u16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -4466,7 +4271,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_lt_data_is_u16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -4506,7 +4310,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_gt_data_is_u16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -4546,7 +4349,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_ne_data_is_u16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -4586,7 +4388,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_le_data_is_u16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -4626,7 +4427,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_ge_data_is_u16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -4666,7 +4466,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_eq_data_is_u32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -4706,7 +4505,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_lt_data_is_u32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -4746,7 +4544,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_gt_data_is_u32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -4786,7 +4583,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_ne_data_is_u32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -4826,7 +4622,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_le_data_is_u32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -4866,7 +4661,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_ge_data_is_u32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -4906,7 +4700,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_eq_data_is_u64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -4946,7 +4739,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_lt_data_is_u64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -4986,7 +4778,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_gt_data_is_u64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -5026,7 +4817,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_ne_data_is_u64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -5066,7 +4856,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_le_data_is_u64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -5106,7 +4895,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_ge_data_is_u64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -5146,7 +4934,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_eq_data_is_i8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -5186,7 +4973,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_lt_data_is_i8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -5226,7 +5012,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_gt_data_is_i8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -5266,7 +5051,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_ne_data_is_i8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -5306,7 +5090,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_le_data_is_i8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -5346,7 +5129,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_ge_data_is_i8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -5386,7 +5168,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_eq_data_is_i16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -5426,7 +5207,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_lt_data_is_i16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -5466,7 +5246,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_gt_data_is_i16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -5506,7 +5285,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_ne_data_is_i16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -5546,7 +5324,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_le_data_is_i16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -5586,7 +5363,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_ge_data_is_i16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -5626,7 +5402,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_eq_data_is_i32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -5666,7 +5441,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_lt_data_is_i32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -5706,7 +5480,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_gt_data_is_i32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -5746,7 +5519,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_ne_data_is_i32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -5786,7 +5558,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_le_data_is_i32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -5826,7 +5597,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_ge_data_is_i32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -5866,7 +5636,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_eq_data_is_i64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -5906,7 +5675,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_lt_data_is_i64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -5946,7 +5714,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_gt_data_is_i64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -5986,7 +5753,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_ne_data_is_i64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6026,7 +5792,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_le_data_is_i64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6066,7 +5831,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_ge_data_is_i64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6106,7 +5870,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_eq_data_is_f32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6146,7 +5909,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_lt_data_is_f32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6186,7 +5948,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_gt_data_is_f32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6226,7 +5987,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_ne_data_is_f32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6266,7 +6026,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_le_data_is_f32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6306,7 +6065,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_ge_data_is_f32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6346,7 +6104,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_eq_data_is_f64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6386,7 +6143,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_lt_data_is_f64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6426,7 +6182,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_gt_data_is_f64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6466,7 +6221,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_ne_data_is_f64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6506,7 +6260,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_le_data_is_f64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6546,7 +6299,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_cmp_ge_data_is_f64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6677,7 +6429,6 @@ pub mod sync {
             f
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_ptr_addr1(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6689,7 +6440,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_ptr_subr1(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6701,7 +6451,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_ptr_offsetr1(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6717,7 +6466,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_ptr_addr2(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6729,7 +6477,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_ptr_subr2(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6741,7 +6488,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_ptr_offsetr2(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6757,7 +6503,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_ptr_addr3(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6769,7 +6514,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_ptr_subr3(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6781,7 +6525,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_ptr_offsetr3(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6797,7 +6540,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_ptr_addr4(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6809,7 +6551,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_ptr_subr4(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6821,7 +6562,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_ptr_offsetr4(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6837,7 +6577,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_ptr_addr5(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6849,7 +6588,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_ptr_subr5(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6861,7 +6599,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_ptr_offsetr5(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6877,7 +6614,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_ptr_addr6(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6889,7 +6625,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_ptr_subr6(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6901,7 +6636,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_ptr_offsetr6(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6981,7 +6715,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r1_to_r1(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -6993,7 +6726,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_super_r1_to_r1(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7005,7 +6737,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r1_to_super_r1(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7017,7 +6748,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r1_to_r2(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7029,7 +6759,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_super_r1_to_r2(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7041,7 +6770,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r1_to_super_r2(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7053,7 +6781,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r1_to_r3(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7065,7 +6792,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_super_r1_to_r3(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7077,7 +6803,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r1_to_super_r3(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7089,7 +6814,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r1_to_r4(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7101,7 +6825,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_super_r1_to_r4(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7113,7 +6836,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r1_to_super_r4(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7152,7 +6874,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r2_to_r1(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7164,7 +6885,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_super_r2_to_r1(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7176,7 +6896,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r2_to_super_r1(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7188,7 +6907,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r2_to_r2(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7200,7 +6918,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_super_r2_to_r2(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7212,7 +6929,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r2_to_super_r2(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7224,7 +6940,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r2_to_r3(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7236,7 +6951,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_super_r2_to_r3(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7248,7 +6962,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r2_to_super_r3(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7260,7 +6973,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r2_to_r4(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7272,7 +6984,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_super_r2_to_r4(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7284,7 +6995,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r2_to_super_r4(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7323,7 +7033,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r3_to_r1(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7335,7 +7044,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_super_r3_to_r1(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7347,7 +7055,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r3_to_super_r1(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7359,7 +7066,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r3_to_r2(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7371,7 +7077,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_super_r3_to_r2(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7383,7 +7088,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r3_to_super_r2(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7395,7 +7099,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r3_to_r3(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7407,7 +7110,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_super_r3_to_r3(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7419,7 +7121,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r3_to_super_r3(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7431,7 +7132,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r3_to_r4(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7443,7 +7143,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_super_r3_to_r4(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7455,7 +7154,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r3_to_super_r4(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7494,7 +7192,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r4_to_r1(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7506,7 +7203,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_super_r4_to_r1(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7518,7 +7214,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r4_to_super_r1(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7530,7 +7225,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r4_to_r2(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7542,7 +7236,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_super_r4_to_r2(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7554,7 +7247,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r4_to_super_r2(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7566,7 +7258,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r4_to_r3(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7578,7 +7269,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_super_r4_to_r3(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7590,7 +7280,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r4_to_super_r3(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7602,7 +7291,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r4_to_r4(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7614,7 +7302,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_super_r4_to_r4(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7626,7 +7313,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r4_to_super_r4(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7659,7 +7345,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r5_to_r5(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7671,7 +7356,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_super_r5_to_r5(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7683,7 +7367,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r5_to_super_r5(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7695,7 +7378,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r5_to_r6(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7707,7 +7389,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_super_r5_to_r6(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7719,7 +7400,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r5_to_super_r6(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7752,7 +7432,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r6_to_r5(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7764,7 +7443,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_super_r6_to_r5(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7776,7 +7454,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r6_to_super_r5(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7788,7 +7465,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r6_to_r6(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7800,7 +7476,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_super_r6_to_r6(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -7812,7 +7487,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_mov_from_r6_to_super_r6(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8248,7 +7922,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r1_and_u8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8260,7 +7933,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r2_and_u8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8272,7 +7944,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r3_and_u8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8284,7 +7955,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r4_and_u8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8296,7 +7966,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r5_and_u8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8308,7 +7977,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r6_and_u8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8320,7 +7988,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r1_and_u16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8332,7 +7999,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r2_and_u16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8344,7 +8010,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r3_and_u16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8356,7 +8021,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r4_and_u16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8368,7 +8032,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r5_and_u16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8380,7 +8043,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r6_and_u16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8392,7 +8054,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r1_and_u32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8404,7 +8065,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r2_and_u32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8416,7 +8076,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r3_and_u32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8428,7 +8087,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r4_and_u32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8440,7 +8098,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r5_and_u32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8452,7 +8109,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r6_and_u32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8464,7 +8120,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r1_and_u64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8476,7 +8131,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r2_and_u64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8488,7 +8142,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r3_and_u64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8500,7 +8153,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r4_and_u64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8512,7 +8164,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r5_and_u64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8524,7 +8175,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r6_and_u64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8536,7 +8186,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r1_and_i8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8548,7 +8197,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r2_and_i8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8560,7 +8208,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r3_and_i8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8572,7 +8219,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r4_and_i8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8584,7 +8230,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r5_and_i8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8596,7 +8241,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r6_and_i8(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8608,7 +8252,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r1_and_i16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8620,7 +8263,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r2_and_i16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8632,7 +8274,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r3_and_i16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8644,7 +8285,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r4_and_i16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8656,7 +8296,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r5_and_i16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8668,7 +8307,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r6_and_i16(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8680,7 +8318,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r1_and_i32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8692,7 +8329,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r2_and_i32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8704,7 +8340,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r3_and_i32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8716,7 +8351,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r4_and_i32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8728,7 +8362,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r5_and_i32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8740,7 +8373,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r6_and_i32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8752,7 +8384,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r1_and_i64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8764,7 +8395,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r2_and_i64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8776,7 +8406,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r3_and_i64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8788,7 +8417,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r4_and_i64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8800,7 +8428,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r5_and_i64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8812,7 +8439,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r6_and_i64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8824,7 +8450,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r1_and_f32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8836,7 +8461,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r2_and_f32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8848,7 +8472,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r3_and_f32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8860,7 +8483,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r4_and_f32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8872,7 +8494,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r5_and_f32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8884,7 +8505,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r6_and_f32(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8896,7 +8516,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r1_and_f64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8908,7 +8527,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r2_and_f64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8920,7 +8538,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r3_and_f64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8932,7 +8549,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r4_and_f64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8944,7 +8560,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r5_and_f64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8956,7 +8571,6 @@ pub mod sync {
             }
         }
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_reg_put_in_r6_and_f64(
             _: *mut c_void,
             task: *mut VMTaskState,
@@ -8974,7 +8588,6 @@ pub mod sync {
         use sart::{ctr::VMTaskState, map::HeapStructure};
         use crate::{BytecodeResolver, MaybeBoxed, VM};
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn inst_sync_spawn<T: BytecodeResolver + Send + Sync + 'static>(
             vm: *mut c_void,
             task: *mut VMTaskState,
@@ -9008,7 +8621,7 @@ pub mod sync {
     pub use threading::*;
     use crate::{BytecodeResolver, CVM, VM, sync::heaps::SYNC_HEAP};
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_free_addr(vm: *mut c_void, _: *mut VMTaskState, addr: u64) {
         unsafe {
             let data = ((&mut *(vm as *mut CVM)).heapmap.add(addr as _))
@@ -9017,14 +8630,14 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_clr_r1(_: *mut c_void, task: *mut VMTaskState, _: u64) {
         unsafe {
             (&mut *task).r1.nullify();
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_free_r1(_: *mut c_void, task: *mut VMTaskState, _: u64) {
         unsafe {
             let r = (&mut *task).r1.heap();
@@ -9041,7 +8654,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_own_r1(vm: *mut c_void, task: *mut VMTaskState, addr: u64) {
         unsafe {
             let vm = &mut *(vm as *mut CVM);
@@ -9051,14 +8664,14 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_clr_r2(_: *mut c_void, task: *mut VMTaskState, _: u64) {
         unsafe {
             (&mut *task).r2.nullify();
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_free_r2(_: *mut c_void, task: *mut VMTaskState, _: u64) {
         unsafe {
             let r = (&mut *task).r2.heap();
@@ -9075,7 +8688,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_own_r2(vm: *mut c_void, task: *mut VMTaskState, addr: u64) {
         unsafe {
             let vm = &mut *(vm as *mut CVM);
@@ -9085,14 +8698,14 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_clr_r3(_: *mut c_void, task: *mut VMTaskState, _: u64) {
         unsafe {
             (&mut *task).r3.nullify();
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_free_r3(_: *mut c_void, task: *mut VMTaskState, _: u64) {
         unsafe {
             let r = (&mut *task).r3.heap();
@@ -9109,7 +8722,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_own_r3(vm: *mut c_void, task: *mut VMTaskState, addr: u64) {
         unsafe {
             let vm = &mut *(vm as *mut CVM);
@@ -9119,14 +8732,14 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_clr_r4(_: *mut c_void, task: *mut VMTaskState, _: u64) {
         unsafe {
             (&mut *task).r4.nullify();
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_free_r4(_: *mut c_void, task: *mut VMTaskState, _: u64) {
         unsafe {
             let r = (&mut *task).r4.heap();
@@ -9143,7 +8756,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_own_r4(vm: *mut c_void, task: *mut VMTaskState, addr: u64) {
         unsafe {
             let vm = &mut *(vm as *mut CVM);
@@ -9153,14 +8766,14 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_clr_r5(_: *mut c_void, task: *mut VMTaskState, _: u64) {
         unsafe {
             (&mut *task).r5.nullify();
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_free_r5(_: *mut c_void, task: *mut VMTaskState, _: u64) {
         unsafe {
             let r = (&mut *task).r5.heap();
@@ -9177,7 +8790,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_own_r5(vm: *mut c_void, task: *mut VMTaskState, addr: u64) {
         unsafe {
             let vm = &mut *(vm as *mut CVM);
@@ -9187,14 +8800,14 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_clr_r6(_: *mut c_void, task: *mut VMTaskState, _: u64) {
         unsafe {
             (&mut *task).r6.nullify();
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_free_r6(_: *mut c_void, task: *mut VMTaskState, _: u64) {
         unsafe {
             let r = (&mut *task).r6.heap();
@@ -9211,7 +8824,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_own_r6(vm: *mut c_void, task: *mut VMTaskState, addr: u64) {
         unsafe {
             let vm = &mut *(vm as *mut CVM);
@@ -9221,7 +8834,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_jmp(_: *mut c_void, task: *mut VMTaskState, index: u64) {
         unsafe {
             let task = &mut *task;
@@ -9229,7 +8842,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_jz_u8_register_r1(
         _: *mut c_void,
         task: *mut VMTaskState,
@@ -9244,7 +8857,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_jnz_u8_register_r1(
         _: *mut c_void,
         task: *mut VMTaskState,
@@ -9259,7 +8872,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_jz_u16_register_r1(
         _: *mut c_void,
         task: *mut VMTaskState,
@@ -9274,7 +8887,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_jnz_u16_register_r1(
         _: *mut c_void,
         task: *mut VMTaskState,
@@ -9289,7 +8902,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_jz_u32_register_r1(
         _: *mut c_void,
         task: *mut VMTaskState,
@@ -9304,7 +8917,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_jnz_u32_register_r1(
         _: *mut c_void,
         task: *mut VMTaskState,
@@ -9319,7 +8932,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_jz_u64_register_r1(
         _: *mut c_void,
         task: *mut VMTaskState,
@@ -9334,7 +8947,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_jnz_u64_register_r1(
         _: *mut c_void,
         task: *mut VMTaskState,
@@ -9349,7 +8962,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_jz_i8_register_r1(
         _: *mut c_void,
         task: *mut VMTaskState,
@@ -9364,7 +8977,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_jnz_i8_register_r1(
         _: *mut c_void,
         task: *mut VMTaskState,
@@ -9379,7 +8992,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_jz_i16_register_r1(
         _: *mut c_void,
         task: *mut VMTaskState,
@@ -9394,7 +9007,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_jnz_i16_register_r1(
         _: *mut c_void,
         task: *mut VMTaskState,
@@ -9409,7 +9022,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_jz_i32_register_r1(
         _: *mut c_void,
         task: *mut VMTaskState,
@@ -9424,7 +9037,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_jnz_i32_register_r1(
         _: *mut c_void,
         task: *mut VMTaskState,
@@ -9439,7 +9052,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_jz_i64_register_r1(
         _: *mut c_void,
         task: *mut VMTaskState,
@@ -9454,7 +9067,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_jnz_i64_register_r1(
         _: *mut c_void,
         task: *mut VMTaskState,
@@ -9469,7 +9082,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_jz_f32_register_r1(
         _: *mut c_void,
         task: *mut VMTaskState,
@@ -9484,7 +9097,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_jnz_f32_register_r1(
         _: *mut c_void,
         task: *mut VMTaskState,
@@ -9499,7 +9112,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_jz_f64_register_r1(
         _: *mut c_void,
         task: *mut VMTaskState,
@@ -9514,7 +9127,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_jnz_f64_register_r1(
         _: *mut c_void,
         task: *mut VMTaskState,
@@ -9529,7 +9142,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     /// Conditional Jump (Zero): Checks R1's *POINTER CONTENT* (u8) for zero.
     /// SLOW PATH: Requires a memory load (dereference) from the heap/stack.
     pub extern "C" fn inst_jz_ptr_u8_register_r6(
@@ -9546,7 +9159,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     /// Conditional Jump (Non-Zero): Checks R1's *POINTER CONTENT* (u8) for non-zero.
     /// SLOW PATH: Requires a memory load (dereference) from the heap/stack.
     pub extern "C" fn inst_jnz_ptr_u8_register_r6(
@@ -9563,7 +9176,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     /// Conditional Jump (Zero): Checks R1's *POINTER CONTENT* (u8) for zero.
     /// SLOW PATH: Requires a memory load (dereference) from the heap/stack.
     pub extern "C" fn inst_jz_ptr_u16_register_r6(
@@ -9580,7 +9193,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     /// Conditional Jump (Non-Zero): Checks R1's *POINTER CONTENT* (u8) for non-zero.
     /// SLOW PATH: Requires a memory load (dereference) from the heap/stack.
     pub extern "C" fn inst_jnz_ptr_u16_register_r6(
@@ -9597,7 +9210,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     /// Conditional Jump (Zero): Checks R1's *POINTER CONTENT* (u8) for zero.
     /// SLOW PATH: Requires a memory load (dereference) from the heap/stack.
     pub extern "C" fn inst_jz_ptr_u32_register_r6(
@@ -9614,7 +9227,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     /// Conditional Jump (Non-Zero): Checks R1's *POINTER CONTENT* (u8) for non-zero.
     /// SLOW PATH: Requires a memory load (dereference) from the heap/stack.
     pub extern "C" fn inst_jnz_ptr_u32_register_r6(
@@ -9631,7 +9244,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     /// Conditional Jump (Zero): Checks R1's *POINTER CONTENT* (u8) for zero.
     /// SLOW PATH: Requires a memory load (dereference) from the heap/stack.
     pub extern "C" fn inst_jz_ptr_u64_register_r6(
@@ -9648,7 +9261,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     /// Conditional Jump (Non-Zero): Checks R1's *POINTER CONTENT* (u8) for non-zero.
     /// SLOW PATH: Requires a memory load (dereference) from the heap/stack.
     pub extern "C" fn inst_jnz_ptr_u64_register_r6(
@@ -9665,7 +9278,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     /// Conditional Jump (Zero): Checks R1's *POINTER CONTENT* (u8) for zero.
     /// SLOW PATH: Requires a memory load (dereference) from the heap/stack.
     pub extern "C" fn inst_jz_ptr_i8_register_r6(
@@ -9682,7 +9295,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     /// Conditional Jump (Non-Zero): Checks R1's *POINTER CONTENT* (u8) for non-zero.
     /// SLOW PATH: Requires a memory load (dereference) from the heap/stack.
     pub extern "C" fn inst_jnz_ptr_i8_register_r6(
@@ -9699,7 +9312,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     /// Conditional Jump (Zero): Checks R1's *POINTER CONTENT* (u8) for zero.
     /// SLOW PATH: Requires a memory load (dereference) from the heap/stack.
     pub extern "C" fn inst_jz_ptr_i16_register_r6(
@@ -9716,7 +9329,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     /// Conditional Jump (Non-Zero): Checks R1's *POINTER CONTENT* (u8) for non-zero.
     /// SLOW PATH: Requires a memory load (dereference) from the heap/stack.
     pub extern "C" fn inst_jnz_ptr_i16_register_r6(
@@ -9733,7 +9346,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     /// Conditional Jump (Zero): Checks R1's *POINTER CONTENT* (u8) for zero.
     /// SLOW PATH: Requires a memory load (dereference) from the heap/stack.
     pub extern "C" fn inst_jz_ptr_i32_register_r6(
@@ -9750,7 +9363,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     /// Conditional Jump (Non-Zero): Checks R1's *POINTER CONTENT* (u8) for non-zero.
     /// SLOW PATH: Requires a memory load (dereference) from the heap/stack.
     pub extern "C" fn inst_jnz_ptr_i32_register_r6(
@@ -9767,7 +9380,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     /// Conditional Jump (Zero): Checks R1's *POINTER CONTENT* (u8) for zero.
     /// SLOW PATH: Requires a memory load (dereference) from the heap/stack.
     pub extern "C" fn inst_jz_ptr_i64_register_r6(
@@ -9784,7 +9397,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     /// Conditional Jump (Non-Zero): Checks R1's *POINTER CONTENT* (u8) for non-zero.
     /// SLOW PATH: Requires a memory load (dereference) from the heap/stack.
     pub extern "C" fn inst_jnz_ptr_i64_register_r6(
@@ -9801,7 +9414,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     /// Conditional Jump (Zero): Checks R1's *POINTER CONTENT* (u8) for zero.
     /// SLOW PATH: Requires a memory load (dereference) from the heap/stack.
     pub extern "C" fn inst_jz_ptr_f32_register_r6(
@@ -9818,7 +9431,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     /// Conditional Jump (Non-Zero): Checks R1's *POINTER CONTENT* (u8) for non-zero.
     /// SLOW PATH: Requires a memory load (dereference) from the heap/stack.
     pub extern "C" fn inst_jnz_ptr_f32_register_r6(
@@ -9835,7 +9448,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     /// Conditional Jump (Zero): Checks R1's *POINTER CONTENT* (u8) for zero.
     /// SLOW PATH: Requires a memory load (dereference) from the heap/stack.
     pub extern "C" fn inst_jz_ptr_f64_register_r6(
@@ -9852,7 +9465,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     /// Conditional Jump (Non-Zero): Checks R1's *POINTER CONTENT* (u8) for non-zero.
     /// SLOW PATH: Requires a memory load (dereference) from the heap/stack.
     pub extern "C" fn inst_jnz_ptr_f64_register_r6(
@@ -9929,7 +9542,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_clr_full(_: *mut c_void, task: *mut VMTaskState, _: u64) {
         unsafe {
             let task = &mut *task;
@@ -9937,7 +9550,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn inst_sync_libcall<T: BytecodeResolver + Send + Sync + 'static>(
         vm: *mut c_void,
         task: *mut VMTaskState,
@@ -9972,7 +9585,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn new_context<T: BytecodeResolver + Send + Sync + 'static>(
         vm: *mut c_void,
         task: *mut VMTaskState,
@@ -9988,7 +9601,7 @@ pub mod sync {
         }
     }
     #[inline(never)]
-    #[unsafe(link_section = ".vm_fast_instructions")]
+    
     pub extern "C" fn restore_context<T: BytecodeResolver + Send + Sync + 'static>(
         vm: *mut c_void,
         task: *mut VMTaskState,

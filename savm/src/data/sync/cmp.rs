@@ -78,7 +78,6 @@ macro_rules! value_based {
     pastey::paste! {
       $(
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn [<inst_cmp_ $op _data_is_ $data>](_: *mut c_void, task: *mut VMTaskState, regdata: u64) {
           unsafe {
             let [r1loc, r2loc, _, _, _, _, _, _] = regdata.to_le_bytes();

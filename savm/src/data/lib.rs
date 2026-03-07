@@ -27,12 +27,12 @@ use std::{
 use crate::acaot::sync_compile;
 use dashmap::DashMap;
 use sart::{
-  boxed::{
+  ctr::{DispatchFn, Instruction},
+  saffi::boxed::{
     RTSafeBoxWrapper,
     spawn::{SendWrapper, ThreadSpawnContext, send},
   },
-  ctr::{DispatchFn, Instruction},
-  map::{CompiledCode, HeapStructure},
+  structures::CompiledCode,
 };
 
 pub use sart;

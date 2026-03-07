@@ -1,5 +1,7 @@
-[build]
-# Assuming you are targeting a standard GNU-based linker (like the default Rust uses)
-rustflags = [
-    "-C", "link-arg=-Tlinker.ld",
-]
+[target.x86_64-pc-windows-msvc]
+linker = "rust-lld.exe"
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[target.aarch64-pc-windows-msvc]
+linker = "rust-lld.exe"
+rustflags = ["-C", "target-feature=+crt-static"]

@@ -81,7 +81,6 @@ macro_rules! regput {
 
       $(
         #[inline(never)]
-        #[unsafe(link_section = ".vm_fast_instructions")]
         pub extern "C" fn [<inst_reg_put_in_ $reg _and_ $x>](_: *mut c_void, task: *mut VMTaskState, data: u64) {
           unsafe {
             let task = &mut *task;
