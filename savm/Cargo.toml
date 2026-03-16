@@ -6,7 +6,11 @@ edition = "2024"
 [dependencies]
 # Concurrency Maps
 ahash = "^0.8"
-dashmap = "^6"
+evmap = "^11"
+
+# High Speed
+rayon = "^1"
+moka = { version = "^0.12", features = ["sync"] }
 
 # Macro Helpers
 pastey = "^0.2"
@@ -19,31 +23,19 @@ cranelift = { version = "^0.129", features = [
   "module",
   "native",
 ], optional = true }
-
-inkwell = { version = "^0.8", default-features = false, features = [
-  "llvm21-1-prefer-static",
+llvm-sys = { version = "=221", default-features = false, features = [
+  "force-static",
+  "disable-alltargets-init",
 ], optional = true }
-object = { version = "^0.38", optional = true }
 
-# Sa Runtime Types
+# Sa Runtime
 sart = { path = "../sart" }
 
-[target.'cfg(target_arch = "x86_64")'.dependencies]
-inkwell = { version = "^0.8", features = ["target-x86"] }
-
-[target.'cfg(target_arch = "x86")'.dependencies]
-inkwell = { version = "^0.8", features = ["target-x86"] }
-
-[target.'cfg(target_arch = "aarch64")'.dependencies]
-inkwell = { version = "^0.8", features = ["target-aarch64"] }
-
-[target.'cfg(target_arch = "riscv64")'.dependencies]
-inkwell = { version = "^0.8", features = ["target-riscv"] }
-
-[target.'cfg(target_arch = "mips64")'.dependencies]
-inkwell = { version = "^0.8", features = ["target-mips"] }
+# SaVM Native Linker and CodeAllocator
+sajit = { version = "0.0.1", path = "../sajit", optional = true }
 
 [features]
-default = ["llvm", "cranelift"]
-llvm = ["dep:inkwell", "dep:object"]
-cranelift = ["dep:cranelift"]
+default = ["cranelift"]
+llvm = ["dep:llvm-sys", "native"]
+cranelift = ["dep:cranelift", "native"]
+native = ["dep:sajit"]

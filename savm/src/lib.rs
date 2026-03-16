@@ -1,49 +1,47 @@
+#![allow(unused)]
 #![feature(
   seek_stream_len,
-  portable_simd,
-  unchecked_shifts,
+  signed_bigint_helpers,
   exact_div,
   int_roundings,
   nonpoison_rwlock,
   sync_nonpoison,
-  unsafe_cell_access
+  unsafe_cell_access,
+  read_array,
+  widening_mul
 )]
 
 pub mod acaot;
 
 use std::{
   fs::File,
+  hash::Hash,
   io::{Read, Seek},
   mem::zeroed,
-  sync::{
-    Arc, LazyLock, OnceLock,
-    atomic::{AtomicUsize, Ordering},
-    mpsc::{Receiver, channel},
-    nonpoison::RwLock,
-  },
-  thread::available_parallelism,
+  os::raw::c_void,
+  sync::{Arc, LazyLock, OnceLock, atomic::Ordering, nonpoison::RwLock},
+  thread::{self, available_parallelism},
+  time::Duration,
 };
 
-use crate::acaot::sync_compile;
-use dashmap::DashMap;
+use evmap::{StableHashEq, handles::ReadHandle};
+use moka::sync::{CacheBuilder, SegmentedCache};
 use sart::{
-  ctr::{CVMTaskState, DispatchFn, FnInstr, Instruction},
-  saffi::boxed::{
-    RTSafeBoxWrapper,
-    spawn::{SendWrapper, ThreadSpawnContext, send},
-  },
-  structures::CompiledCode,
+  code::SwappableCodeStore,
+  ctr::{CVMTaskState, Instruction},
 };
 
 pub use sart;
 use tokio::runtime::{Builder, Runtime};
 
+use crate::{acaot::pickle::def::PickleInstruction, management::management_main};
+
 pub mod executor;
+pub(crate) mod management;
 pub mod sync;
 
-pub(crate) static VMS: AtomicUsize = AtomicUsize::new(1);
-
-static TOTAL_THREADS: LazyLock<usize> = LazyLock::new(|| available_parallelism().unwrap().into());
+pub static TOTAL_THREADS: LazyLock<usize> =
+  LazyLock::new(|| available_parallelism().unwrap().into());
 static VMMADE: OnceLock<()> = OnceLock::new();
 
 pub enum SymbolMapTable<T> {
@@ -57,36 +55,76 @@ pub enum SymbolMapTable<T> {
 
 pub enum CacheData {
   None,
-  Pickle {},
-  #[cfg(feature = "llvm")]
-  Cranelift {},
+  Pickle {
+    out: Box<[PickleInstruction]>,
+  },
   #[cfg(feature = "cranelift")]
-  LLVM {},
+  CraneliftAbs8 {},
+  #[cfg(feature = "cranelift")]
+  CraneliftRel {},
+  #[cfg(feature = "llvm")]
+  LLVMAbs8 {},
+  #[cfg(feature = "llvm")]
+  LLVMRel {},
+}
+
+pub enum CacheLevel {
+  Pickle,
+  #[cfg(feature = "cranelift")]
+  CraneliftAbs8,
+  #[cfg(feature = "cranelift")]
+  CraneliftRel,
+  #[cfg(feature = "llvm")]
+  LLVMAbs8,
+  #[cfg(feature = "llvm")]
+  LLVMRel,
 }
 
 pub trait BytecodeResolver {
   type Output: Read + Seek;
 
-  fn sections(&self) -> &[u64];
+  /// Return the id of the LAST VALID section
+  /// We use this to prevent unnecessary [u64] allocation
+  fn last_section_id(&self) -> u64;
 
+  /// Resolve the symbol map table
   fn resolve_data(&self, section: u64) -> SymbolMapTable<Self::Output>;
 
+  /// Checks if the cache is available!
   fn get_best_cache(&self, section: u64) -> CacheData;
+
+  /// Checks if the cache is available!
+  fn get_cache(&self, section: u64, level: CacheLevel) -> CacheData;
+
+  /// Updates the cache
+  ///
+  /// We hope the callee only updates the tier of cache this produces
+  ///
+  /// eg. we hope it does not replace Pickle code with Cranelift code as that'll lead to performance losses next round
+  fn update_cache(&self, section: u64, cache: CacheData);
 }
 
 impl BytecodeResolver for Box<dyn BytecodeResolver<Output = File> + Send + Sync + 'static> {
   type Output = File;
 
   fn get_best_cache(&self, section: u64) -> CacheData {
-    BytecodeResolver::get_best_cache(self, section)
+    BytecodeResolver::get_best_cache(self.as_ref(), section)
   }
 
   fn resolve_data(&self, section: u64) -> SymbolMapTable<Self::Output> {
-    BytecodeResolver::resolve_data(self, section)
+    BytecodeResolver::resolve_data(self.as_ref(), section)
   }
 
-  fn sections(&self) -> &[u64] {
-    BytecodeResolver::sections(self)
+  fn last_section_id(&self) -> u64 {
+    BytecodeResolver::last_section_id(self.as_ref())
+  }
+
+  fn update_cache(&self, section: u64, cache: CacheData) {
+    BytecodeResolver::update_cache(self.as_ref(), section, cache)
+  }
+
+  fn get_cache(&self, section: u64, level: CacheLevel) -> CacheData {
+    BytecodeResolver::get_cache(self.as_ref(), section, level)
   }
 }
 
@@ -94,6 +132,44 @@ pub static GLOBAL_RUNTIME: LazyLock<Runtime> =
   LazyLock::new(|| Builder::new_multi_thread().enable_all().build().unwrap());
 
 pub static VMCONF: RwLock<VmConfig> = RwLock::new(unsafe { zeroed() });
+
+// This only and only stores Subroutine-Threaded instructions
+pub(crate) static CODE_CACHE: LazyLock<
+  SegmentedCache<u64, Arc<Box<[PickleInstruction]>>, ahash::RandomState>,
+> = LazyLock::new(|| {
+  CacheBuilder::new(1 << 10) // 2^10 = 1024
+    .segments(available_parallelism().map(|x| x.get()).unwrap_or(4))
+    .time_to_live(Duration::from_mins(20))
+    .time_to_idle(Duration::from_mins(5))
+    .build_with_hasher(ahash::RandomState::default())
+});
+
+pub type JITStorage = *mut SwappableCodeStore<()>;
+
+// This only and only stores JIT instructions
+pub(crate) static JIT_CACHE: OnceLock<ThreadSafe<ReadHandle<u64, usize>>> = OnceLock::new();
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct ThreadSafe<T>(pub T);
+
+unsafe impl<T> Send for ThreadSafe<T> {}
+unsafe impl<T> Sync for ThreadSafe<T> {}
+
+impl<T: Hash> Hash for ThreadSafe<T> {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    self.0.hash(state)
+  }
+}
+
+impl<T: PartialEq> PartialEq for ThreadSafe<T> {
+  fn eq(&self, other: &Self) -> bool {
+    self.0.eq(&other.0)
+  }
+
+  fn ne(&self, other: &Self) -> bool {
+    self.0.ne(&other.0)
+  }
+}
 
 #[derive(Debug)]
 #[repr(C)]
@@ -106,31 +182,7 @@ pub struct VmConfig {
 #[repr(C)]
 pub struct VM<T: BytecodeResolver + Send + Sync + 'static> {
   pub resolve: Arc<T>,
-  pub code: CompiledCode,
-  pub recv: Option<Receiver<SendWrapper>>,
-  pub counter: usize,
-  /// This is the 1st pointer to the heap structure
-  /// Ofc there are total `256` distinct addresses
-  pub heapmap: *mut HeapStructure,
 }
-
-pub const INNERBYTES: usize = 2 * size_of::<Arc<()>>() + size_of::<Option<Receiver<SendWrapper>>>();
-
-#[repr(C)]
-/// VM but optimized to use from C/FFI Boundaries
-pub struct CVM {
-  pub _inner: [u8; INNERBYTES],
-  pub counter: usize,
-  pub heapmap: *mut HeapStructure,
-}
-
-const _PASS1: bool = size_of::<CVM>()
-  == size_of::<VM<Box<dyn BytecodeResolver<Output = File> + Send + Sync + 'static>>>();
-const _VERIFY1: () = assert!(_PASS1);
-
-const _PASS2: bool = align_of::<CVM>()
-  == align_of::<VM<Box<dyn BytecodeResolver<Output = File> + Send + Sync + 'static>>>();
-const _VERIFY2: () = assert!(_PASS2);
 
 unsafe impl<T: BytecodeResolver + Send + Sync + 'static> Send for VM<T> {}
 unsafe impl<T: BytecodeResolver + Send + Sync + 'static> Sync for VM<T> {}
@@ -162,107 +214,22 @@ pub fn unpack_u64(packed: u64) -> (u32, u32) {
 impl<T: BytecodeResolver + Send + Sync + 'static> VM<T> {
   /// Please note that module id `0` represents the main module
   pub fn new(data: T) -> Self {
-    VMMADE.set(()).expect("Cell must be initialized only once. We know there will be morons and that's why for the LOVE OF GOD, don't try this trick again");
+    CODE_CACHE.run_pending_tasks();
+    VMMADE.set(()).expect("Each process can only have 1 VM");
 
     let resolver = Arc::new(data);
 
-    let resolve = resolver.clone();
+    // Start Management Thread
+    {
+      let resolve = resolver.clone();
 
-    Self {
-      resolve: resolve,
-      counter: 0,
-      recv: None,
-      heapmap: unsafe { zeroed() },
-      code: {
-        let out: CompiledCode = Arc::new(DashMap::with_hasher(ahash::RandomState::new()));
+      let (writer, reader) = evmap::new::<u64, usize>();
+      JIT_CACHE.set(ThreadSafe(reader)).expect("impossible");
 
-        let refsolver = resolver.as_ref();
-        let refsolver_ptr = resolver.clone();
-
-        refsolver.modules().iter().for_each(|id| {
-          let modid = *id;
-
-          let refsolver_ptr = refsolver_ptr.clone();
-
-          match refsolver.get_regions(modid) {
-            Some(regions) => regions.iter().for_each(|region| {
-              let region = *region;
-
-              let res = refsolver_ptr.clone();
-              out.insert(
-                pack_u32(modid, region),
-                LazyLock::new(Box::new(move || sync_compile(res.as_ref(), modid, region))),
-              );
-            }),
-            None => {
-              refsolver
-                .get_native_regions(modid)
-                .iter()
-                .for_each(|region| {
-                  let region = *region;
-
-                  let output = refsolver_ptr.resolve_native(modid, region);
-
-                  out.insert(
-                    pack_u32(modid, region),
-                    LazyLock::new(Box::new(move || {
-                      Box::new([Instruction {
-                        fn_: FnInstr {
-                          arg: 0,
-                          dispatch: output,
-                        },
-                      }])
-                    })),
-                  );
-                });
-            }
-          }
-        });
-
-        out
-      },
-    }
-  }
-
-  /// This returns a Boxed copy is there are more than 5 VMs already
-  pub fn create_copy(&self) -> (*mut RTSafeBoxWrapper, MaybeBoxed<Self>) {
-    let old = VMS.fetch_add(1, Ordering::SeqCst);
-
-    let (tx, rx) = channel::<SendWrapper>();
-
-    let tx = unsafe { RTSafeBoxWrapper::new_raw(tx) };
-
-    let tx = unsafe { RTSafeBoxWrapper::new_raw(ThreadSpawnContext { send, sender: tx }) };
-
-    if old >= *TOTAL_THREADS {
-      return (
-        tx,
-        MaybeBoxed::Boxed(Box::new(Self {
-          code: self.code.clone(),
-          heapmap: unsafe { zeroed() },
-          counter: 0,
-          recv: Some(rx),
-          resolve: self.resolve.clone(),
-        })),
-      );
+      thread::spawn(move || management_main(writer, resolve));
     }
 
-    (
-      tx,
-      MaybeBoxed::Unboxed(Self {
-        code: self.code.clone(),
-        heapmap: unsafe { zeroed() },
-        counter: 0,
-        recv: Some(rx),
-        resolve: self.resolve.clone(),
-      }),
-    )
-  }
-}
-
-impl<T: BytecodeResolver + Send + Sync + 'static> Drop for VM<T> {
-  fn drop(&mut self) {
-    VMS.fetch_sub(1, Ordering::SeqCst);
+    Self { resolve: resolver }
   }
 }
 
