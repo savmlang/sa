@@ -1,12 +1,11 @@
 use std::{cell::UnsafeCell, collections::HashMap, hint::cold_path, mem::zeroed};
 
-use evmap::refs::{ReadGuard, Values};
 use sart::{ctr::VMTaskState, salloc, structures::QuadPackedData};
 
 use crate::{
   BytecodeResolver, CODE_CACHE, JIT_CACHE, VM,
   acaot::pickle::{
-    def::{PICKLE_DISPATCH_TABLE, PICKLE_OPCODE_HINT, PICKLE_OPCODE_MARK},
+    def::{PICKLE_DISPATCH_TABLE, PICKLE_OPCODE_HINT, PICKLE_OPCODE_JMP, PICKLE_OPCODE_MARK},
     implementation::{SIZE_128KB, WorkingSet},
   },
 };
@@ -71,8 +70,7 @@ impl<T: BytecodeResolver + Send + Sync + 'static> VM<T> {
       ts.curline_or_resume.usi = 0;
 
       'jcheck: loop {
-        if let Some(d) = unsafe { &JIT_CACHE.get().unwrap_unchecked().0 }.get(&sectionid) {
-          drop(d);
+        if let Some(_) = &JIT_CACHE.get().unwrap_unchecked().0.get(&sectionid) {
           run_jit = true;
           break 'jcheck;
         };
@@ -87,7 +85,11 @@ impl<T: BytecodeResolver + Send + Sync + 'static> VM<T> {
           let pickle = dt.get_unchecked(ts.curline_or_resume.usi);
 
           // USE A NO-OP to our benefit
-          if pickle.opcode == PICKLE_OPCODE_HINT && pickle.u1 == PICKLE_OPCODE_MARK {
+          if pickle.opcode == PICKLE_OPCODE_HINT
+            && [PICKLE_OPCODE_MARK, PICKLE_OPCODE_JMP]
+              .iter()
+              .any(|x| *x == pickle.u1)
+          {
             ts.curline_or_resume.usi += 1;
             continue 'jcheck;
           }
@@ -107,7 +109,7 @@ impl<T: BytecodeResolver + Send + Sync + 'static> VM<T> {
     cold_path();
   }
 
-  pub(crate) fn dispatch_jit(&self, sectionid: u64) {}
+  pub(crate) fn dispatch_jit(&self, _: u64) {}
 
   fn pickle_section(&self, sectionid: u64) {
     // Compile

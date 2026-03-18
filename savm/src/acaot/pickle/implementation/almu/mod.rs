@@ -1,6 +1,6 @@
-//! Memory Unit
+//! Arithmatic, Logic, Memory Unit
 
-use std::ptr::{null_mut, replace};
+use std::ptr::null_mut;
 
 use sart::ctr::VMTaskState;
 
@@ -9,26 +9,32 @@ use crate::{
   resolve,
 };
 
-mod vcopy;
-pub use vcopy::*;
+macro_rules! import {
+  (
+    $($name:ident),*
+  ) => {
+    $(
+      mod $name;
+      pub use $name::*;
+    )*
+  };
+}
 
-mod cast;
-pub use cast::*;
-
-mod vops;
-pub use vops::*;
-
-mod vbit;
-pub use vbit::*;
-
-mod vrot;
-pub use vrot::*;
-
-mod vsh;
-pub use vsh::*;
-
-mod vcnt;
-pub use vcnt::*;
+import! {
+  atomic,
+  cast,
+  fp,
+  vbit,
+  vcnt,
+  vcopy,
+  vfma,
+  vfop,
+  vops,
+  vrot,
+  vminimax,
+  vsh,
+  vau
+}
 
 pub fn call_scratch(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
   let op_class = pickle.u1;
@@ -39,8 +45,8 @@ pub fn call_scratch(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: 
     // Allocate
     // `[padding (6-bits)] size_reg[4-bits] align_reg[4-bits]`
     0b00 => {
-      let size_reg = (payload as u8 >> 4);
-      let align_reg = (payload as u8 & 0x0F);
+      let size_reg = payload as u8 >> 4;
+      let align_reg = payload as u8 & 0x0F;
 
       unsafe {
         let size = resolve!(taskstate => size_reg).u64;
@@ -53,19 +59,19 @@ pub fn call_scratch(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: 
       }
     }
     // Drop classic
-    0b01 => unsafe {
+    0b01 => {
       let pt = taskstate.largepad;
       taskstate.largepad = null_mut();
 
       ws.free(pt);
-    },
+    }
     // Drop (alignment was given at alloc)
-    0b10 => unsafe {
+    0b10 => {
       let pt = taskstate.largepad;
       taskstate.largepad = null_mut();
 
       ws.salloc_free(pt);
-    },
+    }
     _ => unreachable!(),
   }
 }

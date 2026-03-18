@@ -1,9 +1,9 @@
 use crate::{
   acaot::pickle::{def::PickleInstruction, implementation::WorkingSet},
-  arrcastint, resolve, resolve_location_src,
+  arrcastint, resolve_location_src,
 };
 use sart::{ctr::VMTaskState, structures::QuadPackedData};
-use std::ptr::{self, addr_of_mut};
+use std::ptr;
 
 macro_rules! intop {
   (($c:ident $t:ty) $target:ident = $s1:ident $op:ident { $offset1:ident, $offset_target:ident }) => {
@@ -36,7 +36,7 @@ pub fn call_vfop(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
   let subop = (flags as u8) & 0x7;
 
   let countbit = ((flags as u8) >> 3) & 0x1;
-  let count = if (countbit == 0) {
+  let count = if countbit == 0 {
     count_data
   } else {
     unsafe { taskstate.r1.u32 }
@@ -55,6 +55,7 @@ pub fn call_vfop(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
       1 => intop!((count f64) target1 = src1 floor { offset1, offset2 }),
       2 => intop!((count f64) target1 = src1 trunc { offset1, offset2 }),
       3 => intop!((count f64) target1 = src1 round { offset1, offset2 }),
+      4 => intop!((count f64) target1 = src1 sqrt { offset1, offset2 }),
       _ => panic!(),
     },
     // f32
@@ -63,6 +64,7 @@ pub fn call_vfop(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
       1 => intop!((count f32) target1 = src1 floor { offset1, offset2 }),
       2 => intop!((count f32) target1 = src1 trunc { offset1, offset2 }),
       3 => intop!((count f32) target1 = src1 round { offset1, offset2 }),
+      4 => intop!((count f32) target1 = src1 sqrt { offset1, offset2 }),
       _ => panic!(),
     },
     _ => panic!(),
@@ -96,7 +98,7 @@ pub fn call_vfcast(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &
   let offset1 = arrcastint!(ws, start = 4, stop = 8, i32);
   let offset2 = arrcastint!(ws, start = 8, stop = 12, i32);
 
-  let count = if (countbit == 0) {
+  let count = if countbit == 0 {
     count_data
   } else {
     unsafe { taskstate.r1.u32 }

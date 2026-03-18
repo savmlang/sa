@@ -1,12 +1,9 @@
 use crate::{
   acaot::pickle::{def::PickleInstruction, implementation::WorkingSet},
-  arrcastint, resolve, resolve_location_src,
+  arrcastint, resolve_location_src,
 };
 use sart::ctr::VMTaskState;
-use std::{
-  ops::Neg,
-  ptr::{self, addr_of_mut},
-};
+use std::{ops::Neg, ptr};
 
 macro_rules! prelude {
   ($pickle:ident, $ws:ident, $task:ident) => {
@@ -35,13 +32,13 @@ macro_rules! prelude {
     let offset1 = arrcastint!($ws, start = 4, stop = 8, i32);
     let offset2 = arrcastint!($ws, start = 8, stop = 12, i32);
 
-    let src1 = unsafe {
+    let src1 = {
       let src = (flags >> 8 as u8) & 0x0F;
 
       resolve_location_src!($task => src)
     };
 
-    let target = unsafe {
+    let target = {
       let src = ((flags >> 4) as u8) & 0x0F;
 
       resolve_location_src!($task => src)

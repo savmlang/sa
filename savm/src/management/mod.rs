@@ -5,7 +5,7 @@ use std::sync::Arc;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(
-  writer: WriteHandle<u64, usize>,
+  _: WriteHandle<u64, usize>,
   resolve: Arc<T>,
 ) {
   (0..=resolve.as_ref().last_section_id())

@@ -81,21 +81,23 @@ impl<T: Seek + Read> PickleWorker<T> {
     }
   }
 
-  // [Sub Opcode (2-bits)] [type (4-bit)] [atomic ordering (3-bits)] [reserved heuristic space (23-bits)] [instruction defined (16-bit)]
+  // [Sub Opcode (2-bits)] [type (3-bit)] [ordering (3-bits)] [offset v0 (i8)] [offset v1 (i8)]
+  // [offset v2 (i8)] [offset v3 (i8)] [instruction defined (16-bit)]
   fn handle_atomic(&mut self) {
     let opcode = PICKLE_OPCODE_ATOMIC;
 
-    let flagu32 = self.bytecode.extract::<2>().swap_if_be();
+    let flags_offset_v0_v1 = self.bytecode.extract::<3>().swap_if_be();
 
-    let [instdef1, instdef2] = self.bytecode.extract::<2>().swap_if_be();
-
-    self.emit_copy_bytes(opcode, flagu32);
+    let mut cp = [0; 4];
+    cp[0..2].copy_from_slice(&self.bytecode.extract::<2>());
+    cp[2..4].copy_from_slice(&self.bytecode.extract::<2>().swap_if_be());
+    self.emit_copy_bytes(opcode, cp);
 
     self.out.push(PickleInstruction {
       opcode: opcode,
-      u1: instdef1,
-      u2: instdef2,
-      u3: 0,
+      u1: flags_offset_v0_v1[0],
+      u2: flags_offset_v0_v1[1],
+      u3: flags_offset_v0_v1[2],
     });
   }
 
@@ -178,7 +180,8 @@ impl<T: Seek + Read> PickleWorker<T> {
   // `vfma [<flags as u20> <padding [4bits]> i.e. single u24 in LE] <count in u32> <base src1 as i32> <base src2 as i32> <base src3 as i32> <base target1 as i32>`
   fn handle_vfma(&mut self) {
     let opcode = PICKLE_OPCODE_VFMA;
-    let [flags1, flags2, flags3] = self.bytecode.extract::<3>().swap_if_be();
+    let [flags1, flags2] = self.bytecode.extract::<2>().swap_if_be();
+    let [flags3] = self.bytecode.extract::<1>();
 
     let mut copy = [0u8; 20];
     copy[0..4].copy_from_slice(&self.bytecode.extract::<4>().swap_if_be());

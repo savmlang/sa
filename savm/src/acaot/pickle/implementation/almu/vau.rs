@@ -1,18 +1,12 @@
 use crate::{
   acaot::pickle::{def::PickleInstruction, implementation::WorkingSet},
-  arrcastint, resolve, resolve_location_src,
+  arrcastint, resolve_location_src,
 };
 use sart::ctr::VMTaskState;
 use std::ptr::{self, addr_of_mut};
 
-mod fp;
-pub use fp::*;
-
-mod vfop;
-pub use vfop::*;
-
 macro_rules! arithprelude {
-    ($pickle:ident, $ws:ident, $task:ident) => {
+    ($ws:ident, $task:ident) => {
       {
       // [<type tag (3 bits)> <count bit>] [Src1 (4-bits)] [Src2 (4-bits)] [Target1 (4-bits)] (16b)
       // [<Carry/Sigflow bit>] [<saturation bit>] [Padding] (16b)
@@ -36,19 +30,19 @@ macro_rules! arithprelude {
       let offset2 = arrcastint!($ws, start = 12, stop = 16, i32);
       let offset3 = arrcastint!($ws, start = 16, stop = 20, i32);
 
-      let src1 = unsafe {
+      let src1 = {
         let src = (topflags >> 8 as u8) & 0x0F;
 
         resolve_location_src!($task => src)
       };
 
-      let src2 = unsafe {
+      let src2 = {
         let src = (topflags as u8) >> 4;
 
         resolve_location_src!($task => src)
       };
 
-      let target = unsafe {
+      let target = {
         let src = (topflags as u8) & 0x0F;
 
         resolve_location_src!($task => src)
@@ -135,9 +129,8 @@ macro_rules! intop_carry {
   };
 }
 
-pub fn call_vadd(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
-  let (instdefined, typetag, count, src1, src2, target, t1, t2, t3) =
-    arithprelude!(pickle, ws, taskstate);
+pub fn call_vadd(_: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+  let (instdefined, typetag, count, src1, src2, target, t1, t2, t3) = arithprelude!(ws, taskstate);
 
   // [<Carry/Sigflow bit>] [<saturation bit>] [Padding (14bits)] (16b)
   let carry = (instdefined >> 15) == 1; // gets the last bit
@@ -147,7 +140,7 @@ pub fn call_vadd(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
   debug_assert!(count != 0);
   debug_assert!(!((carry || saturate) && count != 1));
 
-  unsafe {
+  {
     match (carry, saturate, typetag) {
       (true, _, tag) => match tag {
         0 => {
@@ -198,14 +191,12 @@ pub fn call_vadd(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
         7 => intop!((count i8) target = src1 wrapping_add src2 { t1, t2, t3 }),
         _ => panic!(),
       },
-      _ => unreachable!(),
     }
   }
 }
 
-pub fn call_vsub(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
-  let (instdefined, typetag, count, src1, src2, target, t1, t2, t3) =
-    arithprelude!(pickle, ws, taskstate);
+pub fn call_vsub(_: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+  let (instdefined, typetag, count, src1, src2, target, t1, t2, t3) = arithprelude!(ws, taskstate);
 
   // [<Carry/Sigflow  [SBB]>] [<saturation bit>] [Padding (14bits)] (16b)
   let carry = (instdefined >> 15) == 1; // gets the last bit
@@ -215,7 +206,7 @@ pub fn call_vsub(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
   debug_assert!(count != 0);
   debug_assert!(!((carry || saturate) && count != 1));
 
-  unsafe {
+  {
     match (carry, saturate, typetag) {
       (true, _, tag) => match tag {
         0 => {
@@ -266,14 +257,12 @@ pub fn call_vsub(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
         7 => intop!((count i8) target = src1 wrapping_sub src2 { t1, t2, t3 }),
         _ => panic!(),
       },
-      _ => unreachable!(),
     }
   }
 }
 
-pub fn call_vmul(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
-  let (instdefined, typetag, count, src1, src2, target, t1, t2, t3) =
-    arithprelude!(pickle, ws, taskstate);
+pub fn call_vmul(_: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+  let (instdefined, typetag, count, src1, src2, target, t1, t2, t3) = arithprelude!(ws, taskstate);
 
   // [<Extended Flags (2 bits)>] [Padding (14 bits)]
   // The extended flags:
@@ -288,7 +277,7 @@ pub fn call_vmul(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
 
   debug_assert!(count != 0);
 
-  unsafe {
+  {
     match (wide, lowbits, typetag) {
       // Wide Multiplication
       (true, _, tag) => match tag {
@@ -336,7 +325,6 @@ pub fn call_vmul(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
         7 => high_mul!((count i8) target = src1 widening_mul src2 { t1, t2, t3 }),
         _ => panic!(),
       },
-      _ => unreachable!(),
     }
   }
 }
@@ -352,19 +340,19 @@ macro_rules! divlikeprelude {
                 let t2 = arrcastint!($ws, start = 12, stop = 16, i32);
         let t3 = arrcastint!($ws, start = 16, stop = 20, i32);
 
-        let src1 = unsafe {
+        let src1 = {
           let src = (args >> 8 as u8) & 0x0F;
 
           resolve_location_src!($task => src)
         };
 
-        let src2 = unsafe {
+        let src2 = {
           let src = (args as u8) >> 4;
 
           resolve_location_src!($task => src)
         };
 
-        let target = unsafe {
+        let target = {
           let src = (args as u8) & 0x0F;
 
           resolve_location_src!($task => src)

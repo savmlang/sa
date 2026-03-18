@@ -1,14 +1,11 @@
-#![allow(unused)]
+#![allow(internal_features)]
 #![feature(
-  seek_stream_len,
   signed_bigint_helpers,
-  exact_div,
-  int_roundings,
   nonpoison_rwlock,
   sync_nonpoison,
-  unsafe_cell_access,
   read_array,
-  widening_mul
+  widening_mul,
+  core_intrinsics
 )]
 
 pub mod acaot;
@@ -18,18 +15,14 @@ use std::{
   hash::Hash,
   io::{Read, Seek},
   mem::zeroed,
-  os::raw::c_void,
-  sync::{Arc, LazyLock, OnceLock, atomic::Ordering, nonpoison::RwLock},
+  sync::{Arc, LazyLock, OnceLock, nonpoison::RwLock},
   thread::{self, available_parallelism},
   time::Duration,
 };
 
-use evmap::{StableHashEq, handles::ReadHandle};
+use evmap::handles::ReadHandle;
 use moka::sync::{CacheBuilder, SegmentedCache};
-use sart::{
-  code::SwappableCodeStore,
-  ctr::{CVMTaskState, Instruction},
-};
+use sart::{code::SwappableCodeStore, ctr::CVMTaskState};
 
 pub use sart;
 use tokio::runtime::{Builder, Runtime};

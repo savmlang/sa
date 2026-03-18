@@ -2,16 +2,14 @@ use std::{
   collections::HashMap,
   hint::cold_path,
   mem::{transmute_copy, zeroed},
-  ops::Sub,
-  ptr::{addr_of_mut, read_unaligned},
-  sync::LazyLock,
+  ptr::read_unaligned,
 };
 
-mod mu;
-pub use mu::*;
+mod almu;
+pub use almu::*;
 
-mod au;
-pub use au::*;
+mod threading;
+pub use threading::*;
 
 use sart::{ctr::VMTaskState, structures::QuadPackedData};
 
@@ -140,7 +138,7 @@ macro_rules! resolve_ptr {
 
 #[macro_export]
 macro_rules! resolve_location_src {
-  ($task:ident => $x:ident) => {
+  ($task:ident => $x:ident $($e:ident)?) => {
     match $x {
       0 => std::ptr::addr_of_mut!($task.r1),
       1 => std::ptr::addr_of_mut!($task.r2),
@@ -152,7 +150,12 @@ macro_rules! resolve_location_src {
       7 => std::ptr::addr_of_mut!($task.r8),
       8 => $task.scratchpad,
       9 => $task.largepad,
+      #[allow(unused_unsafe)]
       10 => unsafe { $task.r2.selfref },
+      $(
+        _con => $e,
+      )?
+      #[allow(unreachable_patterns)]
       _ => unimplemented!(),
     }
   };
@@ -309,9 +312,10 @@ pub fn call_jif(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut
 
 #[macro_export]
 macro_rules! arrcastint {
-  ($ws:ident, start = $start:expr, stop = $stop:expr, $i:ty) => {
-    unsafe { <$i>::from_ne_bytes($ws.arr[$start..$stop].try_into().unwrap_unchecked()) }
-  };
+  ($ws:ident, start = $start:expr, stop = $stop:expr, $i:ty) => {{
+    #[allow(unused_unsafe)]
+    <$i>::from_ne_bytes(unsafe { $ws.arr[$start..$stop].try_into().unwrap_unchecked() })
+  }};
 }
 
 pub fn call_vcmp(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
@@ -337,9 +341,9 @@ pub fn call_vcmp(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
   let offset2 = arrcastint!(ws, start = 10, stop = 14, i32);
   let offset3 = arrcastint!(ws, start = 14, stop = 18, i32);
 
-  let src1 = unsafe { resolve_location_src!(taskstate => src1) };
-  let src2 = unsafe { resolve_location_src!(taskstate => src2) };
-  let target = unsafe { resolve_location_src!(taskstate => target) };
+  let src1 = { resolve_location_src!(taskstate => src1) };
+  let src2 = { resolve_location_src!(taskstate => src2) };
+  let target = { resolve_location_src!(taskstate => target) };
 
   // We're assuming vectored, as there's no issues, haha
   // Also, its easier to downref to u32, u16...
