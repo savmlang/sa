@@ -15,15 +15,15 @@ pub use au::*;
 
 use sart::{ctr::VMTaskState, structures::QuadPackedData};
 
-use crate::acaot::pickle::def::PickleInstruction;
+use crate::acaot::pickle::def::{PICKLE_DISPATCH_TABLE, PickleInstruction};
 
 pub const SIZE_128KB: usize = 128 * 1024 / size_of::<QuadPackedData>();
 
 pub struct WorkingSet {
-  arr: [u8; 20],
-  largepad: Box<[QuadPackedData; SIZE_128KB]>,
-  largepad_cursor: usize,
-  relocmap: HashMap<u64, usize, ahash::RandomState>,
+  pub arr: [u8; 20],
+  pub largepad: *mut QuadPackedData, // SIZE_128KB allocated
+  pub largepad_cursor: usize,
+  pub relocmap: HashMap<u64, usize, ahash::RandomState>,
 }
 
 // the largepad is a LIFO-ONLY Queue
@@ -57,7 +57,7 @@ impl WorkingSet {
 
     // Standard, add a header
     unsafe {
-      let newptr = self.largepad.as_mut_ptr().add(self.largepad_cursor);
+      let newptr = self.largepad.add(self.largepad_cursor);
       *newptr = QuadPackedData { u64: req_size as _ };
 
       self.largepad_cursor = new_cursor;
@@ -161,15 +161,52 @@ macro_rules! resolve_location_src {
 pub type ResolveFn =
   fn(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) -> ();
 
-pub fn call_hint(_pickle: &PickleInstruction, _ws: &mut WorkingSet, _taskstate: &mut VMTaskState) {}
+pub fn call_hint(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+  let instruction = pickle.u1;
+
+  let total_wsput = pickle.u2 as usize;
+
+  let pic = unsafe { taskstate.curline_or_resume.usi };
+
+  // Fetch WS_PUTs and decode
+  for pidx in pic..(pic + total_wsput) {
+    unsafe {
+      let wsput = &*(taskstate.icache_or_to_be_defined.pt as *const PickleInstruction).add(pidx);
+
+      let offset = wsput.u1 as usize;
+
+      *ws.arr.get_unchecked_mut(offset * 2) = wsput.u2;
+      *ws.arr.get_unchecked_mut(offset * 2 + 1) = wsput.u3;
+    }
+  }
+
+  // Increment counter by that exact amount
+  // total_wsput
+  unsafe {
+    taskstate.curline_or_resume.usi += total_wsput;
+  }
+
+  // Call next instruction
+  unsafe {
+    // TODO: Replace with `become` once its in nightly-functional
+    return PICKLE_DISPATCH_TABLE.get_unchecked(instruction as usize)(
+      &*(taskstate.icache_or_to_be_defined.pt as *const PickleInstruction)
+        .add(taskstate.curline_or_resume.usi),
+      ws,
+      taskstate,
+    );
+  }
+}
 
 pub fn call_mark(_pickle: &PickleInstruction, _ws: &mut WorkingSet, _taskstate: &mut VMTaskState) {}
 
 pub fn call_ws_put(pickle: &PickleInstruction, ws: &mut WorkingSet, _taskstate: &mut VMTaskState) {
   let offset = pickle.u1 as usize;
 
-  ws.arr[offset * 2] = pickle.u2;
-  ws.arr[offset * 2 + 1] = pickle.u3;
+  unsafe {
+    *ws.arr.get_unchecked_mut(offset * 2) = pickle.u2;
+    *ws.arr.get_unchecked_mut(offset * 2 + 1) = pickle.u3;
+  }
 }
 
 pub fn call_mov(pickle: &PickleInstruction, _ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
@@ -318,7 +355,7 @@ pub fn call_vcmp(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
     i32,
     i32,
     i32,
-  ) = if op >= 0 && op <= 9 {
+  ) = if op <= 9 {
     let is_signed = [2, 4, 6, 8].iter().any(|o| op == *o);
 
     match (is_signed, width) {

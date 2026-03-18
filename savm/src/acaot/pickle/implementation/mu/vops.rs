@@ -69,10 +69,18 @@ pub fn call_vneg(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
   let (count, typetag, src1, target, offset1, offset2) = prelude!(pickle, ws, taskstate);
 
   match typetag {
-    4 => intop!((count i64) target = src1 strict_neg { offset1 = offset1, offsetTarget = offset2 }),
-    5 => intop!((count i32) target = src1 strict_neg { offset1 = offset1, offsetTarget = offset2 }),
-    6 => intop!((count i16) target = src1 strict_neg { offset1 = offset1, offsetTarget = offset2 }),
-    7 => intop!((count i8) target = src1 strict_neg { offset1 = offset1, offsetTarget = offset2 }),
+    4 => {
+      intop!((count i64) target = src1 strict_neg { offset1 = offset1, offsetTarget = offset2 })
+    }
+    5 => {
+      intop!((count i32) target = src1 strict_neg { offset1 = offset1, offsetTarget = offset2 })
+    }
+    6 => {
+      intop!((count i16) target = src1 strict_neg { offset1 = offset1, offsetTarget = offset2 })
+    }
+    7 => {
+      intop!((count i8) target = src1 strict_neg { offset1 = offset1, offsetTarget = offset2 })
+    }
     8 => intop!((count f64) target = src1 neg { offset1 = offset1, offsetTarget = offset2 }),
     9 => intop!((count f32) target = src1 neg { offset1 = offset1, offsetTarget = offset2 }),
     _ => panic!("Invalid type to neg"),
@@ -83,10 +91,18 @@ pub fn call_vabs(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
   let (count, typetag, src1, target, offset1, offset2) = prelude!(pickle, ws, taskstate);
 
   match typetag {
-    4 => intop!((count i64) target = src1 strict_abs { offset1 = offset1, offsetTarget = offset2 }),
-    5 => intop!((count i32) target = src1 strict_abs { offset1 = offset1, offsetTarget = offset2 }),
-    6 => intop!((count i16) target = src1 strict_abs { offset1 = offset1, offsetTarget = offset2 }),
-    7 => intop!((count i8) target = src1 strict_abs { offset1 = offset1, offsetTarget = offset2 }),
+    4 => {
+      intop!((count i64) target = src1 strict_abs { offset1 = offset1, offsetTarget = offset2 })
+    }
+    5 => {
+      intop!((count i32) target = src1 strict_abs { offset1 = offset1, offsetTarget = offset2 })
+    }
+    6 => {
+      intop!((count i16) target = src1 strict_abs { offset1 = offset1, offsetTarget = offset2 })
+    }
+    7 => {
+      intop!((count i8) target = src1 strict_abs { offset1 = offset1, offsetTarget = offset2 })
+    }
     8 => intop!((count f64) target = src1 abs { offset1 = offset1, offsetTarget = offset2 }),
     9 => intop!((count f32) target = src1 abs { offset1 = offset1, offsetTarget = offset2 }),
     _ => panic!("Invalid type to neg"),

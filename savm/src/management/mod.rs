@@ -1,4 +1,4 @@
-use crate::{BytecodeResolver, CacheData, SymbolMapTable, acaot::pickle::PickleWorker};
+use crate::{BytecodeResolver, CODE_CACHE, CacheData, SymbolMapTable, acaot::pickle::PickleWorker};
 use evmap::handles::WriteHandle;
 use std::sync::Arc;
 
@@ -10,7 +10,7 @@ pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(
 ) {
   (0..=resolve.as_ref().last_section_id())
     .into_par_iter()
-    .for_each(|id| match resolve.as_ref().resolve_data(id) {
+    .map(|id| match resolve.as_ref().resolve_data(id) {
       SymbolMapTable::MixedSizedBytecode { bytecode } => {
         match resolve.as_ref().get_best_cache(id) {
           // Pickle urgently!
@@ -22,12 +22,22 @@ pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(
             };
             worker.pass1();
 
-            let out = worker.out.into_boxed_slice();
-            resolve.as_ref().update_cache(id, CacheData::Pickle { out });
+            let out = Arc::new(worker.out.into_boxed_slice());
+
+            CODE_CACHE.insert(id, out.clone());
+            Some((id, out))
           }
-          _ => {}
+          _ => None,
         }
       }
-      SymbolMapTable::NativePointer { .. } => {}
+      SymbolMapTable::NativePointer { .. } => None,
+    })
+    .filter_map(|x| x)
+    .collect::<Box<[_]>>()
+    .into_iter()
+    .for_each(|(section, cache)| {
+      resolve
+        .as_ref()
+        .update_cache(section, CacheData::Pickle { out: cache });
     });
 }

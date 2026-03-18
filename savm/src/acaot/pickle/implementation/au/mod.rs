@@ -12,52 +12,52 @@ mod vfop;
 pub use vfop::*;
 
 macro_rules! arithprelude {
-  ($pickle:ident, $ws:ident, $task:ident) => {
-    {
-    // [<type tag (3 bits)> <count bit>] [Src1 (4-bits)] [Src2 (4-bits)] [Target1 (4-bits)] (16b)
-    // [<Carry/Sigflow bit>] [<saturation bit>] [Padding] (16b)
-    let flags = arrcastint!($ws, start = 0, stop = 4, u32);
+    ($pickle:ident, $ws:ident, $task:ident) => {
+      {
+      // [<type tag (3 bits)> <count bit>] [Src1 (4-bits)] [Src2 (4-bits)] [Target1 (4-bits)] (16b)
+      // [<Carry/Sigflow bit>] [<saturation bit>] [Padding] (16b)
+      let flags = arrcastint!($ws, start = 0, stop = 4, u32);
 
-    let instdefined = flags as u16;
+      let instdefined = flags as u16;
 
-    let topflags = (flags >> 16) as u16;
-    let countbit = (flags >> 12 as u8) & 0x01;
-    let typetag = flags >> 13 as u8;
+      let topflags = (flags >> 16) as u16;
+      let countbit = (topflags >> 12 as u8) & 0x01;
+      let typetag = topflags >> 13 as u8;
 
-    let count_data = arrcastint!($ws, start = 4, stop = 8, u32);
+      let count_data = arrcastint!($ws, start = 4, stop = 8, u32);
 
-    let count = if (countbit == 0) {
-      count_data
-    } else {
-      unsafe { $task.r1.u32 }
+      let count = if (countbit == 0) {
+        count_data
+      } else {
+        unsafe { $task.r1.u32 }
+      };
+
+      let offset1 = arrcastint!($ws, start = 8, stop = 12, i32);
+      let offset2 = arrcastint!($ws, start = 12, stop = 16, i32);
+      let offset3 = arrcastint!($ws, start = 16, stop = 20, i32);
+
+      let src1 = unsafe {
+        let src = (topflags >> 8 as u8) & 0x0F;
+
+        resolve_location_src!($task => src)
+      };
+
+      let src2 = unsafe {
+        let src = (topflags as u8) >> 4;
+
+        resolve_location_src!($task => src)
+      };
+
+      let target = unsafe {
+        let src = (topflags as u8) & 0x0F;
+
+        resolve_location_src!($task => src)
+      };
+
+      (instdefined, typetag, count, src1, src2, target, offset1, offset2, offset3)
+      }
     };
-
-    let offset1 = arrcastint!($ws, start = 8, stop = 12, i32);
-    let offset2 = arrcastint!($ws, start = 12, stop = 16, i32);
-    let offset3 = arrcastint!($ws, start = 16, stop = 20, i32);
-
-    let src1 = unsafe {
-      let src = (flags >> 8 as u8) & 0x0F;
-
-      resolve_location_src!($task => src)
-    };
-
-    let src2 = unsafe {
-      let src = (flags as u8) >> 4;
-
-      resolve_location_src!($task => src)
-    };
-
-    let target = unsafe {
-      let src = (flags as u8) & 0x0F;
-
-      resolve_location_src!($task => src)
-    };
-
-    (instdefined, typetag, count, src1, src2, target, offset1, offset2, offset3)
-    }
-  };
-}
+  }
 
 macro_rules! intop {
   (($c:ident $t:ty) $target:ident = $s1:ident $op:ident $s2:ident { $t1:ident, $t2:ident, $t3:ident }) => {
@@ -342,38 +342,38 @@ pub fn call_vmul(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
 }
 
 macro_rules! divlikeprelude {
-  ($pickle:ident, $ws:ident, $task:ident) => {
-    {
-      let args = u16::from_ne_bytes([$pickle.u1, $pickle.u2]);
+    ($pickle:ident, $ws:ident, $task:ident) => {
+      {
+        let args = u16::from_ne_bytes([$pickle.u1, $pickle.u2]);
 
-      let typetag = (args >> 12) as u8;
+        let typetag = (args >> 12) as u8;
 
-      let t1 = arrcastint!($ws, start = 8, stop = 12, i32);
-              let t2 = arrcastint!($ws, start = 12, stop = 16, i32);
-      let t3 = arrcastint!($ws, start = 16, stop = 20, i32);
+        let t1 = arrcastint!($ws, start = 8, stop = 12, i32);
+                let t2 = arrcastint!($ws, start = 12, stop = 16, i32);
+        let t3 = arrcastint!($ws, start = 16, stop = 20, i32);
 
-      let src1 = unsafe {
-        let src = (args >> 8 as u8) & 0x0F;
+        let src1 = unsafe {
+          let src = (args >> 8 as u8) & 0x0F;
 
-        resolve_location_src!($task => src)
-      };
+          resolve_location_src!($task => src)
+        };
 
-      let src2 = unsafe {
-        let src = (args as u8) >> 4;
+        let src2 = unsafe {
+          let src = (args as u8) >> 4;
 
-        resolve_location_src!($task => src)
-      };
+          resolve_location_src!($task => src)
+        };
 
-      let target = unsafe {
-        let src = (args as u8) & 0x0F;
+        let target = unsafe {
+          let src = (args as u8) & 0x0F;
 
-        resolve_location_src!($task => src)
-      };
+          resolve_location_src!($task => src)
+        };
 
-      (typetag, src1, src2, target, t1, t2, t3)
-    }
-  };
-}
+        (typetag, src1, src2, target, t1, t2, t3)
+      }
+    };
+  }
 
 pub fn call_div(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
   let (typetag, src1, src2, target, t1, t2, t3) = divlikeprelude!(pickle, ws, taskstate);

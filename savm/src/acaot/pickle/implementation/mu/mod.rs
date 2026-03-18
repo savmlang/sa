@@ -21,6 +21,15 @@ pub use vops::*;
 mod vbit;
 pub use vbit::*;
 
+mod vrot;
+pub use vrot::*;
+
+mod vsh;
+pub use vsh::*;
+
+mod vcnt;
+pub use vcnt::*;
+
 pub fn call_scratch(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
   let op_class = pickle.u1;
 

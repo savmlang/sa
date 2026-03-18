@@ -1,7 +1,8 @@
 use crate::acaot::pickle::implementation::*;
 
-// Pickle is our own internal LE implementation
-// for converting variable width bytecode into pickle
+/// Pickle is our own internal NE implementation
+/// for converting variable width bytecode into pickle
+#[repr(C)]
 pub struct PickleInstruction {
   pub opcode: u8,
   pub u1: u8,
@@ -89,15 +90,14 @@ opcodes! {
   22 => VFOP,
   23 => VFCAST,
   24 => VBIT,
-  25 => VBOP,
-  26 => VROT,
-  27 => VSH,
-  28 => VCNT,
-  29 => VMINIMAX,
-  30 => VFMA,
-  31 => SYNCCALL,
-  32 => ASYNCCALL,
-  33 => SPAWN,
-  34 => TASK,
-  36 => ATOMIC
+  25 => VROT,
+  26 => VSH,
+  27 => VCNT,
+  28 => VMINIMAX,
+  29 => VFMA,
+  30 => SYNCCALL,
+  31 => ASYNCCALL,
+  32 => SPAWN,
+  33 => TASK,
+  34 => ATOMIC
 }

@@ -56,7 +56,7 @@ pub enum SymbolMapTable<T> {
 pub enum CacheData {
   None,
   Pickle {
-    out: Box<[PickleInstruction]>,
+    out: Arc<Box<[PickleInstruction]>>,
   },
   #[cfg(feature = "cranelift")]
   CraneliftAbs8 {},
@@ -87,6 +87,15 @@ pub trait BytecodeResolver {
   /// We use this to prevent unnecessary [u64] allocation
   fn last_section_id(&self) -> u64;
 
+  /// Returns an heuristic list upto 500 elements in size over 2 clusters
+  ///
+  /// Cluster 1 (idx = 0)
+  /// - Absolute top-notch priority entitled to DIRECT upgrade the the highest JIT Level
+  ///
+  /// Cluster 2 (idx = 1)
+  /// - Priority over other modules
+  fn heuristic_pgo(&self) -> [&[u64]; 2];
+
   /// Resolve the symbol map table
   fn resolve_data(&self, section: u64) -> SymbolMapTable<Self::Output>;
 
@@ -109,6 +118,10 @@ impl BytecodeResolver for Box<dyn BytecodeResolver<Output = File> + Send + Sync 
 
   fn get_best_cache(&self, section: u64) -> CacheData {
     BytecodeResolver::get_best_cache(self.as_ref(), section)
+  }
+
+  fn heuristic_pgo(&self) -> [&[u64]; 2] {
+    BytecodeResolver::heuristic_pgo(self.as_ref())
   }
 
   fn resolve_data(&self, section: u64) -> SymbolMapTable<Self::Output> {

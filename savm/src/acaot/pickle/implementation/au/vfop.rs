@@ -25,7 +25,7 @@ macro_rules! intop {
 //
 // Flags are like this:
 //   [padding (3-bits)] [float type (1 bit)] [Src1 (4-bits)] [Target1 (4-bits)] [count bit (1-bit)] [Sub-Op (3-bit)]
-pub fn vfop(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+pub fn call_vfop(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
   let flags = u16::from_le_bytes([pickle.u1, pickle.u2]);
 
   let count_data = arrcastint!(ws, start = 0, stop = 4, u32);
@@ -73,7 +73,7 @@ pub fn vfop(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMT
 //
 // Flags are like this:
 //   [Padding] [count bit (1-bit)] [op (1-bit)] [f width (1-bit)] [int type tag (3 bits)] [Src1 (4-bits)] [Target1 (4-bits)]
-pub fn vfcast(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+pub fn call_vfcast(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
   let flags = u16::from_le_bytes([pickle.u1, pickle.u2]);
 
   let target1 = {
@@ -107,61 +107,57 @@ pub fn vfcast(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut V
     // f64
     0 => match op {
       // f* to i*
-      0 => 
-        match typetag {
-          0 => as_cast::<f64, u64>,
-          1 => as_cast::<f64, u32>,
-          2 => as_cast::<f64, u16>,
-          3 => as_cast::<f64, u8>,
-          4 => as_cast::<f64, i64>,
-          5 => as_cast::<f64, i32>,
-          6 => as_cast::<f64, i16>,
-          7 => as_cast::<f64, i8>,
-          _ => panic!(),
-        }
-      ,
+      0 => match typetag {
+        0 => as_cast::<f64, u64>,
+        1 => as_cast::<f64, u32>,
+        2 => as_cast::<f64, u16>,
+        3 => as_cast::<f64, u8>,
+        4 => as_cast::<f64, i64>,
+        5 => as_cast::<f64, i32>,
+        6 => as_cast::<f64, i16>,
+        7 => as_cast::<f64, i8>,
+        _ => panic!(),
+      },
       // i* to f*
       1 => match typetag {
-          0 => as_cast::<u64, f64>,
-          1 => as_cast::<u32, f64>,
-          2 => as_cast::<u16, f64>,
-          3 => as_cast::<u8, f64>,
-          4 => as_cast::<i64, f64>,
-          5 => as_cast::<i32, f64>,
-          6 => as_cast::<i16, f64>,
-          7 => as_cast::<i8, f64>,
-          _ => panic!(),
-        }
+        0 => as_cast::<u64, f64>,
+        1 => as_cast::<u32, f64>,
+        2 => as_cast::<u16, f64>,
+        3 => as_cast::<u8, f64>,
+        4 => as_cast::<i64, f64>,
+        5 => as_cast::<i32, f64>,
+        6 => as_cast::<i16, f64>,
+        7 => as_cast::<i8, f64>,
+        _ => panic!(),
+      },
       _ => panic!(),
     },
     // f64
     1 => match op {
       // f* to i*
-      0 => 
-        match typetag {
-          0 => as_cast::<f32, u64>,
-          1 => as_cast::<f32, u32>,
-          2 => as_cast::<f32, u16>,
-          3 => as_cast::<f32, u8>,
-          4 => as_cast::<f32, i64>,
-          5 => as_cast::<f32, i32>,
-          6 => as_cast::<f32, i16>,
-          7 => as_cast::<f32, i8>,
-          _ => panic!(),
-        }
-      ,
+      0 => match typetag {
+        0 => as_cast::<f32, u64>,
+        1 => as_cast::<f32, u32>,
+        2 => as_cast::<f32, u16>,
+        3 => as_cast::<f32, u8>,
+        4 => as_cast::<f32, i64>,
+        5 => as_cast::<f32, i32>,
+        6 => as_cast::<f32, i16>,
+        7 => as_cast::<f32, i8>,
+        _ => panic!(),
+      },
       // i* to f*
       1 => match typetag {
-          0 => as_cast::<u64, f32>,
-          1 => as_cast::<u32, f32>,
-          2 => as_cast::<u16, f32>,
-          3 => as_cast::<u8, f32>,
-          4 => as_cast::<i64, f32>,
-          5 => as_cast::<i32, f32>,
-          6 => as_cast::<i16, f32>,
-          7 => as_cast::<i8, f32>,
-          _ => panic!(),
-        }
+        0 => as_cast::<u64, f32>,
+        1 => as_cast::<u32, f32>,
+        2 => as_cast::<u16, f32>,
+        3 => as_cast::<u8, f32>,
+        4 => as_cast::<i64, f32>,
+        5 => as_cast::<i32, f32>,
+        6 => as_cast::<i16, f32>,
+        7 => as_cast::<i8, f32>,
+        _ => panic!(),
+      },
       _ => panic!(),
     },
     _ => panic!(),
@@ -207,8 +203,7 @@ fn as_cast<T, E>(
   offsetsrc: i32,
   offsettgt: i32,
   count: u32,
-)
-where
+) where
   T: CastTo<E>,
 {
   unsafe {
