@@ -5,13 +5,13 @@
   sync_nonpoison,
   read_array,
   widening_mul,
-  core_intrinsics
+  core_intrinsics,
+  adt_const_params
 )]
 
 pub mod acaot;
 
 use std::{
-  fs::File,
   hash::Hash,
   io::{Read, Seek},
   mem::zeroed,
@@ -73,9 +73,11 @@ pub enum CacheLevel {
   LLVMRel,
 }
 
-pub trait BytecodeResolver {
-  type Output: Read + Seek;
+pub trait ResolvedData: Read + Seek {}
 
+impl<T: Read + Seek> ResolvedData for T {}
+
+pub trait BytecodeResolver {
   /// Return the id of the LAST VALID section
   /// We use this to prevent unnecessary [u64] allocation
   fn last_section_id(&self) -> u64;
@@ -90,7 +92,7 @@ pub trait BytecodeResolver {
   fn heuristic_pgo(&self) -> [&[u64]; 2];
 
   /// Resolve the symbol map table
-  fn resolve_data(&self, section: u64) -> SymbolMapTable<Self::Output>;
+  fn resolve_data(&self, section: u64) -> SymbolMapTable<Box<dyn ResolvedData>>;
 
   /// Checks if the cache is available!
   fn get_best_cache(&self, section: u64) -> CacheData;
@@ -106,9 +108,7 @@ pub trait BytecodeResolver {
   fn update_cache(&self, section: u64, cache: CacheData);
 }
 
-impl BytecodeResolver for Box<dyn BytecodeResolver<Output = File> + Send + Sync + 'static> {
-  type Output = File;
-
+impl BytecodeResolver for Box<dyn BytecodeResolver + Send + Sync + 'static> {
   fn get_best_cache(&self, section: u64) -> CacheData {
     BytecodeResolver::get_best_cache(self.as_ref(), section)
   }
@@ -117,7 +117,7 @@ impl BytecodeResolver for Box<dyn BytecodeResolver<Output = File> + Send + Sync 
     BytecodeResolver::heuristic_pgo(self.as_ref())
   }
 
-  fn resolve_data(&self, section: u64) -> SymbolMapTable<Self::Output> {
+  fn resolve_data(&self, section: u64) -> SymbolMapTable<Box<dyn ResolvedData>> {
     BytecodeResolver::resolve_data(self.as_ref(), section)
   }
 
@@ -186,12 +186,12 @@ pub struct VmConfig {
 
 /// We create a VM for each thread executed
 #[repr(C)]
-pub struct VM<T: BytecodeResolver + Send + Sync + 'static> {
-  pub resolve: Arc<T>,
+pub struct VM {
+  pub resolve: Arc<dyn BytecodeResolver + Send + Sync + 'static>,
 }
 
-unsafe impl<T: BytecodeResolver + Send + Sync + 'static> Send for VM<T> {}
-unsafe impl<T: BytecodeResolver + Send + Sync + 'static> Sync for VM<T> {}
+unsafe impl Send for VM {}
+unsafe impl Sync for VM {}
 
 pub fn pack_u32(high_u32: u32, low_u32: u32) -> u64 {
   let high_u64 = high_u32 as u64;
@@ -217,9 +217,9 @@ pub fn unpack_u64(packed: u64) -> (u32, u32) {
   (high_u32, low_u32)
 }
 
-impl<T: BytecodeResolver + Send + Sync + 'static> VM<T> {
+impl VM {
   /// Please note that module id `0` represents the main module
-  pub fn new(data: T) -> Self {
+  pub fn new<T: BytecodeResolver + Send + Sync + 'static>(data: T) -> Self {
     CODE_CACHE.run_pending_tasks();
     VMMADE.set(()).expect("Each process can only have 1 VM");
 

@@ -1,3 +1,6 @@
 {
-  "rust-analyzer.linkedProjects": ["./savm/Cargo.toml"]
+  "rust-analyzer.linkedProjects": [
+    "./savm/Cargo.toml",
+    "./bin/savmrun/Cargo.toml"
+  ]
 }

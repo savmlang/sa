@@ -73,7 +73,7 @@ pub fn call_vbit(pickle: &PickleInstruction, ws: &mut WorkingSet, ts: &mut VMTas
   unsafe {
     let count = pickle.u3;
 
-    let op = (count >> 4);
+    let op = count >> 4;
 
     let countbit = count & 0x01;
 

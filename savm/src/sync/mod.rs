@@ -3,7 +3,7 @@ use std::{cell::UnsafeCell, collections::HashMap, hint::cold_path, mem::zeroed};
 use sart::{ctr::VMTaskState, salloc, structures::QuadPackedData};
 
 use crate::{
-  BytecodeResolver, CODE_CACHE, JIT_CACHE, VM,
+  CODE_CACHE, JIT_CACHE, VM,
   acaot::pickle::{
     def::{PICKLE_DISPATCH_TABLE, PICKLE_OPCODE_HINT, PICKLE_OPCODE_JMP, PICKLE_OPCODE_MARK},
     implementation::{SIZE_128KB, WorkingSet},
@@ -49,7 +49,7 @@ thread_local! {
   });
 }
 
-impl<T: BytecodeResolver + Send + Sync + 'static> VM<T> {
+impl VM {
   pub fn call_section(&self, sectionid: u64) {
     let Some(data) = CODE_CACHE.get(&sectionid) else {
       // TODO: Replace with `become`

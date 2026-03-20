@@ -92,9 +92,9 @@ macro_rules! atomicops {
         $ts: &mut VMTaskState
       ) {
         let $o1_raw = (instdefined as u8) & 0x0F;
-        let $o2_raw = (instdefined as u8 >> 4) & 0x0F;
-        let $o3_raw = (instdefined as u8 >> 8) & 0x0F;
-        let $o4_raw = (instdefined as u8 >> 12) & 0x0F;
+        let $o2_raw = (instdefined >> 4) as u8 & 0x0F;
+        let $o3_raw = (instdefined >> 8) as u8 & 0x0F;
+        let $o4_raw = (instdefined >> 12) as u8 & 0x0F;
 
         const $co: AtomicOrdering = $ord;
 
@@ -164,6 +164,58 @@ macro_rules! atomicops {
   };
 }
 
+trait AtomicOps {
+  unsafe fn do_min<const ORD: AtomicOrdering>(p: *mut Self, val: Self) -> Self;
+  unsafe fn do_max<const ORD: AtomicOrdering>(p: *mut Self, val: Self) -> Self;
+
+  unsafe fn do_umin<const ORD: AtomicOrdering>(p: *mut Self, val: Self) -> Self;
+  unsafe fn do_umax<const ORD: AtomicOrdering>(p: *mut Self, val: Self) -> Self;
+}
+
+macro_rules! implatomicop {
+  (
+    $(
+      { $($t:ty),* } => {
+        min: $min:ident,
+        max: $max:ident
+      }
+    ),*
+  ) => {
+    $(
+      $(
+      impl AtomicOps for $t {
+        unsafe fn do_min<const ORD: AtomicOrdering>(p: *mut $t, val: $t) -> $t {
+          unsafe { $min::<_, ORD>(p, val) }
+        }
+
+        unsafe fn do_umin<const ORD: AtomicOrdering>(p: *mut $t, val: $t) -> $t {
+          unsafe { $min::<_, ORD>(p, val) }
+        }
+
+        unsafe fn do_max<const ORD: AtomicOrdering>(p: *mut $t, val: $t) -> $t {
+          unsafe { $max::<_, ORD>(p, val) }
+        }
+
+        unsafe fn do_umax<const ORD: AtomicOrdering>(p: *mut $t, val: $t) -> $t {
+          unsafe { $max::<_, ORD>(p, val) }
+        }
+      }
+      )*
+    )*
+  };
+}
+
+implatomicop! {
+  { u64, u32, u16, u8 } => {
+    min: atomic_umin,
+    max: atomic_umax
+  },
+  { i64, i32, i16, i8 } => {
+    min: atomic_min,
+    max: atomic_max
+  }
+}
+
 atomicops! {
   { u64, u32, u16, u8, i64, i32, i16, i8 } ORD cas => |p1, x, e, ret, instdef, o1_raw, o2_raw, o3_raw, o4_raw, ts| {
     let (out, succ) = match ts.r8.u8 {
@@ -198,13 +250,13 @@ atomicops! {
       // Xchg
       6 =>  atomic_xchg::<_, ORD>(p1, o),
       // Umin
-      7 =>  atomic_umin::<_,  ORD>(p1, o),
+      7 =>  AtomicOps::do_umin::<ORD>(p1, o),
       // Umax
-      8 =>  atomic_umax::<_, ORD>(p1, o),
+      8 =>  AtomicOps::do_umax::<ORD>(p1, o),
       // Smin
-      9 =>  atomic_min::<_, ORD>(p1, o),
+      9 =>  AtomicOps::do_min::<ORD>(p1, o),
       // Smax
-      10 =>  atomic_max::<_, ORD>(p1, o),
+      10 =>  AtomicOps::do_max::<ORD>(p1, o),
       e => panic!("Unknown Atomic Op: {e}")
     };
 

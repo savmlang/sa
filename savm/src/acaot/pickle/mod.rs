@@ -148,15 +148,15 @@ impl<T: Seek + Read> PickleWorker<T> {
     let sectionid = self.bytecode.extract::<8>().swap_if_be();
     let marker = self.bytecode.extract::<8>().swap_if_be();
 
-    let mut copy = [0u8; 14];
+    let mut copy = [0u8; 16];
     copy[0..8].copy_from_slice(&sectionid);
-    copy[8..14].copy_from_slice(&marker[0..6]);
+    copy[8..16].copy_from_slice(&marker);
     self.emit_copy_bytes(opcode, copy);
 
     self.out.push(PickleInstruction {
       opcode: opcode,
-      u1: marker[6],
-      u2: marker[7],
+      u1: 0,
+      u2: 0,
       u3: 0,
     });
   }
@@ -165,14 +165,12 @@ impl<T: Seek + Read> PickleWorker<T> {
     let opcode = PICKLE_OPCODE_SYNCCALL;
     let sectionid = self.bytecode.extract::<8>().swap_if_be();
 
-    let mut copy = [0u8; 6];
-    copy[0..6].copy_from_slice(&sectionid[0..6]);
-    self.emit_copy_bytes(opcode, copy);
+    self.emit_copy_bytes(opcode, sectionid);
 
     self.out.push(PickleInstruction {
       opcode: opcode,
-      u1: sectionid[6],
-      u2: sectionid[7],
+      u1: 0,
+      u2: 0,
       u3: 0,
     });
   }
