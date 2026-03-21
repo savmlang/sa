@@ -1,9 +1,6 @@
 [submodule "sart"]
 	path = sart
 	url = https://github.com/savmlang/sart.git
-[submodule "bin/savmcl"]
-	path = bin/savmcl
-	url = https://github.com/savmlang/savmcl.git
 [submodule "bin/savmrun"]
 	path = bin/savmrun
 	url = https://github.com/savmlang/savmrun.git
