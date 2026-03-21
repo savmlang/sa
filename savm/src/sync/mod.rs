@@ -1,4 +1,4 @@
-use std::{cell::UnsafeCell, collections::HashMap, hint::cold_path, mem::zeroed};
+use std::{cell::UnsafeCell, collections::HashMap, hint::cold_path, mem::zeroed, sync::OnceLock};
 
 use sart::{ctr::VMTaskState, salloc, structures::QuadPackedData};
 
@@ -9,6 +9,13 @@ use crate::{
     implementation::{SIZE_128KB, WorkingSet},
   },
 };
+
+pub static GLOBAL_DATA: OnceLock<UnSafePtr<u8>> = OnceLock::new();
+
+pub struct UnSafePtr<T>(pub *mut T);
+
+unsafe impl<T> Send for UnSafePtr<T> {}
+unsafe impl<T> Sync for UnSafePtr<T> {}
 
 const SCRATCHPAD: usize = 50 * 24 * size_of::<QuadPackedData>();
 
@@ -92,6 +99,11 @@ impl VM {
           {
             ts.curline_or_resume.usi += 1;
             continue 'jcheck;
+          }
+
+          if pickle.opcode == PICKLE_OPCODE_HINT {
+            let dptr = dt.as_ptr();
+            ts.engine_or_pt.pt = dptr as _;
           }
 
           (PICKLE_DISPATCH_TABLE.get_unchecked(pickle.opcode as usize))(pickle, &mut t.ws, ts);

@@ -2,13 +2,14 @@
 -- for usage
 
 PRAGMA user_version = 1;
+PRAGMA synchronous = OFF;
 
 -- Clear things eagerly
 DROP TABLE IF EXISTS Metadata;
 DROP TABLE IF EXISTS Bincode;
 DROP TABLE IF EXISTS LibFnmap;
 DROP TABLE IF EXISTS DllStore;
-DROP TABLE IF EXISTS Extracts;
+DROP TABLE IF EXISTS GlobalData;
 
 -- The following identifiers are a MUST to be present
 -- 

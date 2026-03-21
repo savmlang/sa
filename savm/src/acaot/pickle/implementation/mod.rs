@@ -174,7 +174,7 @@ pub fn call_hint(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
   // Fetch WS_PUTs and decode
   for pidx in pic..(pic + total_wsput) {
     unsafe {
-      let wsput = &*(taskstate.icache_or_to_be_defined.pt as *const PickleInstruction).add(pidx);
+      let wsput = &*(taskstate.engine_or_pt.pt as *const PickleInstruction).add(pidx);
 
       let offset = wsput.u1 as usize;
 
@@ -193,7 +193,7 @@ pub fn call_hint(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
   unsafe {
     // TODO: Replace with `become` once its in nightly-functional
     return PICKLE_DISPATCH_TABLE.get_unchecked(instruction as usize)(
-      &*(taskstate.icache_or_to_be_defined.pt as *const PickleInstruction)
+      &*(taskstate.engine_or_pt.pt as *const PickleInstruction)
         .add(taskstate.curline_or_resume.usi),
       ws,
       taskstate,

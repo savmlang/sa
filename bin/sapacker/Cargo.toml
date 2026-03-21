@@ -1,0 +1,9 @@
+[package]
+name = "sapacker"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rusqlite = { version = "0.39.0", features = ["bundled", "blob"] }
+serde = { version = "1.0.228", features = ["derive"] }
+toml = "1.0.7"
