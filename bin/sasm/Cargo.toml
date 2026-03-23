@@ -1,0 +1,17 @@
+[package]
+name = "sasm"
+version = "0.0.1"
+description = "The Sa Assembly Assembler"
+edition = "2024"
+
+[dependencies]
+console = "^0.16"
+indicatif = "^0.18"
+lexical-core = { version = "^1", default-features = false, features = [
+  "lexical-parse-float",
+  "parse-floats",
+] }
+phf = { version = "^0.13", features = ["macros"] }
+rayon = "^1"
+
+sart = { path = "../../sart" }
