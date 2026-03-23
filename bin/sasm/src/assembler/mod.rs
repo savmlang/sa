@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use phf::{Map, phf_map};
 use std::{
   borrow::Cow,
@@ -7,7 +5,7 @@ use std::{
 };
 
 use crate::{
-  GLOB_MACROS,
+  GLOB_MACROS, GLOB_VALUES,
   assembler::{
     macros::{AssertOp, MacroJIT, MicroJITBuilder},
     number::parse_expr,
@@ -31,7 +29,7 @@ macro_rules! widths {
   ) => {
     $(
       pub const fn $width(data: $t) -> Self {
-        #[allow(unused_mut)]
+        #[allow(unused)]
         let size = std::mem::size_of::<$t>()*8;
 
         $(
@@ -49,7 +47,7 @@ macro_rules! widths {
       }
 
       pub const fn $as(self) -> $t {
-        #[allow(unused_mut)]
+        #[allow(unused)]
         let size = std::mem::size_of::<$t>()*8;
 
         $(
@@ -114,6 +112,7 @@ impl OutValue {
 }
 
 static IMPORTS: Map<&'static str, OutValue> = phf_map! {
+  // Register mapping
   "r1" => OutValue::u8(0),
   "r2" => OutValue::u8(1),
   "r3" => OutValue::u8(2),
@@ -122,6 +121,126 @@ static IMPORTS: Map<&'static str, OutValue> = phf_map! {
   "r6" => OutValue::u8(5),
   "r7" => OutValue::u8(6),
   "r8" => OutValue::u8(7),
+  "scratchpad" => OutValue::u8(8),
+  "largepad" => OutValue::u8(9),
+  "ptr" => OutValue::u8(10),
+
+  // Count
+  "COUNT_ABSOLUTE" => OutValue::u1(0),
+  "COUNT_FROM_R1" => OutValue::u1(1),
+
+  // Widths
+  "w64" => OutValue::u2(0),
+  "w32" => OutValue::u2(1),
+  "w16" => OutValue::u2(2),
+  "w8" => OutValue::u2(3),
+
+  // JZ,JNZ Flags
+  "OP_JZ" => OutValue::u1(0),
+  "OP_JNZ" => OutValue::u1(1),
+
+  // Ops
+  "IOP_EQ" => OutValue::u5(0),
+  "IOP_NEQ" => OutValue::u5(1),
+  "IOP_S_LT" => OutValue::u5(2),
+  "IOP_U_LT" => OutValue::u5(3),
+  "IOP_S_LTEQ" => OutValue::u5(4),
+  "IOP_U_LTEQ" => OutValue::u5(5),
+
+  "IOP_S_GT" => OutValue::u5(6),
+  "IOP_U_GT" => OutValue::u5(7),
+  "IOP_S_GTEQ" => OutValue::u5(8),
+  "IOP_U_GTEQ" => OutValue::u5(9),
+
+  "FOP_ORD" => OutValue::u5(10),
+  "FOP_UORD" => OutValue::u5(11),
+  "FOP_EQ" => OutValue::u5(12),
+  "FOP_NEQ" => OutValue::u5(13),
+  "FOP_ORD_NEQ" => OutValue::u5(14),
+  "FOP_UNORD_NEQ" => OutValue::u5(15),
+
+  "FOP_ORD_LT" => OutValue::u5(16),
+  "FOP_ORD_LTEQ" => OutValue::u5(17),
+  "FOP_ORD_GT" => OutValue::u5(18),
+  "FOP_ORD_GTEQ" => OutValue::u5(19),
+
+  "FOP_UORD_LT" => OutValue::u5(20),
+  "FOP_UORD_LTEQ" => OutValue::u5(21),
+  "FOP_UORD_GT" => OutValue::u5(22),
+  "FOP_UORD_GTEQ" => OutValue::u5(23),
+
+  // SUBOPS
+
+  "VFOP_CEIL" => OutValue::u3(0),
+  "VFOP_FLOOR" => OutValue::u3(1),
+  "VFOP_TRUNC" => OutValue::u3(2),
+  "VFOP_NEAREST" => OutValue::u3(3),
+  "VFOP_SQRT" => OutValue::u3(4),
+
+  // BITOP
+  "VBIT_AND" => OutValue::u4(0),
+  "VBIT_OR" => OutValue::u4(1),
+  "VBIT_XOR" => OutValue::u4(2),
+  "VBIT_NOT" => OutValue::u4(3),
+  "VBIT_OR_NOT" => OutValue::u4(4),
+  "VBIT_AND_NOT" => OutValue::u4(5),
+  "VBIT_XOR_NOT" => OutValue::u4(6),
+  "VBIT_BITREV" => OutValue::u4(7),
+  "VBIT_BSWAP" => OutValue::u4(8),
+
+  // SH
+  "SH_OP_SHL" => OutValue::u1(0),
+  "SH_OP_SHR" => OutValue::u1(1),
+
+  // VMINIMAX
+  "OP_VMIN" => OutValue::u1(0),
+  "OP_VMAX" => OutValue::u1(1),
+
+  // VCNT
+  "VCNT_OP_POPCNT" => OutValue::u4(0),
+  "VCNT_OP_CLZ" => OutValue::u4(1),
+  "VCNT_OP_CLS" => OutValue::u4(2),
+  "VCNT_OP_CTZ" => OutValue::u4(3),
+
+  // VTASK
+  "VTASK_ASYNC_DETACH" => OutValue::u4(0),
+  "VTASK_ASYNC_JOIN" => OutValue::u4(1),
+  "VTASK_ASYNC_ISCOMPLETE" => OutValue::u4(2),
+  "VTASK_SYNC_DETACH" => OutValue::u4(3),
+  "VTASK_SYNC_JOIN" => OutValue::u4(4),
+  "VTASK_SYNC_ISCOMPLETE" => OutValue::u4(5),
+  "VTASK_THREAD_UNPARK" => OutValue::u4(6),
+  "VTASK_SYNC_THREAD_UNPARK" => OutValue::u4(7),
+  "VTASK_SYNC_THREAD_DETACH" => OutValue::u4(8),
+  "VTASK_SYNC_YIELD" => OutValue::u4(9),
+  "VTASK_ASYNC_YIELD" => OutValue::u4(10),
+  "VTASK_WAITMS" => OutValue::u4(11),
+
+  // ORD
+  "SEQCST" => OutValue::u3(0),
+  "RELAXED" => OutValue::u3(1),
+  "ACQUIRE" => OutValue::u3(2),
+  "RELEASE" => OutValue::u3(3),
+  "ACQ_REL" => OutValue::u3(4),
+
+  // ATOMIC OP
+  "OP_CAS" => OutValue::u2(0),
+  "OP_LOAD" => OutValue::u2(1),
+  "OP_RMW" => OutValue::u2(2),
+  "OP_STORE" => OutValue::u2(3),
+
+  // Types
+  "u64" => OutValue::u4(0),
+  "u32" => OutValue::u4(1),
+  "u16" => OutValue::u4(2),
+  "u8" => OutValue::u4(3),
+  "i64" => OutValue::u4(4),
+  "i32" => OutValue::u4(5),
+  "i16" => OutValue::u4(6),
+  "i8" => OutValue::u4(7),
+  "f64" => OutValue::u4(8),
+  "f32" => OutValue::u4(9),
+
 };
 
 #[derive(Debug, Hash, Clone, Copy, PartialEq, Eq)]
@@ -130,7 +249,7 @@ pub enum Condition {
 }
 
 pub struct State<'a> {
-  resolved: HashMap<&'a str, OutValue>,
+  pub resolved: HashMap<&'a str, OutValue>,
   suppress: HashSet<Condition>,
   macro_used: HashSet<&'a str>,
   must_use: HashSet<&'a str>,
@@ -159,8 +278,6 @@ pub fn assemble<'a>(data: &'a str) -> State<'a> {
 
   // Parse main code
   let macromode = copies.fold(false, |macromode, statement| {
-
-    println!("{macromode}: {statement:?}");
 
     let mut final_macromode = macromode;
 
@@ -278,8 +395,14 @@ fn parse_pwr<'a>(statement: &'a str, state: &mut State<'a>, macromode: &mut bool
         &mut state.resolved
       };
 
-      // User wants to import a macro from globals
-      if id.starts_with("#") {
+      // User wants to import a macro from
+      if id == "*" {
+        IMPORTS.entries().for_each(|(k, v)| {
+          if let Some(_) = hmap.insert(*k, *v) {
+            panic!("While loading the whole prelude, found duplicate : {k}");
+          }
+        });
+      } else if id.starts_with("#") {
         let Some(mc) = GLOB_MACROS
           .get()
           .expect("`macros` cannot globally import macros!")
@@ -289,7 +412,20 @@ fn parse_pwr<'a>(statement: &'a str, state: &mut State<'a>, macromode: &mut bool
         };
 
         state.macros.insert(id, Cow::Borrowed(mc));
-      } else if let Some(_) = hmap.insert(id, *IMPORTS.get(id).expect("Unable to resolve")) {
+      } else if let Some(_) = hmap.insert(
+        id,
+        GLOB_VALUES
+          .get()
+          .and_then(|x| x.get(&id))
+          .map(|x| *x)
+          .or_else(|| IMPORTS.get(id).map(|x| *x))
+          .or_else(|| {
+            id.strip_suffix("::")
+              .and_then(|x| IMPORTS.get(x))
+              .map(|x| *x)
+          })
+          .expect("Unable to find identifier from either GLOBAL_VALUES or DEFAULT_IMPORTS"),
+      ) {
         panic!("Duplicate identifier : {id}");
       };
     }),

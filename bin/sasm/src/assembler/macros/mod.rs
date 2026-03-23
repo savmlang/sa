@@ -2,8 +2,6 @@ use std::collections::{HashMap, HashSet};
 
 use crate::assembler::OutValue;
 
-use super::State;
-
 #[derive(Debug, Clone, Copy)]
 pub enum AssertOp {
   Or,
@@ -71,7 +69,6 @@ impl<'a> MacroJIT<'a> {
         AssertOp::Or => ite.any(cond),
         // AND
         AssertOp::And => ite.all(cond),
-        _ => false,
       } {
         panic!("Assertion failed : {op:?}");
       }

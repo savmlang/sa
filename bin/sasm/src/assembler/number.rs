@@ -2,7 +2,7 @@ use crate::assembler::{OutValue, State};
 
 macro_rules! mixedradix {
   ($data:ident, $radix:expr) => {
-    let data = unsafe { $data.get(2..).expect("Malformed integer literal") };
+    let data = { $data.get(2..).expect("Malformed integer literal") };
 
     let (data, width) = data.split_once("::u").unwrap();
 
@@ -38,6 +38,7 @@ pub fn parse_expr<'a>(
       &state.resolved
     };
     let (data, width) = &data[1..].split_once("::u").unwrap();
+
     return map.get(data).unwrap().into_width(width.parse().unwrap());
   }
 
@@ -56,9 +57,7 @@ pub fn parse_expr<'a>(
 
         let mc = state.curr_macro.as_mut().unwrap();
 
-        let idx = mc.compiled.len().checked_sub(1).expect(
-          "First operation cannot call a macro, consider adding anything meaningful beforehand.",
-        );
+        let idx = mc.compiled.len().wrapping_sub(1);
 
         let pos = mc
           .args
@@ -67,6 +66,10 @@ pub fn parse_expr<'a>(
           .expect("Found unknown argument");
 
         if !macroemit {
+          if idx == usize::MAX {
+            panic!("Macro operand cannot be used in the place!");
+          }
+
           let reloctable = mc.reloctable.entry(idx).or_default();
 
           reloctable.push(pos);
