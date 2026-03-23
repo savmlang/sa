@@ -24,8 +24,8 @@ fn main() {
   files.sort_by(|a, b| {
     let a = a.file_name();
     let b = b.file_name();
-    let is_a_macros = a == "macros";
-    let is_b_macros = b == "macros";
+    let is_a_macros = a == "macros.sasm";
+    let is_b_macros = b == "macros.sasm";
 
     if is_a_macros {
       has_macros = true;
@@ -67,7 +67,14 @@ fn main() {
   pb.set_prefix("Assembling");
 
   files.into_par_iter().for_each(|x| {
-    let fl = x.file_name().into_string().unwrap().parse::<u64>().unwrap();
+    let fl = x
+      .file_name()
+      .into_string()
+      .unwrap()
+      .strip_suffix(".sasm")
+      .expect("Unable to strip `.sasm` from file name")
+      .parse::<u64>()
+      .unwrap();
     let cnt = fs::read_to_string(x.path()).unwrap().into_boxed_str();
 
     pb.suspend(|| {

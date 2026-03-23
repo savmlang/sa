@@ -40,7 +40,12 @@ impl<'a> MacroJIT<'a> {
     )
   }
 
-  pub fn write(&self, out: &mut Vec<u8>, args: &[OutValue]) {
+  pub fn write<'b>(
+    &self,
+    out: &mut Vec<u8>,
+    args: &[OutValue],
+    mut macro_mode: Option<&mut MicroJITBuilder<'b>>,
+  ) {
     if self.total_args != args.len() {
       panic!(
         "Args mismatch for macro : Expected {}, found {}",
@@ -52,7 +57,14 @@ impl<'a> MacroJIT<'a> {
     self.asserts.iter().for_each(|(d, op)| {
       let mut ite = op.iter();
 
-      let cond = |(arg, size): &(usize, u8)| args[*arg].width == *size;
+      let cond = |(arg, size): &(usize, u8)| {
+        // Found a macro argument, pass any width checks
+        if *size == 0 {
+          return true;
+        }
+
+        args[*arg].width == *size
+      };
 
       if !match *d {
         // OR
@@ -72,13 +84,23 @@ impl<'a> MacroJIT<'a> {
         for item in table {
           let val = { *args.get(*item).unwrap() };
 
-          match val.width {
-            8 => out.extend_from_slice(&val.as_u8().to_le_bytes()),
-            16 => out.extend_from_slice(&val.as_u16().to_le_bytes()),
-            32 => out.extend_from_slice(&val.as_u32().to_le_bytes()),
-            64 => out.extend_from_slice(&val.as_u64().to_le_bytes()),
+          match (val.width, macro_mode.as_mut()) {
+            (0, Some(mc)) => {
+              (*mc)
+                .reloctable
+                .entry(out.len().checked_sub(1).expect(
+                  "First operation cannot call a macro, consider adding anything meaningful beforehand.",
+                ))
+                .or_default()
+                .push(val.data as _);
+            }
+            (8, _) => out.extend_from_slice(&val.as_u8().to_le_bytes()),
+            (16, _) => out.extend_from_slice(&val.as_u16().to_le_bytes()),
+            (32, _) => out.extend_from_slice(&val.as_u32().to_le_bytes()),
+            (64, _) => out.extend_from_slice(&val.as_u64().to_le_bytes()),
             other => panic!(
-              "Illegal bitwidth : u{other}. Ensure that operands are Quantizable (u8, u16, u32, u64)"
+              "Illegal bitwidth : u{}. Ensure that operands are Quantizable (u8, u16, u32, u64)",
+              other.0
             ),
           }
         }

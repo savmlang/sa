@@ -1,12 +1,18 @@
 #![allow(unused)]
 
 use phf::{Map, phf_map};
-use std::{borrow::Cow, collections::{HashMap, HashSet}};
+use std::{
+  borrow::Cow,
+  collections::{HashMap, HashSet},
+};
 
-use crate::{GLOB_MACROS, assembler::{
-  macros::{AssertOp, MacroJIT, MicroJITBuilder},
-  number::parse_expr,
-}};
+use crate::{
+  GLOB_MACROS,
+  assembler::{
+    macros::{AssertOp, MacroJIT, MicroJITBuilder},
+    number::parse_expr,
+  },
+};
 
 use sart::ctr::parse_instrution;
 
@@ -153,6 +159,9 @@ pub fn assemble<'a>(data: &'a str) -> State<'a> {
 
   // Parse main code
   let macromode = copies.fold(false, |macromode, statement| {
+
+    println!("{macromode}: {statement:?}");
+
     let mut final_macromode = macromode;
 
     match statement.chars().next().unwrap() {
@@ -165,7 +174,7 @@ pub fn assemble<'a>(data: &'a str) -> State<'a> {
             &mut state.curr_macro.as_mut().unwrap().compiled
           } else {
             &mut state.out
-          };  
+          };
           outvect.push(instr);
           return final_macromode;
         };
@@ -180,7 +189,7 @@ pub fn assemble<'a>(data: &'a str) -> State<'a> {
         outvect.push(instr);
 
         ops.trim().split(",").map(|x| x.trim()).for_each(|x| {
-          let val = parse_expr(&mut state, x, macromode);
+          let val = parse_expr(&mut state, x, macromode, false);
           let outvect = if macromode {
             &mut state.curr_macro.as_mut().unwrap().compiled
           } else {
@@ -249,7 +258,7 @@ fn parse_pwr<'a>(statement: &'a str, state: &mut State<'a>, macromode: &mut bool
     "#define" => {
       let (varname, data) = payload.trim().split_once(" ").expect("Unknown format!");
 
-      let out = parse_expr(state, data, *macromode);
+      let out = parse_expr(state, data, *macromode, false);
 
       let hmap = if *macromode {
         &mut state.curr_macro.as_mut().unwrap().resolved
@@ -271,7 +280,11 @@ fn parse_pwr<'a>(statement: &'a str, state: &mut State<'a>, macromode: &mut bool
 
       // User wants to import a macro from globals
       if id.starts_with("#") {
-        let Some(mc) = GLOB_MACROS.get().expect("`macros` cannot globally import macros!").get(id) else {
+        let Some(mc) = GLOB_MACROS
+          .get()
+          .expect("`macros` cannot globally import macros!")
+          .get(id)
+        else {
           panic!("Unable to resolve global macro : {id}");
         };
 
@@ -319,7 +332,11 @@ fn parse_pwr<'a>(statement: &'a str, state: &mut State<'a>, macromode: &mut bool
 
         let mc = state.curr_macro.as_ref().unwrap();
 
-        let idx = mc.args.iter().position(|x| *x == arg).expect("Unable to get position of operand");
+        let idx = mc
+          .args
+          .iter()
+          .position(|x| *x == arg)
+          .expect("Unable to get position of operand");
 
         (idx, wid)
       };
@@ -328,14 +345,19 @@ fn parse_pwr<'a>(statement: &'a str, state: &mut State<'a>, macromode: &mut bool
         let op = AssertOp::Or;
 
         let pr = parsecond(payload);
-        state.curr_macro.as_mut().unwrap().asserts.push((op, Box::new([pr])));
+        state
+          .curr_macro
+          .as_mut()
+          .unwrap()
+          .asserts
+          .push((op, Box::new([pr])));
         return;
       };
 
       let op = match op {
         "or" => AssertOp::Or,
         "and" => AssertOp::And,
-        op => panic!("Unknown op {op} : expected `or`, `and`")
+        op => panic!("Unknown op {op} : expected `or`, `and`"),
       };
 
       let i = conds.split(",").map(|x| x.trim()).map(parsecond).collect();
@@ -385,31 +407,35 @@ fn parse_pwr<'a>(statement: &'a str, state: &mut State<'a>, macromode: &mut bool
     }
 
     other => {
-      if !*macromode {
-        let Some(macrodata) = state.macros.get(other) else {
-          panic!("Unknown directive : {other}. Neither any associated macros were found.");
-        };
+      let Some(macrodata) = state.macros.get(other) else {
+        panic!("Unknown directive : {other}. Neither any associated macros were found.");
+      };
 
-        let macrodata = macrodata.as_ref() as *const MacroJIT<'a>;
+      let macrodata = macrodata.as_ref() as *const MacroJIT<'a>;
 
-        let argv = payload
-          .split(",")
-          .map(|x| x.trim())
-          .filter(|x| !x.is_empty())
-          .map(|x| parse_expr(state, x, *macromode))
-          .collect::<Box<[_]>>();
+      let argv = payload
+        .split(",")
+        .map(|x| x.trim())
+        .filter(|x| !x.is_empty())
+        .map(|x| parse_expr(state, x, *macromode, true))
+        .collect::<Box<[_]>>();
 
-        let macrodata = unsafe { &*macrodata };
+      let macrodata = unsafe { &*macrodata };
 
-        macrodata.write(&mut state.out, &argv);
-        _ = state.macro_used.insert(other);
+      macrodata.write(
+        &mut state.out,
+        &argv,
+        if *macromode {
+          Some(state.curr_macro.as_mut().unwrap())
+        } else {
+          None
+        },
+      );
+      _ = state.macro_used.insert(other);
 
-        macrodata.mustuse.iter().for_each(|e| {
-          state.must_use.insert(*e);
-        });
-      } else {
-        panic!("Unknown directive : {other}. Macros cannot nest macros.");
-      }
+      macrodata.mustuse.iter().for_each(|e| {
+        state.must_use.insert(*e);
+      });
     }
   }
 }

@@ -24,7 +24,12 @@ macro_rules! mixedradix {
   };
 }
 
-pub fn parse_expr<'a>(state: &mut State<'a>, data: &'a str, macromode: bool) -> OutValue {
+pub fn parse_expr<'a>(
+  state: &mut State<'a>,
+  data: &'a str,
+  macromode: bool,
+  macroemit: bool,
+) -> OutValue {
   // Resolve variables!
   if &data[0..=0] == "$" {
     let map = if macromode {
@@ -51,18 +56,26 @@ pub fn parse_expr<'a>(state: &mut State<'a>, data: &'a str, macromode: bool) -> 
 
         let mc = state.curr_macro.as_mut().unwrap();
 
-        let idx = mc.compiled.len() - 1;
-
-        let reloctable = mc.reloctable.entry(idx).or_default();
-
-        reloctable.push(
-          mc.args
-            .iter()
-            .position(|x| *x == *argument_name)
-            .expect("Found unknown argument"),
+        let idx = mc.compiled.len().checked_sub(1).expect(
+          "First operation cannot call a macro, consider adding anything meaningful beforehand.",
         );
 
-        return OutValue { data: 0, width: 0 };
+        let pos = mc
+          .args
+          .iter()
+          .position(|x| *x == *argument_name)
+          .expect("Found unknown argument");
+
+        if !macroemit {
+          let reloctable = mc.reloctable.entry(idx).or_default();
+
+          reloctable.push(pos);
+        }
+
+        return OutValue {
+          data: pos as _,
+          width: 0,
+        };
       }
       _ => {}
     }
@@ -82,7 +95,7 @@ pub fn parse_expr<'a>(state: &mut State<'a>, data: &'a str, macromode: bool) -> 
         .unwrap()
         .split("|")
         .map(|x| x.trim())
-        .map(|x| parse_expr(state, x, macromode))
+        .map(|x| parse_expr(state, x, macromode, macroemit))
         .fold((0u64, 0u8), |(acc_data, acc_width), out| {
           // Check for overflow before shifting
           if acc_width + out.width > width {
