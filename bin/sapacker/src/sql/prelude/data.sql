@@ -3,6 +3,7 @@
 
 PRAGMA user_version = 1;
 PRAGMA synchronous = OFF;
+PRAGMA journal_mode = OFF;
 
 -- Clear things eagerly
 DROP TABLE IF EXISTS Metadata;

@@ -46,6 +46,10 @@ pub enum SymbolMapTable<T> {
   },
 }
 
+pub enum SymbolMapTableInfo {
+  NativePointer,
+  MixedSizedBytecode,
+}
 pub enum CacheData {
   None,
   Pickle {
@@ -94,6 +98,9 @@ pub trait BytecodeResolver {
   /// Resolve the symbol map table
   fn resolve_data(&self, section: u64) -> SymbolMapTable<Box<dyn ResolvedData>>;
 
+  /// Learn about the data present
+  fn learn_data(&self, section: u64) -> SymbolMapTableInfo;
+
   /// Checks if the cache is available!
   fn get_best_cache(&self, section: u64) -> CacheData;
 
@@ -119,6 +126,10 @@ impl BytecodeResolver for Box<dyn BytecodeResolver + Send + Sync + 'static> {
 
   fn resolve_data(&self, section: u64) -> SymbolMapTable<Box<dyn ResolvedData>> {
     BytecodeResolver::resolve_data(self.as_ref(), section)
+  }
+
+  fn learn_data(&self, section: u64) -> SymbolMapTableInfo {
+    BytecodeResolver::learn_data(self.as_ref(), section)
   }
 
   fn last_section_id(&self) -> u64 {
