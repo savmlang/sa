@@ -9,18 +9,17 @@ DROP TABLE IF EXISTS Metadata;
 DROP TABLE IF EXISTS Bincode;
 DROP TABLE IF EXISTS LibFnmap;
 DROP TABLE IF EXISTS DllStore;
-DROP TABLE IF EXISTS GlobalData;
 
 -- The following identifiers are a MUST to be present
 -- 
 -- `0` = Last section id
--- `1` = Top priority compile queue
--- `2` = Priority compile queue
+-- `1` = Top priority compile queue (array of u64s)
+-- `2` = Priority compile queue (array of u64s)
+-- `3` = GlobalData
 CREATE TABLE IF NOT EXISTS Metadata(
   identifier INTEGER PRIMARY KEY,
 
-  sizeof INTEGER NOT NULL,
-  valuedata BLOB NOT NULL CHECK (length(valuedata) = sizeof)
+  valuedata BLOB NOT NULL CHECK (length(valuedata) <= 10485760)
 ) WITHOUT ROWID;
 
 -- Binaries & native libraries that are to be eagerly loaded
@@ -44,6 +43,10 @@ CREATE TABLE IF NOT EXISTS LibFnmap(
   library_id INTEGER NOT NULL,                                  -- High 64 bits
   function_id INTEGER NOT NULL,                                 -- Low 64 bits
   symbol_name BLOB NOT NULL CHECK (length(symbol_name) <= 512), -- The actual name of the C function (e.g., "sqlite3_open")
+  -- Calling ABI Definition:
+  -- Otherwise is parsed as a valid 
+  callsig BLOB NOT NULL CHECK (length(callsig) <= 10240),
+
   PRIMARY KEY (library_id, function_id)
 ) WITHOUT ROWID;
 
@@ -57,12 +60,4 @@ CREATE TABLE IF NOT EXISTS DllStore(
   -- This is machine code with the OS headers, not a lcoation
   dylibcontent BLOB NOT NULL,
   PRIMARY KEY (library_id, platform)
-) WITHOUT ROWID;
-
--- This is the GLOBAL DATA to be mounted
--- as RW
-CREATE TABLE IF NOT EXISTS GlobalData(
-  identifier INTEGER PRIMARY KEY DEFAULT 1 CHECK (identifier=1),
-  todisk BOOLEAN NOT NULL DEFAULT TRUE,
-  globdata BLOB NOT NULL
-) WITHOUT ROWID;
+);
