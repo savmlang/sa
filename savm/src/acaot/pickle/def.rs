@@ -3,6 +3,7 @@ use crate::acaot::pickle::implementation::*;
 /// Pickle is our own internal NE implementation
 /// for converting variable width bytecode into pickle
 #[repr(C)]
+#[derive(Debug)]
 pub struct PickleInstruction {
   pub opcode: u8,
   pub u1: u8,

@@ -4,17 +4,15 @@ use std::{
   path::PathBuf,
 };
 
-use rusqlite::{Connection, params};
+use rusqlite::{params, Connection};
 
 const ASSETCLASS_BINCODE: u64 = 0;
 const LIBRARY_EARGERLOAD: u64 = 1;
-const LIBRARY_EXPLICITLOAD: u64 = 2;
 
 pub fn emit(path: &mut PathBuf, conn: &Connection) {
   for (pth, asst) in [
     ("bytecode", ASSETCLASS_BINCODE),
     ("eagerload", LIBRARY_EARGERLOAD),
-    ("explicit", LIBRARY_EXPLICITLOAD),
   ] {
     path.push(pth);
 

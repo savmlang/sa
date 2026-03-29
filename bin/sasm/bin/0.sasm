@@ -43,7 +43,7 @@ mark $MARK_LOOP_BEGIN::u64
 
   ; If Remainder == 0
   ; We found a composite number, loop again
-  mov $r8::u8, 0::u64
+  reg $r8::u8, 0::u64
   #eq %u16[ $r8::u4 | $r3::u4 | $r3::u4 | 0::u4 ]
   
   reg $r8::u8, 1::u64

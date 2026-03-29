@@ -507,7 +507,7 @@ impl<T: Seek + Read> PickleWorker<T> {
       u3: 0,
     });
 
-    self.jump.insert(marker, self.out.len());
+    self.jump.insert(marker, self.out.len() - 1);
   }
 
   fn handle_reg(&mut self) {

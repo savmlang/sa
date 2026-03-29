@@ -1,4 +1,7 @@
-use crate::{BytecodeResolver, CODE_CACHE, CacheData, SymbolMapTable, acaot::pickle::PickleWorker};
+use crate::{
+  BytecodeResolver, CODE_CACHE, CacheData, SymbolMapTable,
+  acaot::pickle::{PickleWorker, def::PickleInstruction},
+};
 use evmap::handles::WriteHandle;
 use std::sync::Arc;
 
@@ -22,10 +25,11 @@ pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(
             };
             worker.pass1();
 
-            let out = Arc::new(worker.out.into_boxed_slice());
+            let out: Arc<[PickleInstruction]> = Arc::from(worker.out.into_boxed_slice());
+            let jumps = Arc::new(worker.jump);
 
-            CODE_CACHE.insert(id, out.clone());
-            Some((id, out))
+            CODE_CACHE.insert(id, (out.clone(), jumps.clone()));
+            Some((id, out, jumps))
           }
           _ => None,
         }
@@ -35,9 +39,9 @@ pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(
     .filter_map(|x| x)
     .collect::<Box<[_]>>()
     .into_iter()
-    .for_each(|(section, cache)| {
+    .for_each(|(section, cache, jumps)| {
       resolve
         .as_ref()
-        .update_cache(section, CacheData::Pickle { out: cache });
+        .update_cache(section, CacheData::Pickle { out: cache, jumps });
     });
 }

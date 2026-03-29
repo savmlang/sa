@@ -12,6 +12,7 @@
 pub mod acaot;
 
 use std::{
+  any::Any,
   hash::Hash,
   io::{Read, Seek},
   mem::zeroed,
@@ -20,6 +21,7 @@ use std::{
   time::Duration,
 };
 
+use ahash::HashMap;
 use evmap::handles::ReadHandle;
 use moka::sync::{CacheBuilder, SegmentedCache};
 use sart::{code::SwappableCodeStore, ctr::CVMTaskState};
@@ -53,27 +55,20 @@ pub enum SymbolMapTableInfo {
 pub enum CacheData {
   None,
   Pickle {
-    out: Arc<Box<[PickleInstruction]>>,
+    out: Arc<[PickleInstruction]>,
+    jumps: Arc<HashMap<u64, usize>>,
   },
-  #[cfg(feature = "cranelift")]
   CraneliftAbs8 {},
-  #[cfg(feature = "cranelift")]
   CraneliftRel {},
-  #[cfg(feature = "llvm")]
   LLVMAbs8 {},
-  #[cfg(feature = "llvm")]
   LLVMRel {},
 }
 
 pub enum CacheLevel {
   Pickle,
-  #[cfg(feature = "cranelift")]
   CraneliftAbs8,
-  #[cfg(feature = "cranelift")]
   CraneliftRel,
-  #[cfg(feature = "llvm")]
   LLVMAbs8,
-  #[cfg(feature = "llvm")]
   LLVMRel,
 }
 
@@ -81,7 +76,7 @@ pub trait ResolvedData: Read + Seek {}
 
 impl<T: Read + Seek> ResolvedData for T {}
 
-pub trait BytecodeResolver {
+pub trait BytecodeResolver: Any {
   /// Return the id of the LAST VALID section
   /// We use this to prevent unnecessary [u64] allocation
   fn last_section_id(&self) -> u64;
@@ -152,7 +147,7 @@ pub static VMCONF: RwLock<VmConfig> = RwLock::new(unsafe { zeroed() });
 
 // This only and only stores Subroutine-Threaded instructions
 pub(crate) static CODE_CACHE: LazyLock<
-  SegmentedCache<u64, Arc<Box<[PickleInstruction]>>, ahash::RandomState>,
+  SegmentedCache<u64, (Arc<[PickleInstruction]>, Arc<HashMap<u64, usize>>), ahash::RandomState>,
 > = LazyLock::new(|| {
   CacheBuilder::new(1 << 10) // 2^10 = 1024
     .segments(available_parallelism().map(|x| x.get()).unwrap_or(4))

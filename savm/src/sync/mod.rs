@@ -1,11 +1,17 @@
-use std::{cell::UnsafeCell, collections::HashMap, hint::cold_path, mem::zeroed, sync::OnceLock};
+use std::{
+  cell::UnsafeCell,
+  hint::cold_path,
+  mem::zeroed,
+  sync::{Arc, OnceLock},
+};
 
 use sart::{ctr::VMTaskState, salloc, structures::QuadPackedData};
 
 use crate::{
-  CODE_CACHE, JIT_CACHE, VM,
+  CODE_CACHE, JIT_CACHE, SymbolMapTable, VM,
   acaot::pickle::{
-    def::{PICKLE_DISPATCH_TABLE, PICKLE_OPCODE_HINT, PICKLE_OPCODE_JMP, PICKLE_OPCODE_MARK},
+    PickleWorker,
+    def::{PICKLE_DISPATCH_TABLE, PICKLE_OPCODE_HINT, PICKLE_OPCODE_MARK, PickleInstruction},
     implementation::{SIZE_128KB, WorkingSet},
   },
 };
@@ -40,7 +46,7 @@ thread_local! {
       arr: [0u8;20],
       largepad: unsafe { salloc::aligned_malloc(SIZE_128KB, 8) as _ },
       largepad_cursor: 0,
-      relocmap: HashMap::default()
+      relocmap: Default::default()
     },
     ts: unsafe {
       let mut ts: [VMTaskState; 50] = zeroed();
@@ -58,7 +64,7 @@ thread_local! {
 
 impl VM {
   pub fn call_section(&self, sectionid: u64) {
-    let Some(data) = CODE_CACHE.get(&sectionid) else {
+    let Some((data, jumps)) = CODE_CACHE.get(&sectionid) else {
       // TODO: Replace with `become`
       return self.pickle_section(sectionid);
     };
@@ -70,6 +76,8 @@ impl VM {
 
     VMSTAT.with(|x| unsafe {
       let t = &mut *x.get();
+
+      t.ws.relocmap = jumps;
 
       let ts = t.ts.get_unchecked_mut(t.cindex);
 
@@ -93,11 +101,9 @@ impl VM {
 
           // USE A NO-OP to our benefit
           if pickle.opcode == PICKLE_OPCODE_HINT
-            && [PICKLE_OPCODE_MARK, PICKLE_OPCODE_JMP]
-              .iter()
-              .any(|x| *x == pickle.u1)
+            && [PICKLE_OPCODE_MARK].iter().any(|x| *x == pickle.u1)
           {
-            ts.curline_or_resume.usi += 1;
+            ts.curline_or_resume.usi += 5;
             continue 'jcheck;
           }
 
@@ -110,6 +116,13 @@ impl VM {
 
           ts.curline_or_resume.usi += 1;
         }
+      }
+
+      {
+        println!(
+          "{} {} {} {} {} {} {} {}",
+          ts.r1.u64, ts.r2.u64, ts.r3.u64, ts.r4.u64, ts.r5.u64, ts.r6.u64, ts.r7.u64, ts.r8.u64
+        );
       }
     });
 
@@ -125,6 +138,22 @@ impl VM {
 
   fn pickle_section(&self, sectionid: u64) {
     // Compile
+    let SymbolMapTable::MixedSizedBytecode { bytecode } = self.resolve.resolve_data(sectionid)
+    else {
+      return;
+    };
+
+    let mut worker = PickleWorker {
+      bytecode,
+      out: vec![],
+      jump: Default::default(),
+    };
+    worker.pass1();
+
+    let out: Arc<[PickleInstruction]> = Arc::from(worker.out.into_boxed_slice());
+
+    CODE_CACHE.insert(sectionid, (out, Arc::new(worker.jump)));
+    CODE_CACHE.run_pending_tasks();
 
     // TODO: Replace with `become`
     return self.call_section(sectionid);

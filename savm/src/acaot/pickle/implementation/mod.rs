@@ -3,6 +3,7 @@ use std::{
   hint::cold_path,
   mem::{transmute_copy, zeroed},
   ptr::read_unaligned,
+  sync::Arc,
 };
 
 mod almu;
@@ -21,7 +22,7 @@ pub struct WorkingSet {
   pub arr: [u8; 20],
   pub largepad: *mut QuadPackedData, // SIZE_128KB allocated
   pub largepad_cursor: usize,
-  pub relocmap: HashMap<u64, usize, ahash::RandomState>,
+  pub relocmap: Arc<HashMap<u64, usize, ahash::RandomState>>,
 }
 
 // the largepad is a LIFO-ONLY Queue
@@ -172,7 +173,7 @@ pub fn call_hint(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
   let pic = unsafe { taskstate.curline_or_resume.usi };
 
   // Fetch WS_PUTs and decode
-  for pidx in pic..(pic + total_wsput) {
+  for pidx in (pic + 1)..=(pic + total_wsput) {
     unsafe {
       let wsput = &*(taskstate.engine_or_pt.pt as *const PickleInstruction).add(pidx);
 
@@ -185,31 +186,36 @@ pub fn call_hint(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
 
   // Increment counter by that exact amount
   // total_wsput
-  unsafe {
-    taskstate.curline_or_resume.usi += total_wsput;
-  }
+  //
+  // +1 to go past the last WS_PUT
+  taskstate.curline_or_resume.usi = pic + total_wsput + 1;
 
   // Call next instruction
   unsafe {
+    let pkl = &*(taskstate.engine_or_pt.pt as *const PickleInstruction)
+      .add(taskstate.curline_or_resume.usi);
+
+    debug_assert!(pkl.opcode == instruction);
+
     // TODO: Replace with `become` once its in nightly-functional
-    return PICKLE_DISPATCH_TABLE.get_unchecked(instruction as usize)(
-      &*(taskstate.engine_or_pt.pt as *const PickleInstruction)
-        .add(taskstate.curline_or_resume.usi),
-      ws,
-      taskstate,
-    );
+    return PICKLE_DISPATCH_TABLE.get_unchecked(instruction as usize)(pkl, ws, taskstate);
   }
 }
 
 pub fn call_mark(_pickle: &PickleInstruction, _ws: &mut WorkingSet, _taskstate: &mut VMTaskState) {}
 
-pub fn call_ws_put(pickle: &PickleInstruction, ws: &mut WorkingSet, _taskstate: &mut VMTaskState) {
-  let offset = pickle.u1 as usize;
+pub fn call_ws_put(
+  _pickle: &PickleInstruction,
+  _ws: &mut WorkingSet,
+  _taskstate: &mut VMTaskState,
+) {
+  panic!("WS_PUT is not to be called");
+  // let offset = pickle.u1 as usize;
 
-  unsafe {
-    *ws.arr.get_unchecked_mut(offset * 2) = pickle.u2;
-    *ws.arr.get_unchecked_mut(offset * 2 + 1) = pickle.u3;
-  }
+  // unsafe {
+  //   *ws.arr.get_unchecked_mut(offset * 2) = pickle.u2;
+  //   *ws.arr.get_unchecked_mut(offset * 2 + 1) = pickle.u3;
+  // }
 }
 
 pub fn call_mov(pickle: &PickleInstruction, _ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
@@ -226,14 +232,15 @@ pub fn call_mov(pickle: &PickleInstruction, _ws: &mut WorkingSet, taskstate: &mu
       13 => {
         taskstate.r1.selfref = taskstate.largepad;
       }
-      _ => {
-        resolve!(taskstate => target).selfref = resolve_ptr!(taskstate => target);
-      }
+      _ => unsafe {
+        (*resolve_ptr!(taskstate => target)).selfref = resolve_ptr!(taskstate => target);
+      },
     }
   } else {
     let rsrc = resolve!(taskstate => source);
-    let ptarget = &mut resolve!(taskstate => target);
-    *ptarget = rsrc;
+    let ptarget = resolve_ptr!(taskstate => target);
+
+    unsafe { *ptarget = rsrc };
   }
 }
 
@@ -245,7 +252,7 @@ pub fn call_reg(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut
   filled[6..8].copy_from_slice(&[pickle.u2, pickle.u3]);
   let data = u64::from_ne_bytes(filled);
 
-  *(&mut resolve!(taskstate => reg)) = QuadPackedData { u64: data };
+  unsafe { *resolve_ptr!(taskstate => reg) = QuadPackedData { u64: data } };
 }
 
 pub fn call_jmp(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
@@ -327,9 +334,9 @@ pub fn call_vcmp(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
 
   let srcflags = arrcastint!(ws, start = 0, stop = 2, u16);
 
-  let src1 = (srcflags >> 6) as u8;
-  let src2 = ((srcflags >> 4) & 0x3) as u8;
-  let target = ((srcflags >> 2) & 0x3) as u8;
+  let src1 = (srcflags >> 12) as u8 & 0xF;
+  let src2 = ((srcflags >> 8) & 0xF) as u8;
+  let target = ((srcflags >> 4) & 0xF) as u8;
 
   let count = if count_bit == 0 {
     arrcastint!(ws, start = 2, stop = 6, u32)
