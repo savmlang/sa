@@ -1,0 +1,9 @@
+[package]
+name = "satest"
+version = "0.0.1"
+edition = "2024"
+
+[dependencies]
+savm = { path = "../../savm", default-features = false }
+serde = { version = "^1", features = ["derive"] }
+serde_json = "^1"

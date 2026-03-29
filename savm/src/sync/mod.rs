@@ -117,13 +117,6 @@ impl VM {
           ts.curline_or_resume.usi += 1;
         }
       }
-
-      {
-        println!(
-          "{} {} {} {} {} {} {} {}",
-          ts.r1.u64, ts.r2.u64, ts.r3.u64, ts.r4.u64, ts.r5.u64, ts.r6.u64, ts.r7.u64, ts.r8.u64
-        );
-      }
     });
 
     if run_jit {
