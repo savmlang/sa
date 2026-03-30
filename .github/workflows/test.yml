@@ -38,11 +38,12 @@ jobs:
       - name: Run
         working-directory: bin/satest
         run: |
-          RUNS=20
+          cargo run --release
 
-          for ((i=1; i<=RUNS; i++)); do
-            echo "Run $i:"
-            
-            cargo run --release
-            python bench/index.py
-          done
+          echo "Python"
+          python bench/0.py
+          python bench/1.py
+
+          echo "NodeJS"
+          node bench/0.js
+          node bench/1.js
