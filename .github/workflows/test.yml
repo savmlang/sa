@@ -49,5 +49,11 @@ jobs:
           echo "NodeJS (Test #1)"
           node bench/1.js
 
+          echo "NodeJS (Test #1 - No JIT)"
+          node --jitless bench/1_nopt.js
+
           echo "NodeJS (Test #2)"
           node bench/2.js
+
+          echo "NodeJS (Test #2 - No JIT)"
+          node --jitless bench/2_nopt.js
