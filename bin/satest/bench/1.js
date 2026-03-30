@@ -24,11 +24,11 @@ function runTests() {
   return (res_u32 << 32n) | (res_u16 << 16n) | (res_u8_a << 8n) | res_u8_b;
 }
 
-const iterations = 10000;
+const iterations = 100;
 const latencies = new BigUint64Array(iterations);
 
 // Warm up - Let V8 optimize the function
-for (let i = 0; i < 2000; i++) runTests();
+for (let i = 0; i < 200_000; i++) runTests();
 
 for (let i = 0; i < iterations; i++) {
   const start = process.hrtime.bigint();
@@ -40,7 +40,5 @@ for (let i = 0; i < iterations; i++) {
 // Calculate Median
 latencies.sort();
 const median = latencies[iterations / 2];
-const result = runTests();
 
-console.log(`Final Packed Register (r6): 0x${result.toString(16)}`);
 console.log(`Median Execution Time: ${median} ns`);

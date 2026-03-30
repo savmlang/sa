@@ -1,39 +1,36 @@
 import time
 import statistics
 
-def benchmark_while_loop(iterations):
-    # Mimics your 2.asm logic exactly
-    r1 = 0
-    r2 = 1
-    r8 = iterations
-    
-    start_time = time.perf_counter()
-    while r1 < r8:
-        r1 += r2
-    end_time = time.perf_counter()
-    
-    return (end_time - start_time) * 1000  # Convert to ms
+def run_tests():
+    # Registers
+    r1 = 0          # Counter
+    r2 = 1          # Increment
+    r8 = 1_000_000  # Stop value
 
-def run_benchmarks(num_runs=20, iterations=1_000_000):
-    results = []
-    print(f"--- Running {num_runs} Trials ({iterations:,} iterations each) ---")
-    
-    for i in range(num_runs):
-        duration = benchmark_while_loop(iterations)
-        results.append(duration)
-        print(f"Run {i+1:02d}: {duration:.4f} ms")
-        
-    median_val = statistics.median(results)
-    
-    print("-" * 40)
-    print(f"YOUR ASSEMBLER: ~106.65 ms")
-    print(f"PYTHON MEDIAN:  {median_val:.4f} ms")
-    print("-" * 40)
-    
-    if 106.65 < median_val:
-        print("STATUS: SaVM is BEATING Python! 🚀")
-    else:
-        print(f"STATUS: Python is faster by {106.65 - median_val:.2f} ms.")
+    while True:
+        # vadd r1 = r1 + r2 (+ offset 1, simulated)
+        r1 = r1 + r2 + 1  # the assembler offset
 
-if __name__ == "__main__":
-    run_benchmarks()
+        # #eq macro: compare r1 and r8
+        r7 = 1 if r1 == r8 else 0
+
+        # jif (jump if non-zero)
+        if r7 != 0:
+            break  # jump to mark 2
+
+        # else continue looping (jmp 1)
+        # loop continues automatically
+
+
+# Execution loop
+latencies = []
+
+for _ in range(100):
+    start = time.perf_counter_ns()
+    run_tests()
+    end = time.perf_counter_ns()
+    latencies.append(end - start)
+
+median_latency = statistics.median(latencies)
+
+print(f"Median Execution Time: {median_latency:.2f} ns")

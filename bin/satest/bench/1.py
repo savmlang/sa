@@ -45,11 +45,10 @@ latencies = []
 
 for _ in range(10_000):
     start = time.perf_counter_ns()
-    result = run_tests()
+    run_tests()
     end = time.perf_counter_ns()
     latencies.append(end - start)
 
 median_latency = statistics.median(latencies)
 
-print(f"Final Packed Register (r6): {hex(result)}")
 print(f"Median Execution Time: {median_latency:.2f} ns")
