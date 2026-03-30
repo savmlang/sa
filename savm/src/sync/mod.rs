@@ -104,7 +104,7 @@ impl VM {
           if pickle.opcode == PICKLE_OPCODE_HINT
             && [PICKLE_OPCODE_MARK].iter().any(|x| *x == pickle.u1)
           {
-            ts.curline_or_resume.usi += 5;
+            ts.curline_or_resume.usi += 3;
             continue 'jcheck;
           }
 

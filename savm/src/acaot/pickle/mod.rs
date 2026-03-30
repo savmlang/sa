@@ -529,20 +529,34 @@ impl<T: Seek + Read> PickleWorker<T> {
   fn emit_copy_bytes<const N: usize>(&mut self, opcode: u8, data: [u8; N]) {
     // Ensure N is even so we don't lose a byte in integer division
     debug_assert!(N % 2 == 0, "Payload must be word-aligned");
+    debug_assert!(N <= 255, "Payload size {} exceeds u8 capacity", N);
 
     self.out.push(PickleInstruction {
       opcode: PICKLE_OPCODE_HINT,
       u1: opcode,
-      u2: (N / 2) as u8,
-      u3: 0,
+      u2: (N / 4) as u8 + ((N % 4) / 2) as u8,
+      // total bytes
+      u3: N as u8,
     });
 
-    for i in 0..N / 2 {
+    let mut chunks_4 = data.chunks_exact(4);
+    for chunk in chunks_4.by_ref() {
       self.out.push(PickleInstruction {
-        opcode: PICKLE_OPCODE_WS_PUT,
-        u1: i as u8,
-        u2: data[i * 2],
-        u3: data[i * 2 + 1],
+        opcode: chunk[0],
+        u1: chunk[1],
+        u2: chunk[2],
+        u3: chunk[3],
+      });
+    }
+
+    // 3. Process remaining 2-byte chunks (the "remainder")
+    let chunks_2 = chunks_4.remainder().chunks_exact(2);
+    for chunk in chunks_2 {
+      self.out.push(PickleInstruction {
+        opcode: chunk[0],
+        u1: chunk[1],
+        u2: 0,
+        u3: 0,
       });
     }
   }

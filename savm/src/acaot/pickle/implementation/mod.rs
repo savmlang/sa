@@ -14,7 +14,10 @@ pub use threading::*;
 
 use sart::{ctr::VMTaskState, structures::QuadPackedData};
 
-use crate::acaot::pickle::def::{PICKLE_DISPATCH_TABLE, PickleInstruction};
+use crate::acaot::pickle::def::{
+  PICKLE_DISPATCH_TABLE, PICKLE_OPCODE_JIF, PICKLE_OPCODE_JMP, PICKLE_OPCODE_MARK,
+  PICKLE_OPCODE_VADD, PICKLE_OPCODE_VCMP, PickleInstruction,
+};
 
 pub const SIZE_128KB: usize = 128 * 1024 / size_of::<QuadPackedData>();
 
@@ -166,24 +169,34 @@ macro_rules! resolve_location_src {
 pub type ResolveFn =
   fn(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) -> ();
 
+#[inline(always)]
 pub fn call_hint(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
   let instruction = pickle.u1;
 
   let total_wsput = pickle.u2 as usize;
+  let bytes = pickle.u3 as usize;
 
   let pic = unsafe { taskstate.curline_or_resume.usi };
 
   // Fetch WS_PUTs and decode
-  for pidx in (pic + 1)..=(pic + total_wsput) {
-    unsafe {
-      let wsput = &*(taskstate.engine_or_pt.pt as *const PickleInstruction).add(pidx);
+  unsafe {
+    std::ptr::copy_nonoverlapping(
+      (taskstate.engine_or_pt.pt as *const PickleInstruction).add(pic + 1) as *const u8,
+      ws.arr.as_mut_ptr(),
+      bytes,
+    );
+  };
 
-      let offset = wsput.u1 as usize;
+  // for pidx in (pic + 1)..=(pic + total_wsput) {
+  //   unsafe {
+  //     let wsput = &*(taskstate.engine_or_pt.pt as *const PickleInstruction).add(pidx);
 
-      *ws.arr.get_unchecked_mut(offset * 2) = wsput.u2;
-      *ws.arr.get_unchecked_mut(offset * 2 + 1) = wsput.u3;
-    }
-  }
+  //     let offset = wsput.u1 as usize;
+
+  //     *ws.arr.get_unchecked_mut(offset * 2) = wsput.u2;
+  //     *ws.arr.get_unchecked_mut(offset * 2 + 1) = wsput.u3;
+  //   }
+  // }
 
   // Increment counter by that exact amount
   // total_wsput
@@ -199,12 +212,21 @@ pub fn call_hint(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
     debug_assert!(pkl.opcode == instruction);
 
     // TODO: Replace with `become` once its in nightly-functional
-    return PICKLE_DISPATCH_TABLE.get_unchecked(instruction as usize)(pkl, ws, taskstate);
+    match instruction {
+      PICKLE_OPCODE_MARK => call_mark(pkl, ws, taskstate),
+      PICKLE_OPCODE_JMP => call_jmp(pkl, ws, taskstate),
+      PICKLE_OPCODE_JIF => call_jif(pkl, ws, taskstate),
+      PICKLE_OPCODE_VCMP => call_vcmp(pkl, ws, taskstate),
+      PICKLE_OPCODE_VADD => call_vadd(pkl, ws, taskstate),
+      _ => return PICKLE_DISPATCH_TABLE.get_unchecked(instruction as usize)(pkl, ws, taskstate),
+    }
   }
 }
 
+#[inline(always)]
 pub fn call_mark(_pickle: &PickleInstruction, _ws: &mut WorkingSet, _taskstate: &mut VMTaskState) {}
 
+#[inline(always)]
 pub fn call_ws_put(
   _pickle: &PickleInstruction,
   _ws: &mut WorkingSet,
@@ -219,6 +241,7 @@ pub fn call_ws_put(
   // }
 }
 
+#[inline(always)]
 pub fn call_mov(pickle: &PickleInstruction, _ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
   let source = pickle.u1;
   let target = pickle.u2;
@@ -245,6 +268,7 @@ pub fn call_mov(pickle: &PickleInstruction, _ws: &mut WorkingSet, taskstate: &mu
   }
 }
 
+#[inline(always)]
 pub fn call_reg(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
   let reg = pickle.u1;
 
@@ -256,6 +280,7 @@ pub fn call_reg(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut
   unsafe { *resolve_ptr!(taskstate => reg) = QuadPackedData { u64: data } };
 }
 
+#[inline(always)]
 pub fn call_jmp(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
   let mut filled = [0u8; 8];
   filled[0..6].copy_from_slice(&ws.arr[0..6]);
@@ -300,6 +325,7 @@ macro_rules! jif_comparison {
   };
 }
 
+#[inline(always)]
 pub fn call_jif(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
   let intent = pickle.u1;
   let relocation_src = pickle.u2;
@@ -342,6 +368,7 @@ macro_rules! arrcastint {
   }};
 }
 
+#[inline(always)]
 pub fn call_vcmp(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
   let count_bit = pickle.u1;
 

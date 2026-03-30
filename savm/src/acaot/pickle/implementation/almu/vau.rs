@@ -129,6 +129,7 @@ macro_rules! intop_carry {
   };
 }
 
+#[inline(always)]
 pub fn call_vadd(_: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
   let (instdefined, typetag, count, src1, src2, target, t1, t2, t3) = arithprelude!(ws, taskstate);
 
@@ -195,6 +196,7 @@ pub fn call_vadd(_: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMT
   }
 }
 
+#[inline(always)]
 pub fn call_vsub(_: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
   let (instdefined, typetag, count, src1, src2, target, t1, t2, t3) = arithprelude!(ws, taskstate);
 
@@ -261,6 +263,7 @@ pub fn call_vsub(_: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMT
   }
 }
 
+#[inline(always)]
 pub fn call_vmul(_: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
   let (instdefined, typetag, count, src1, src2, target, t1, t2, t3) = arithprelude!(ws, taskstate);
 
@@ -363,6 +366,7 @@ macro_rules! divlikeprelude {
     };
   }
 
+#[inline(always)]
 pub fn call_div(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
   let (typetag, src1, src2, target, t1, t2, t3) = divlikeprelude!(pickle, ws, taskstate);
 
@@ -381,6 +385,7 @@ pub fn call_div(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut
   }
 }
 
+#[inline(always)]
 pub fn call_rem(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
   let (typetag, src1, src2, target, t1, t2, t3) = divlikeprelude!(pickle, ws, taskstate);
 
