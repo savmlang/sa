@@ -1,11 +1,9 @@
-#![allow(internal_features)]
 #![feature(
   signed_bigint_helpers,
   nonpoison_rwlock,
   sync_nonpoison,
   read_array,
   widening_mul,
-  core_intrinsics,
   adt_const_params
 )]
 

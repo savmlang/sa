@@ -6,17 +6,26 @@ use serde::{Deserialize, Serialize};
 use std::{
   fs::{self, File},
   mem::zeroed,
+  time::Instant,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
 struct ExpectedOutput {
+  #[serde(default)]
   r1: u64,
+  #[serde(default)]
   r2: u64,
+  #[serde(default)]
   r3: u64,
+  #[serde(default)]
   r4: u64,
+  #[serde(default)]
   r5: u64,
+  #[serde(default)]
   r6: u64,
+  #[serde(default)]
   r7: u64,
+  #[serde(default)]
   r8: u64,
 }
 
@@ -53,10 +62,12 @@ fn main() {
   for sectionid in 0..total {
     println!("[TESTING] #{sectionid}");
 
-    let out: ExpectedOutput =
-      serde_json::from_reader(File::open(format!("./expected/{sectionid}.json")).unwrap()).unwrap();
+    let out = fs::read(format!("./expected/{sectionid}.toml")).unwrap();
+    let out: ExpectedOutput = toml::from_slice(&out).unwrap();
 
+    let t0 = Instant::now();
     vm.call_section(sectionid as _);
+    let tf = t0.elapsed();
 
     VMSTAT.with(|x| unsafe {
       let mt = &mut *x.get();
@@ -85,7 +96,7 @@ fn main() {
       mt.ts = zeroed();
     });
 
-    println!("[PASS]    #{sectionid}");
+    println!("[PASS]    #{sectionid} in {tf:?} (Intl-Mode)");
     println!();
   }
 }

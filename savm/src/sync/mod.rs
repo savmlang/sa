@@ -46,6 +46,7 @@ thread_local! {
       arr: [0u8;20],
       largepad: unsafe { salloc::aligned_malloc(SIZE_128KB, 8) as _ },
       largepad_cursor: 0,
+      jmp: (0, 0),
       relocmap: Default::default()
     },
     ts: unsafe {

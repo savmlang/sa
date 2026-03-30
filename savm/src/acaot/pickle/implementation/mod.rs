@@ -23,6 +23,7 @@ pub struct WorkingSet {
   pub largepad: *mut QuadPackedData, // SIZE_128KB allocated
   pub largepad_cursor: usize,
   pub relocmap: Arc<HashMap<u64, usize, ahash::RandomState>>,
+  pub jmp: (u64, usize),
 }
 
 // the largepad is a LIFO-ONLY Queue
@@ -262,7 +263,15 @@ pub fn call_jmp(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut
   let data = u64::from_ne_bytes(filled);
 
   unsafe {
-    taskstate.curline_or_resume.unsigned = *ws.relocmap.get(&data).unwrap_unchecked() as _;
+    if ws.jmp.0 == data {
+      taskstate.curline_or_resume.usi = ws.jmp.1;
+      return;
+    }
+
+    let cr = *ws.relocmap.get(&data).unwrap_unchecked();
+
+    ws.jmp = (data, cr);
+    taskstate.curline_or_resume.usi = cr;
   }
 }
 
@@ -312,7 +321,15 @@ pub fn call_jif(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut
 
   unsafe {
     if (intent == 0 && !not_zero) || (intent != 0 && not_zero) {
-      taskstate.curline_or_resume.unsigned = *ws.relocmap.get(&marker).unwrap_unchecked() as _;
+      if ws.jmp.0 == marker {
+        taskstate.curline_or_resume.usi = ws.jmp.1;
+        return;
+      }
+
+      let cr = *ws.relocmap.get(&marker).unwrap_unchecked();
+
+      ws.jmp = (marker, cr);
+      taskstate.curline_or_resume.usi = cr;
     }
   }
 }
@@ -334,9 +351,9 @@ pub fn call_vcmp(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
 
   let srcflags = arrcastint!(ws, start = 0, stop = 2, u16);
 
-  let src1 = (srcflags >> 12) as u8 & 0xF;
-  let src2 = ((srcflags >> 8) & 0xF) as u8;
-  let target = ((srcflags >> 4) & 0xF) as u8;
+  let _src1 = (srcflags >> 12) as u8 & 0xF;
+  let _src2 = ((srcflags >> 8) & 0xF) as u8;
+  let _target = ((srcflags >> 4) & 0xF) as u8;
 
   let count = if count_bit == 0 {
     arrcastint!(ws, start = 2, stop = 6, u32)
@@ -348,9 +365,9 @@ pub fn call_vcmp(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
   let offset2 = arrcastint!(ws, start = 10, stop = 14, i32);
   let offset3 = arrcastint!(ws, start = 14, stop = 18, i32);
 
-  let src1 = { resolve_location_src!(taskstate => src1) };
-  let src2 = { resolve_location_src!(taskstate => src2) };
-  let target = { resolve_location_src!(taskstate => target) };
+  let src1 = { resolve_location_src!(taskstate => _src1) };
+  let src2 = { resolve_location_src!(taskstate => _src2) };
+  let target = { resolve_location_src!(taskstate => _target) };
 
   // We're assuming vectored, as there's no issues, haha
   // Also, its easier to downref to u32, u16...
@@ -370,20 +387,20 @@ pub fn call_vcmp(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
     let is_signed = [2, 4, 6, 8].iter().any(|o| op == *o);
 
     match (is_signed, width) {
-      (true, 0) => vcmp_inner::<i8>,
-      (true, 1) => vcmp_inner::<i16>,
-      (true, 2) => vcmp_inner::<i32>,
-      (true, 3) => vcmp_inner::<i64>,
-      (false, 0) => vcmp_inner::<u8>,
-      (false, 1) => vcmp_inner::<u16>,
-      (false, 2) => vcmp_inner::<u32>,
-      (false, 3) => vcmp_inner::<u64>,
+      (true, 0) => vcmp_inner::<i64>,
+      (true, 1) => vcmp_inner::<i32>,
+      (true, 2) => vcmp_inner::<i16>,
+      (true, 3) => vcmp_inner::<i8>,
+      (false, 0) => vcmp_inner::<u64>,
+      (false, 1) => vcmp_inner::<u32>,
+      (false, 2) => vcmp_inner::<u16>,
+      (false, 3) => vcmp_inner::<u8>,
       _ => panic!(),
     }
   } else {
     match width {
-      2 => vcmp_f_inner::<f32, i32>,
-      3 => vcmp_f_inner::<f64, i64>,
+      1 => vcmp_f_inner::<f32, i32>,
+      0 => vcmp_f_inner::<f64, i64>,
       _ => panic!(),
     }
   };

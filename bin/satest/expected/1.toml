@@ -1,0 +1,13 @@
+r1 = 100
+r2 = 200
+r3 = 300
+
+# Packed Inputs (MSB: u32 | u16 | u8 | u8 :LSB)
+r4 = 0x000000C8_001E_C8_1E
+r5 = 0x00000320_0384_38_1E
+
+# Expected r6 after all vadd passes:
+# [u32: 1000] [u16: 930] [u8: 200] [u8: 60] 
+# Note: The 200 stays untouched because offset 0 targetted 30+30, 
+# and offset 1 (u16) targetted 30+900.
+r6 = 0x000003E8_03A2_00_3C
