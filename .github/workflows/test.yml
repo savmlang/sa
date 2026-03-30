@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          submodules: recursive
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -24,6 +26,14 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.9"
+
+      - name: Install salloc
+        working-directory: sart/saffi/libsalloc/allocator
+        run: |
+          cargo build --release
+
+          sudo cp ./target/release/libsalloc.so /usr/lib/libsalloc.so
+          sudo ldconfig
 
       - name: Run
         working-directory: bin/satest
