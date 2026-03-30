@@ -40,10 +40,14 @@ jobs:
         run: |
           cargo run --release
 
-          echo "Python"
-          python bench/0.py
+          echo "Python (Test #1)"
           python bench/1.py
 
-          echo "NodeJS"
-          node bench/0.js
+          echo "Python (Test #2)"
+          python bench/2.py
+
+          echo "NodeJS (Test #1)"
           node bench/1.js
+
+          echo "NodeJS (Test #2)"
+          node bench/2.js
