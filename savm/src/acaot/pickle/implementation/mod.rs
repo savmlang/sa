@@ -22,7 +22,7 @@ use crate::acaot::pickle::def::{
 pub const SIZE_128KB: usize = 128 * 1024 / size_of::<QuadPackedData>();
 
 pub struct WorkingSet {
-  pub arr: [u8; 20],
+  pub arr: &'static [u8],
   pub largepad: *mut QuadPackedData, // SIZE_128KB allocated
   pub largepad_cursor: usize,
   pub relocmap: Arc<HashMap<u64, usize, ahash::RandomState>>,
@@ -179,12 +179,11 @@ pub fn call_hint(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
   let pic = unsafe { taskstate.curline_or_resume.usi };
 
   // Fetch WS_PUTs and decode
-  unsafe {
-    std::ptr::copy_nonoverlapping(
+  ws.arr = unsafe {
+    std::slice::from_raw_parts(
       (taskstate.engine_or_pt.pt as *const PickleInstruction).add(pic + 1) as *const u8,
-      ws.arr.as_mut_ptr(),
       bytes,
-    );
+    )
   };
 
   // for pidx in (pic + 1)..=(pic + total_wsput) {

@@ -43,7 +43,7 @@ impl Drop for VMState {
 thread_local! {
   pub static VMSTAT: UnsafeCell<VMState> = UnsafeCell::new(VMState {
     ws: WorkingSet {
-      arr: [0u8;20],
+      arr: &[],
       largepad: unsafe { salloc::aligned_malloc(SIZE_128KB, 8) as _ },
       largepad_cursor: 0,
       jmp: (0, 0),
