@@ -211,14 +211,7 @@ pub fn call_hint(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
     debug_assert!(pkl.opcode == instruction);
 
     // TODO: Replace with `become` once its in nightly-functional
-    match instruction {
-      PICKLE_OPCODE_MARK => call_mark(pkl, ws, taskstate),
-      PICKLE_OPCODE_JMP => call_jmp(pkl, ws, taskstate),
-      PICKLE_OPCODE_JIF => call_jif(pkl, ws, taskstate),
-      PICKLE_OPCODE_VCMP => call_vcmp(pkl, ws, taskstate),
-      PICKLE_OPCODE_VADD => call_vadd(pkl, ws, taskstate),
-      _ => return PICKLE_DISPATCH_TABLE.get_unchecked(instruction as usize)(pkl, ws, taskstate),
-    }
+    return PICKLE_DISPATCH_TABLE.get_unchecked(instruction as usize)(pkl, ws, taskstate);
   }
 }
 
