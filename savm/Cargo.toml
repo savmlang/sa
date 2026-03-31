@@ -13,6 +13,7 @@ evmap = "^11"
 
 # High Speed
 rayon = "^1"
+crossbeam-channel = "^0.5"
 moka = { version = "^0.12", features = ["sync"] }
 
 # Macro Helpers
@@ -23,7 +24,7 @@ tokio = { version = "^1", features = ["rt", "rt-multi-thread", "sync", "time"] }
 
 # Sets of compiler
 cranelift = { version = "^0.130", features = [
-  "module",
+  "std",
   "native",
 ], optional = true }
 llvm-sys = { version = "=221", default-features = false, features = [

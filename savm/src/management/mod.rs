@@ -7,11 +7,90 @@ use std::sync::Arc;
 
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
-pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(
+#[cfg(feature = "native")]
+pub mod compiler_thread;
+
+#[cfg(feature = "native")]
+pub mod jitmem;
+
+#[allow(unused_macros)]
+macro_rules! schedule {
+  ($tx_critical:ident, $tx_fastlane:ident, $tx_public:ident, $critical:ident, $important:ident, $others:ident, $compiler_fastlane:ident, $compiler_public:ident, $compilers:ident, $important_s:ident, $others_iter:ident) => {
+    /*
+      Schedule more work thu each sector
+    */
+    'a: while let Some(x) = $critical.peek() {
+      if $tx_critical
+        .try_send((**x, $compilers.len() - 1, false))
+        .is_ok()
+      {
+        _ = $critical.next();
+      } else {
+        break 'a;
+      }
+    }
+
+    'a: while let Some(x) = $important.peek() {
+      if $tx_fastlane
+        .try_send((**x, $compiler_fastlane, false))
+        .is_ok()
+      {
+        _ = $important.next();
+      } else {
+        break 'a;
+      }
+    }
+
+    'a: while let Some(x) = $others.peek() {
+      if $tx_public.try_send((*x, $compiler_public, false)).is_ok() {
+        _ = $others.next();
+      } else {
+        break 'a;
+      }
+    }
+
+    /*
+      Sanity Checking
+    */
+
+    // If the list is empty
+    // Else - end
+    if $critical.peek().is_none() {
+      // Send shutdown signal to the thread
+      _ = $tx_critical.try_send((0, 0, true));
+    }
+
+    // If the list is empty & compiler can be increased, increment
+    // Else - end fastlane
+    if $important.peek().is_none() {
+      if $compiler_fastlane + 1 == $compilers.len() {
+        $compiler_fastlane += 1;
+        $important = $important_s.into_iter().peekable();
+      } else {
+        // Send shutdown signal to the fastlane thread
+        _ = $tx_fastlane.try_send((0, 0, true));
+      }
+    }
+
+    if $others.peek().is_none() {
+      if $compiler_public + 1 == $compilers.len() {
+        $compiler_public += 1;
+        $others = $others_iter();
+      } else {
+        // Send shutdown signal
+        _ = $tx_public.try_send((0, 0, true));
+      }
+    }
+  };
+}
+
+pub fn management_main(
   _: WriteHandle<u64, usize>,
-  resolve: Arc<T>,
+  resolve: Arc<dyn BytecodeResolver + Send + Sync + 'static>,
 ) {
-  (0..=resolve.as_ref().last_section_id())
+  let last = resolve.as_ref().last_section_id();
+
+  (0..=last)
     .into_par_iter()
     .map(|id| match resolve.as_ref().resolve_data(id) {
       SymbolMapTable::MixedSizedBytecode { bytecode } => {
@@ -44,4 +123,151 @@ pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(
         .as_ref()
         .update_cache(section, CacheData::Pickle { out: cache, jumps });
     });
+
+  #[cfg(feature = "native")]
+  {
+    use std::time::Duration;
+
+    use crossbeam_channel::{bounded, select, tick};
+
+    use crate::{acaot::native::compiler_infra, management::compiler_thread::JITOut};
+
+    let rs = resolve.as_ref();
+    let compilers = compiler_infra();
+
+    if compilers.is_empty() {
+      return;
+    }
+
+    let [critical_s, important_s] = rs.heuristic_pgo();
+    let mut critical = critical_s.into_iter().peekable();
+    let mut important = important_s.into_iter().peekable();
+
+    let others_iter = || {
+      (0..=last)
+        .filter(|x| !(critical_s.contains(x) || important_s.contains(x)))
+        .peekable()
+    };
+    let mut others = others_iter();
+
+    let (update, recv) = bounded::<JITOut>(20);
+
+    let timer = tick(Duration::from_millis(200));
+
+    let mut threads = 0usize;
+    // critical node
+    let tx_critical = {
+      use std::thread;
+
+      use crossbeam_channel::bounded;
+
+      use crate::management::compiler_thread::compiler;
+
+      let (tx, rx) = bounded::<(u64, usize, bool)>(20);
+
+      while !tx.is_full()
+        && let Some(x) = critical.next()
+      {
+        tx.try_send((*x, compilers.len() - 1, false))
+          .expect("This cannot actually error");
+      }
+
+      let upd = update.clone();
+      let rb = resolve.clone();
+
+      threads += 1;
+      thread::spawn(move || compiler(rb, rx, upd));
+
+      tx
+    };
+
+    // fastlane node
+    let tx_fastlane = {
+      use std::thread;
+
+      use crossbeam_channel::bounded;
+
+      use crate::management::compiler_thread::compiler;
+
+      let (tx, rx) = bounded::<(u64, usize, bool)>(20);
+
+      while !tx.is_full()
+        && let Some(x) = important.next()
+      {
+        tx.try_send((*x, compilers.len() - 1, false))
+          .expect("This cannot actually error");
+      }
+
+      let upd = update.clone();
+      let rb = resolve.clone();
+
+      threads += 1;
+      thread::spawn(move || compiler(rb, rx, upd));
+
+      tx
+    };
+    let mut compiler_fastlane = 0;
+
+    // Public node
+    let tx_public = {
+      use std::thread;
+
+      use crossbeam_channel::bounded;
+
+      use crate::management::compiler_thread::compiler;
+
+      let (tx, rx) = bounded::<(u64, usize, bool)>(20);
+
+      while !tx.is_full()
+        && let Some(x) = others.next()
+      {
+        tx.try_send((x, compilers.len() - 1, false))
+          .expect("This cannot actually error");
+      }
+
+      let upd = update.clone();
+      let rb = resolve.clone();
+
+      threads += 1;
+      thread::spawn(move || compiler(rb, rx, upd));
+
+      tx
+    };
+    let mut compiler_public = 0;
+
+    loop {
+      select! {
+        // TODO:
+        recv(recv) -> val => {
+          if let Ok(jitout) = val {
+            match jitout {
+              JITOut::Stopped => {
+                threads -= 1;
+              }
+               _ => {}
+            }
+          }
+
+          schedule!(tx_critical, tx_fastlane, tx_public, critical, important, others, compiler_fastlane, compiler_public, compilers, important_s, others_iter);
+        }
+
+
+        recv(timer) -> _ => {
+          // Redundant, but JustInCase
+          schedule!(tx_critical, tx_fastlane, tx_public, critical, important, others, compiler_fastlane, compiler_public, compilers, important_s, others_iter);
+
+          // Break JIT if all modules are processes
+          // Now we get into well - nicely linking all of them
+          if threads == 0 && critical.peek().is_none()
+            && important.peek().is_none()
+            && others.peek().is_none()
+          {
+            // Soak all the recv's until closed
+            todo!();
+            break;
+          }
+        }
+      }
+    }
+  }
 }
