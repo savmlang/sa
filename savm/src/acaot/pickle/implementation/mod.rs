@@ -273,8 +273,7 @@ pub fn call_reg(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut
   let reg = pickle.u1;
 
   let mut filled = [0u8; 8];
-  filled[0..6].copy_from_slice(&ws.arr[0..6]);
-  filled[6..8].copy_from_slice(&[pickle.u2, pickle.u3]);
+  filled[0..8].copy_from_slice(&ws.arr[0..8]);
   let data = u64::from_ne_bytes(filled);
 
   unsafe { *resolve_ptr!(taskstate => reg) = QuadPackedData { u64: data } };

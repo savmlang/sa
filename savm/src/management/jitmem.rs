@@ -1,55 +1,41 @@
-use std::{num::NonZeroU8, ptr::null, sync::Arc};
+use std::{num::NonZeroU8, pin::Pin, ptr::null, sync::Arc};
 
 use sajit::{
   Executable, MemoryExecutableApi, WriteFnResult, advanced::MemoryExecutable,
   relocations::Relocation,
 };
+use sart::structures::jit::JITReloc;
 
 pub struct JITMemoryManager {
-  root: Box<str>,
-  blockid: u8,
-  quick: Vec<MemoryExecutable>,
-  equilibrium: Vec<MemoryExecutable>,
+  quick: Vec<Pin<Box<MemoryExecutable>>>,
+
+  // Stores `epicenter` TEXT - our flagship
+  // JIT + AoT tier
+  epicenter: Option<MemoryExecutable>,
 }
 
 impl JITMemoryManager {
-  pub fn new(root: &str) -> Self {
-    #[cfg(windows)]
-    let path = format!("{root}\\jit_block_0");
-
-    #[cfg(unix)]
-    let path = format!("{root}/jit_block_0");
-
+  pub fn new() -> Self {
     // Get a 32MB Chunk for TEMP Storage
-    let a = MemoryExecutable::new_slab(path, Some(NonZeroU8::new(2).unwrap()));
+    let a = MemoryExecutable::new_slab(Some(NonZeroU8::new(2).unwrap()));
 
     Self {
-      root: root.into(),
-      blockid: 1,
-      quick: vec![a],
-      equilibrium: vec![],
+      quick: vec![Box::pin(a)],
+      epicenter: None,
     }
   }
 
   pub fn alloc_quick_new(&mut self) {
-    #[cfg(windows)]
-    let path = format!("{}\\jit_block_{}", &self.root, self.blockid);
-
-    #[cfg(unix)]
-    let path = format!("{}/jit_block_{}", &self.root, self.blockid);
-
-    self.blockid += 1;
-
-    self.quick.push(MemoryExecutable::new_slab(
-      path,
-      Some(NonZeroU8::new(2).unwrap()),
-    ));
+    self
+      .quick
+      // Since its more slabs - use None i.e. default quanta = 16MiB
+      .push(Box::pin(MemoryExecutable::new_slab(None)));
   }
 
   // Max executable JIT blob is ~<32MB (for sanity)
   const MAX_EXEC_SIZE: usize = 31 * 1024 * 1024 + 1023 * 1024;
 
-  pub fn write_quick(&mut self, data: Arc<[u8]>, relocs: Arc<[Relocation]>) -> *const Executable {
+  pub fn write_quick(&mut self, data: &[u8], relocs: &[Relocation]) -> *const Executable {
     // Try to fit larger ones
     // optimistically
     //
@@ -58,7 +44,7 @@ impl JITMemoryManager {
     let succ = self
       .quick
       .iter_mut()
-      .any(|x| match x.write_fn(&data, &relocs) {
+      .any(|x| match x.write_fn(data, relocs) {
         WriteFnResult::Executable(ex) => {
           out = ex;
           true
@@ -76,27 +62,20 @@ impl JITMemoryManager {
       let size = data.len();
 
       let alc = size.next_multiple_of(MemoryExecutable::DEFAULT_SLAB_SIZE);
+      let amt = alc / MemoryExecutable::DEFAULT_SLAB_SIZE;
 
-      if alc > u8::MAX as usize {
+      if amt > u8::MAX as usize {
         panic!("SaVM [CRITICAL] : This codebase is not possible to be correctly handled!");
       }
 
-      #[cfg(windows)]
-      let path = format!("{}\\jit_block_{}", &self.root, self.blockid);
+      let mut m = MemoryExecutable::new_slab(Some(NonZeroU8::new(amt as u8).unwrap()));
 
-      #[cfg(unix)]
-      let path = format!("{}/jit_block_{}", &self.root, self.blockid);
-
-      self.blockid += 1;
-
-      let mut m = MemoryExecutable::new_slab(path, Some(NonZeroU8::new(alc as u8).unwrap()));
-
-      let out = match m.write_fn(&data, &relocs) {
+      let out = match m.write_fn(data, relocs) {
         WriteFnResult::Executable(ex) => ex,
         _ => panic!("Reached a position where calculation is not idompotent"),
       };
 
-      self.quick.push(m);
+      self.quick.push(Box::pin(m));
 
       return out;
     }
@@ -111,14 +90,23 @@ impl Drop for JITMemoryManager {
     self
       .quick
       .drain(..)
-      .chain(self.equilibrium.drain(..))
       .for_each(|x| {
         // Leak since its not dropped
         // Safety
+        let x= Pin::into_inner(x);
         x.leak();
 
         #[cfg(debug_assertions)]
         panic!("Please ensure that SaVM is programmed correctly, the Drop method should not encounter stray Memory blobs!");
       });
+
+    if let Some(x) = self.epicenter.take() {
+      // This should be leaked
+      x.leak();
+    }
   }
+}
+
+fn calculate_relocation(rl: JITReloc) -> Box<[Relocation]> {
+  todo!()
 }

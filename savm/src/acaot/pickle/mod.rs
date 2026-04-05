@@ -12,7 +12,7 @@ pub mod def;
 pub mod implementation;
 
 pub struct PickleWorker<T: Seek + Read> {
-  pub(crate) bytecode: T,
+  pub bytecode: T,
   pub out: Vec<PickleInstruction>,
   pub jump: HashMap<u64, usize, ahash::RandomState>,
 }
@@ -516,13 +516,13 @@ impl<T: Seek + Read> PickleWorker<T> {
     let data_ne: [u8; 8] =
       u64::from_le_bytes(self.bytecode.read_array::<8>().expect("")).to_ne_bytes();
 
-    self.emit_copy_bytes::<6>(PICKLE_OPCODE_REG, data_ne[0..6].try_into().unwrap());
+    self.emit_copy_bytes(PICKLE_OPCODE_REG, data_ne);
 
     self.out.push(PickleInstruction {
       opcode: PICKLE_OPCODE_REG,
       u1: register,
-      u2: data_ne[6],
-      u3: data_ne[7],
+      u2: 0,
+      u3: 0,
     });
   }
 

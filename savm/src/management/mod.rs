@@ -2,16 +2,36 @@ use crate::{
   BytecodeResolver, CODE_CACHE, CacheData, SymbolMapTable,
   acaot::pickle::{PickleWorker, def::PickleInstruction},
 };
-use evmap::handles::WriteHandle;
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use std::sync::Arc;
 
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
+#[cfg(feature = "native")]
+use crate::SafeSwappableCodeStore;
+#[cfg(feature = "native")]
+use evmap::handles::WriteHandle;
+#[cfg(feature = "native")]
+use sart::code::SwappableCodeStore;
+#[cfg(feature = "native")]
+use std::{mem::transmute, process::abort};
 
 #[cfg(feature = "native")]
 pub mod compiler_thread;
 
 #[cfg(feature = "native")]
 pub mod jitmem;
+
+#[cfg(feature = "native")]
+use jitmem::JITMemoryManager;
+
+enum ProcessResult {
+  Pickle(
+    u64,
+    Arc<[PickleInstruction]>,
+    Arc<ahash::HashMap<u64, usize>>,
+  ),
+  Native(u64),
+  None,
+}
 
 #[allow(unused_macros)]
 macro_rules! schedule {
@@ -85,11 +105,12 @@ macro_rules! schedule {
 }
 
 pub fn management_main(
-  _: WriteHandle<u64, usize>,
+  #[cfg(feature = "native")] mut evmap: WriteHandle<u64, SafeSwappableCodeStore>,
   resolve: Arc<dyn BytecodeResolver + Send + Sync + 'static>,
 ) {
   let last = resolve.as_ref().last_section_id();
 
+  let mut _nativeptr = vec![];
   (0..=last)
     .into_par_iter()
     .map(|id| match resolve.as_ref().resolve_data(id) {
@@ -108,166 +129,240 @@ pub fn management_main(
             let jumps = Arc::new(worker.jump);
 
             CODE_CACHE.insert(id, (out.clone(), jumps.clone()));
-            Some((id, out, jumps))
+            ProcessResult::Pickle(id, out, jumps)
           }
-          _ => None,
+          _ => ProcessResult::None,
         }
       }
-      SymbolMapTable::NativePointer { .. } => None,
+      SymbolMapTable::NativePointer { .. } => ProcessResult::Native(id),
     })
-    .filter_map(|x| x)
+    .filter_map(|x| match x {
+      ProcessResult::None => None,
+      e => Some(e),
+    })
     .collect::<Box<[_]>>()
     .into_iter()
-    .for_each(|(section, cache, jumps)| {
-      resolve
-        .as_ref()
-        .update_cache(section, CacheData::Pickle { out: cache, jumps });
+    .for_each(|outdata| match outdata {
+      ProcessResult::Pickle(section, cache, jumps) => {
+        resolve
+          .as_ref()
+          .update_cache(section, CacheData::Pickle { out: cache, jumps });
+      }
+      ProcessResult::Native(m) => _nativeptr.push(m),
+      _ => {}
     });
 
   #[cfg(feature = "native")]
   {
-    use std::time::Duration;
+    let nativeptr = _nativeptr.into_boxed_slice();
+
+    use std::{collections::HashMap, time::Duration};
 
     use crossbeam_channel::{bounded, select, tick};
 
-    use crate::{acaot::native::compiler_infra, management::compiler_thread::JITOut};
+    use crate::{
+      acaot::native::{CompilerId, compiler_infra},
+      management::{compiler_thread::JITOut, jitmem::JITMemoryManager},
+    };
 
-    let rs = resolve.as_ref();
-    let compilers = compiler_infra();
+    let mut samgr = JITMemoryManager::new();
 
-    if compilers.is_empty() {
-      return;
+    let mut compiler_trampoline = HashMap::<CompilerId, Box<[u8]>>::new();
+    for b in compiler_infra() {
+      let mut c = b.get_abs8();
+
+      let id = c.compiler_id();
+      compiler_trampoline.insert(id, c.codegen_internal_trampoline());
     }
 
-    let [critical_s, important_s] = rs.heuristic_pgo();
-    let mut critical = critical_s.into_iter().peekable();
-    let mut important = important_s.into_iter().peekable();
+    // Compiler
+    {
+      let rs = resolve.as_ref();
+      let compilers = compiler_infra();
 
-    let others_iter = || {
-      (0..=last)
-        .filter(|x| !(critical_s.contains(x) || important_s.contains(x)))
-        .peekable()
-    };
-    let mut others = others_iter();
-
-    let (update, recv) = bounded::<JITOut>(20);
-
-    let timer = tick(Duration::from_millis(200));
-
-    let mut threads = 0usize;
-    // critical node
-    let tx_critical = {
-      use std::thread;
-
-      use crossbeam_channel::bounded;
-
-      use crate::management::compiler_thread::compiler;
-
-      let (tx, rx) = bounded::<(u64, usize, bool)>(20);
-
-      while !tx.is_full()
-        && let Some(x) = critical.next()
-      {
-        tx.try_send((*x, compilers.len() - 1, false))
-          .expect("This cannot actually error");
+      if compilers.is_empty() {
+        return;
       }
 
-      let upd = update.clone();
-      let rb = resolve.clone();
+      let [critical_s, important_s] = rs.heuristic_pgo();
+      let mut critical = critical_s.into_iter().peekable();
+      let mut important = important_s.into_iter().peekable();
 
-      threads += 1;
-      thread::spawn(move || compiler(rb, rx, upd));
+      let others_iter = || {
+        (0..=last)
+          .filter(|x| !(critical_s.contains(x) || important_s.contains(x) || nativeptr.contains(x)))
+          .peekable()
+      };
+      let mut others = others_iter();
 
-      tx
-    };
+      let (update, recv) = bounded::<JITOut>(20);
 
-    // fastlane node
-    let tx_fastlane = {
-      use std::thread;
+      let timer = tick(Duration::from_millis(200));
 
-      use crossbeam_channel::bounded;
+      let mut threads = 0usize;
+      // critical node
+      let tx_critical = {
+        use std::thread;
 
-      use crate::management::compiler_thread::compiler;
+        use crossbeam_channel::bounded;
 
-      let (tx, rx) = bounded::<(u64, usize, bool)>(20);
+        use crate::management::compiler_thread::compiler;
 
-      while !tx.is_full()
-        && let Some(x) = important.next()
-      {
-        tx.try_send((*x, compilers.len() - 1, false))
-          .expect("This cannot actually error");
-      }
+        let (tx, rx) = bounded::<(u64, usize, bool)>(20);
 
-      let upd = update.clone();
-      let rb = resolve.clone();
+        while !tx.is_full()
+          && let Some(x) = critical.next()
+        {
+          tx.try_send((*x, compilers.len() - 1, false))
+            .expect("This cannot actually error");
+        }
 
-      threads += 1;
-      thread::spawn(move || compiler(rb, rx, upd));
+        let upd = update.clone();
+        let rb = resolve.clone();
 
-      tx
-    };
-    let mut compiler_fastlane = 0;
+        threads += 1;
+        thread::spawn(move || compiler(rb, rx, upd));
 
-    // Public node
-    let tx_public = {
-      use std::thread;
+        tx
+      };
 
-      use crossbeam_channel::bounded;
+      // fastlane node
+      let tx_fastlane = {
+        use std::thread;
 
-      use crate::management::compiler_thread::compiler;
+        use crossbeam_channel::bounded;
 
-      let (tx, rx) = bounded::<(u64, usize, bool)>(20);
+        use crate::management::compiler_thread::compiler;
 
-      while !tx.is_full()
-        && let Some(x) = others.next()
-      {
-        tx.try_send((x, compilers.len() - 1, false))
-          .expect("This cannot actually error");
-      }
+        let (tx, rx) = bounded::<(u64, usize, bool)>(20);
 
-      let upd = update.clone();
-      let rb = resolve.clone();
+        while !tx.is_full()
+          && let Some(x) = important.next()
+        {
+          tx.try_send((*x, compilers.len() - 1, false))
+            .expect("This cannot actually error");
+        }
 
-      threads += 1;
-      thread::spawn(move || compiler(rb, rx, upd));
+        let upd = update.clone();
+        let rb = resolve.clone();
 
-      tx
-    };
-    let mut compiler_public = 0;
+        threads += 1;
+        thread::spawn(move || compiler(rb, rx, upd));
 
-    loop {
-      select! {
-        // TODO:
-        recv(recv) -> val => {
-          if let Ok(jitout) = val {
-            match jitout {
-              JITOut::Stopped => {
-                threads -= 1;
+        tx
+      };
+      let mut compiler_fastlane = 0;
+
+      // Public node
+      let tx_public = {
+        use std::thread;
+
+        use crossbeam_channel::bounded;
+
+        use crate::management::compiler_thread::compiler;
+
+        let (tx, rx) = bounded::<(u64, usize, bool)>(20);
+
+        while !tx.is_full()
+          && let Some(x) = others.next()
+        {
+          tx.try_send((x, compilers.len() - 1, false))
+            .expect("This cannot actually error");
+        }
+
+        let upd = update.clone();
+        let rb = resolve.clone();
+
+        threads += 1;
+        thread::spawn(move || compiler(rb, rx, upd));
+
+        tx
+      };
+      let mut compiler_public = 0;
+
+      loop {
+        select! {
+          recv(recv) -> val => {
+            if let Ok(jitout) = val {
+              match jitout {
+                JITOut::Stopped => {
+                  threads -= 1;
+                }
+                // We've gotten jitted output
+                // Commit it & Update new JIT Data
+                JITOut::JITData { moduleid, abs8, rel } => {
+                  process_jit(resolve.as_ref(), &mut samgr, &mut evmap, moduleid, abs8, rel);
+                }
               }
-               _ => {}
+            }
+
+            schedule!(tx_critical, tx_fastlane, tx_public, critical, important, others, compiler_fastlane, compiler_public, compilers, important_s, others_iter);
+          }
+
+
+          recv(timer) -> _ => {
+            // Redundant, but JustInCase
+            schedule!(tx_critical, tx_fastlane, tx_public, critical, important, others, compiler_fastlane, compiler_public, compilers, important_s, others_iter);
+
+            // Break JIT if all modules are processes
+            // Now we get into well - nicely linking all of them
+            if threads == 0 && critical.peek().is_none()
+              && important.peek().is_none()
+              && others.peek().is_none()
+            {
+              break;
             }
           }
-
-          schedule!(tx_critical, tx_fastlane, tx_public, critical, important, others, compiler_fastlane, compiler_public, compilers, important_s, others_iter);
-        }
-
-
-        recv(timer) -> _ => {
-          // Redundant, but JustInCase
-          schedule!(tx_critical, tx_fastlane, tx_public, critical, important, others, compiler_fastlane, compiler_public, compilers, important_s, others_iter);
-
-          // Break JIT if all modules are processes
-          // Now we get into well - nicely linking all of them
-          if threads == 0 && critical.peek().is_none()
-            && important.peek().is_none()
-            && others.peek().is_none()
-          {
-            // Soak all the recv's until closed
-            todo!();
-            break;
-          }
         }
       }
     }
+  }
+}
+
+#[cfg(feature = "native")]
+fn process_jit(
+  resolver: &dyn BytecodeResolver,
+  sajit: &mut JITMemoryManager,
+  evmap: &mut WriteHandle<u64, SafeSwappableCodeStore>,
+  moduleid: u64,
+  abs8: CacheData,
+  rel: CacheData,
+) {
+  // Commit abs8 ONLY though
+  match abs8 {
+    CacheData::None => {}
+    cache => {
+      resolver.update_cache(moduleid, cache.clone());
+
+      match cache {
+        CacheData::None | CacheData::Pickle { .. } => {}
+        CacheData::CraneliftRel { .. } | CacheData::LLVMRel { .. } => {
+          abort();
+        }
+        CacheData::CraneliftAbs8 { binary, reloc } | CacheData::LLVMAbs8 { binary, reloc } => {
+          todo!();
+          // let bin = sajit.write_quick(&binary, relocs);
+
+          // if let Some(jitblob) = evmap.get_one(&moduleid) {
+          //   // Case `usize` back into the `*mut JIT`
+          //   let mgr = unsafe { &**jitblob };
+
+          //   _ = unsafe { mgr.set(0, bin, None) };
+          // } else {
+          //   let mgr = Box::new(SwappableCodeStore::new(bin));
+
+          //   _ = unsafe { mgr.set(0, bin, None) };
+
+          //   evmap.insert(moduleid, Box::into_raw(mgr));
+          //   evmap.publish();
+          // }
+        }
+      }
+    }
+  }
+
+  match rel {
+    CacheData::None => {}
+    cache => resolver.update_cache(moduleid, cache.clone()),
   }
 }

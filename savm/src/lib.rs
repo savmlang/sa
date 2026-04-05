@@ -1,3 +1,4 @@
+#![allow(unused)]
 #![feature(
   signed_bigint_helpers,
   nonpoison_rwlock,
@@ -20,9 +21,8 @@ use std::{
 };
 
 use ahash::HashMap;
-use evmap::handles::ReadHandle;
 use moka::sync::{CacheBuilder, SegmentedCache};
-use sart::{code::SwappableCodeStore, ctr::CVMTaskState};
+use sart::{code::SwappableCodeStore, ctr::CVMTaskState, structures::jit::JITReloc};
 
 pub use sart;
 use tokio::runtime::{Builder, Runtime};
@@ -50,16 +50,30 @@ pub enum SymbolMapTableInfo {
   NativePointer,
   MixedSizedBytecode,
 }
+
+#[derive(Debug, Clone)]
 pub enum CacheData {
   None,
   Pickle {
     out: Arc<[PickleInstruction]>,
     jumps: Arc<HashMap<u64, usize>>,
   },
-  CraneliftAbs8 {},
-  CraneliftRel {},
-  LLVMAbs8 {},
-  LLVMRel {},
+  CraneliftAbs8 {
+    binary: Arc<[u8]>,
+    reloc: JITReloc,
+  },
+  CraneliftRel {
+    binary: Arc<[u8]>,
+    reloc: JITReloc,
+  },
+  LLVMAbs8 {
+    binary: Arc<[u8]>,
+    reloc: JITReloc,
+  },
+  LLVMRel {
+    binary: Arc<[u8]>,
+    reloc: JITReloc,
+  },
 }
 
 pub enum CacheLevel {
@@ -154,10 +168,19 @@ pub(crate) static CODE_CACHE: LazyLock<
     .build_with_hasher(ahash::RandomState::default())
 });
 
-pub type JITStorage = *mut SwappableCodeStore<()>;
+#[cfg(feature = "native")]
+use sajit::Executable;
+
+#[cfg(feature = "native")]
+use evmap::handles::ReadHandle;
+
+#[cfg(feature = "native")]
+pub type SafeSwappableCodeStore = *mut SwappableCodeStore<(*const Executable)>;
 
 // This only and only stores JIT instructions
-pub(crate) static JIT_CACHE: OnceLock<ThreadSafe<ReadHandle<u64, usize>>> = OnceLock::new();
+#[cfg(feature = "native")]
+pub(crate) static JIT_CACHE: OnceLock<ThreadSafe<ReadHandle<u64, SafeSwappableCodeStore>>> =
+  OnceLock::new();
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct ThreadSafe<T>(pub T);
@@ -233,10 +256,24 @@ impl VM {
     {
       let resolve = resolver.clone();
 
-      let (writer, reader) = evmap::new::<u64, usize>();
-      JIT_CACHE.set(ThreadSafe(reader)).expect("impossible");
+      #[cfg(feature = "native")]
+      let writer = {
+        let (writer, reader) = evmap::new();
+        JIT_CACHE.set(ThreadSafe(reader)).expect("impossible");
 
-      thread::spawn(move || management_main(writer, resolve));
+        ThreadSafe(writer)
+      };
+
+      thread::spawn(move || {
+        #[cfg(feature = "native")]
+        {
+          let data = writer;
+          management_main(data.0, resolve);
+        }
+
+        #[cfg(not(feature = "native"))]
+        management_main(resolve);
+      });
     }
 
     Self { resolve: resolver }

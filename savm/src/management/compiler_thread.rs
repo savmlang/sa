@@ -1,14 +1,15 @@
-use std::sync::Arc;
+use std::{hint::cold_path, process::abort, sync::Arc};
 
 use crossbeam_channel::{Receiver, Sender};
 
-use crate::{
-  BytecodeResolver, CODE_CACHE, CacheData, CacheLevel,
-  acaot::native::{NativeCompilerBuilder, compiler_infra},
-};
+use crate::{BytecodeResolver, CODE_CACHE, CacheData, CacheLevel, acaot::native::compiler_infra};
 
 pub enum JITOut {
-  JITData { abs8: CacheData, rel: CacheData },
+  JITData {
+    moduleid: u64,
+    abs8: CacheData,
+    rel: CacheData,
+  },
   Stopped,
 }
 
@@ -24,31 +25,70 @@ pub fn compiler(
       break;
     }
 
-    let builder = compilers
-      .get(compilerindex)
-      .expect("Could not fetch compiler noted by the index, please note that it is indeed correct");
+    let builder = compilers.get(compilerindex).unwrap_or_else(|| {
+      use std::io::{self, Write};
 
-    let bytecode = CODE_CACHE.entry(moduleid).or_insert_with(|| {
+      cold_path();
+      let _ = writeln!(
+        io::stderr(),
+        "SaVM Critical Error: IMPOSSIBLE - Compiler found false"
+      );
+      let _ = io::stderr().flush();
+
+      abort();
+    });
+
+    // Lets not hit it badly
+    let bytecode = CODE_CACHE.get(&moduleid).unwrap_or_else(|| {
       match resolve.as_ref().get_cache(moduleid, CacheLevel::Pickle) {
         CacheData::Pickle { out, jumps } => (out, jumps),
-        _ => panic!("SaVM Critical Error : SaVM Runtime did not assume cache protocol."),
+        _ => {
+          use std::io::{self, Write};
+
+          cold_path();
+          let _ = writeln!(io::stderr(), "SaVM Critical Error: flawed cache protocol.");
+          let _ = io::stderr().flush();
+
+          abort();
+        }
       }
     });
 
-    let bytecode = bytecode.value();
-
-    let (inst, jmp) = bytecode.clone();
-    {
-      let mut c_abs8 = builder.get_abs8();
-
-      c_abs8.prime(inst, jmp);
-    }
-
+    let mut rel = CacheData::None;
     {
       if let Some(mut c_rel) = builder.get_rel() {
-        let (inst, jmp) = bytecode.clone();
-        c_rel.prime(inst, jmp);
+        match resolve.as_ref().get_cache(moduleid, builder.rel_cache()) {
+          CacheData::None => {
+            let (inst, jmp) = bytecode.clone();
+
+            rel = c_rel.compile(inst.as_ref(), jmp.as_ref());
+          }
+          e => {
+            rel = e;
+          }
+        }
       }
     }
+
+    let abs8;
+    let (inst, jmp) = bytecode;
+    {
+      match resolve.as_ref().get_cache(moduleid, builder.abs_cache()) {
+        CacheData::None => {
+          let mut c_abs8 = builder.get_abs8();
+
+          abs8 = c_abs8.compile(inst.as_ref(), jmp.as_ref());
+        }
+        e => {
+          abs8 = e;
+        }
+      }
+    }
+
+    _ = tx.send(JITOut::JITData {
+      moduleid,
+      abs8,
+      rel,
+    });
   }
 }

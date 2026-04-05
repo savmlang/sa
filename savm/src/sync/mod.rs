@@ -2,13 +2,14 @@ use std::{
   cell::UnsafeCell,
   hint::cold_path,
   mem::zeroed,
+  ptr,
   sync::{Arc, OnceLock},
 };
 
 use sart::{ctr::VMTaskState, salloc, structures::QuadPackedData};
 
 use crate::{
-  CODE_CACHE, JIT_CACHE, SymbolMapTable, VM,
+  CODE_CACHE, SymbolMapTable, VM,
   acaot::pickle::{
     PickleWorker,
     def::{PICKLE_DISPATCH_TABLE, PICKLE_OPCODE_HINT, PICKLE_OPCODE_MARK, PickleInstruction},
@@ -65,19 +66,19 @@ thread_local! {
 
 impl VM {
   pub fn call_section(&self, sectionid: u64) {
-    let Some((data, jumps)) = CODE_CACHE.get(&sectionid) else {
+    let Some((mut data, jumps)) = CODE_CACHE.get(&sectionid) else {
       // TODO: Replace with `become`
       return self.pickle_section(sectionid);
     };
 
     let leng = data.len();
-    let dt = data.as_ref();
 
     let mut run_jit = false;
 
     VMSTAT.with(|x| unsafe {
       let t = &mut *x.get();
 
+      t.ws.jmp = (0, jumps.get(&0).map(|x| *x).unwrap_or_default());
       t.ws.relocmap = jumps;
 
       let ts = t.ts.get_unchecked_mut(t.cindex);
@@ -85,12 +86,28 @@ impl VM {
       ts.engine_or_pt.pt = self as *const _ as _;
       ts.curline_or_resume.usi = 0;
 
+      let mut atmark = false;
+
       'jcheck: loop {
-        if let Some(_) = &JIT_CACHE.get().unwrap_unchecked().0.get(&sectionid) {
+        #[cfg(feature = "native")]
+        if let Some(_) = &crate::JIT_CACHE.get().unwrap_unchecked().0.get(&sectionid) {
           run_jit = true;
           break 'jcheck;
         };
 
+        // Try to get a newer Pickle to run chocolate faster
+        // If not there - keep the old arc
+        // if let Some((inst, jumps)) = CODE_CACHE.get(&sectionid) {
+        //   let marker = data = inst;
+        //   t.ws.jmp = (0, jumps.get(&0).map(|x| *x).unwrap_or_default());
+
+        //   ts.curline_or_resume.usi = *jumps
+        //     .get(&ptr::read_unaligned(t.ws.arr as *const u8 as *const u64))
+        //     .unwrap();
+        //   t.ws.relocmap = jumps;
+        // };
+
+        let dt = data.as_ref();
         // We use loop-in-a-loop to correctly manage state!
         // eg, yield that makes it re-check for JIT
         loop {
@@ -105,6 +122,7 @@ impl VM {
             && [PICKLE_OPCODE_MARK].iter().any(|x| *x == pickle.u1)
           {
             ts.curline_or_resume.usi += 3;
+            atmark = true;
             continue 'jcheck;
           }
 
@@ -120,6 +138,7 @@ impl VM {
       }
     });
 
+    #[cfg(feature = "native")]
     if run_jit {
       // TODO: Replace with `become`
       return self.dispatch_jit(sectionid);
@@ -128,6 +147,7 @@ impl VM {
     cold_path();
   }
 
+  #[cfg(feature = "native")]
   pub(crate) fn dispatch_jit(&self, _: u64) {}
 
   fn pickle_section(&self, sectionid: u64) {
