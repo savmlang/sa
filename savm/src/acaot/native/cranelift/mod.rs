@@ -241,6 +241,11 @@ impl NativeCompiler for SaVMCranelift {
           192,
           6,
         )),
+        regspill: builder.create_sized_stack_slot(StackSlotData::new(
+          StackSlotKind::ExplicitDynamicSlot,
+          64,
+          6,
+        )),
         blockmap: h,
         largepad,
         prologue,
@@ -295,6 +300,7 @@ pub struct CompilerMeta {
 
   // scratchpad
   pub scratchpad: StackSlot,
+  pub regspill: StackSlot,
 
   // Largepad
   pub largepad: Variable,

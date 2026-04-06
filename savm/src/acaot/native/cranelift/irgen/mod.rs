@@ -90,7 +90,7 @@ pub fn compile(
         let offset = i32::from_ne_bytes(unsafe { meta.ws[0..4].try_into().unwrap_unchecked() });
         let marker = u64::from_ne_bytes(unsafe { meta.ws[4..12].try_into().unwrap_unchecked() });
 
-        let src = reg::resolve_location_src_load(
+        let &[src] = reg::resolve_location_src_load(
           builder,
           meta,
           TypeOrWidth::Width(width),
@@ -98,7 +98,24 @@ pub fn compile(
           None,
           offset,
           1,
-        );
+        )
+        .as_ref() else {
+          unreachable!();
+        };
+
+        let newblock = builder.create_block();
+
+        let userblock = meta.blockmap.get(&marker).unwrap().current;
+
+        let (then, other) = if intent == 0 {
+          // Jump If Zero
+          (newblock, userblock)
+        } else {
+          (userblock, newblock)
+        };
+
+        builder.ins().brif(src, then, [], other, []);
+        builder.switch_to_block(newblock);
       }
       _ => {}
     }

@@ -25,15 +25,15 @@ pub fn break_simd_waterfall(
   let width = map.width();
 
   // Vector
-  let b512_threshold = 512 / width;
-  let b256_threshold = 256 / width;
-  let b128_threshold = 128 / width;
+  let b512_threshold = 64 / width;
+  let b256_threshold = 32 / width;
+  let b128_threshold = 16 / width;
 
   // Scalar
-  let b64_threshold = 64 / width;
-  let b32_threshold = 32 / width;
-  let b16_threshold = 16 / width;
-  let b8_threshold = 8 / width;
+  let b64_threshold = 8 / width;
+  let b32_threshold = 4 / width;
+  let b16_threshold = 2 / width;
+  let b8_threshold = 1 / width;
 
   // MemFlags (Vector)
   let b512_flags = memflags(alignment, 64);

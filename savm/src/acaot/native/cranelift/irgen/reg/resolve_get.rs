@@ -22,9 +22,24 @@ pub fn resolve_location_src_load(
 
   match locsrc {
     0..=7 => {
-      let rg = resolve_reg(builder, meta, locsrc);
+      let total_bytes_touched = ofset as u32 + count * (typedata.width as u32);
 
-      todo!()
+      // Figures out minimum regsisters
+      let cnt = total_bytes_touched.div_ceil(8);
+
+      let (stack_ptr, _regs) = register_map(locsrc, cnt as _, builder, meta);
+      let ptr = builder.ins().iadd_imm(stack_ptr, ofset as i64);
+
+      // The stack address is forced to be 64B aligned as pos `0`
+      let alignment = get_max_alignment(64, ofset);
+
+      break_simd_waterfall(alignment, typedata, count)
+        .into_iter()
+        .map(|(offset, mem, memflags)| {
+          println!("Got Typ : {mem}");
+          builder.ins().load(mem, memflags, ptr, offset.cast_signed())
+        })
+        .collect::<Box<[_]>>()
     }
     // Scratchpad
     8 => {
@@ -61,6 +76,34 @@ pub fn resolve_location_src_load(
     }
     _ => unreachable!(),
   }
+}
+
+fn register_map(
+  current: u8,
+  count: u8,
+  builder: &mut FunctionBuilder,
+  meta: &mut CompilerMeta,
+) -> (Value, Box<[Variable]>) {
+  let spillmap = meta.regspill;
+
+  let stack_ptr = builder.ins().stack_addr(I64, spillmap, 0);
+
+  let vars = (current..(current + count))
+    .enumerate()
+    .map(|(idx, rg)| {
+      let offset = (idx * 8) as i32;
+      let rg = resolve_reg(builder, meta, rg);
+
+      let value = builder.use_var(rg);
+      builder
+        .ins()
+        .store(MemFlags::trusted(), value, stack_ptr, offset);
+
+      rg
+    })
+    .collect::<Box<[Variable]>>();
+
+  (stack_ptr, vars)
 }
 
 fn get_max_alignment(base_align: u8, byteoffset: i32) -> u8 {
@@ -171,6 +214,7 @@ impl ClifTypeMapping {
 
   pub fn simd_width_type(&self, simdbytes: u8) -> Type {
     let width = self.width();
+
     match simdbytes {
       // AVX512
       64 => match width {
