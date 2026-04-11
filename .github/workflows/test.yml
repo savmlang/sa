@@ -5,7 +5,7 @@ on:
 
 jobs:
   jitemitvm:
-    name: Run test
+    name: Run jitemission
 
     strategy:
       fail-fast: true
@@ -23,14 +23,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: nightly
-
-      - name: Install salloc
-        working-directory: sart/saffi/libsalloc/allocator
-        run: |
-          cargo build --release
-
-          sudo cp ./target/release/libsalloc.so /usr/lib/libsalloc.so
-          sudo ldconfig
 
       - name: Run
         working-directory: jitemission
