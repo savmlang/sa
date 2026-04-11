@@ -169,7 +169,7 @@ pub fn management_main(
 
     let mut compiler_trampoline = HashMap::<CompilerId, Box<[u8]>>::new();
     for b in compiler_infra() {
-      let mut c = b.get_abs8();
+      let mut c = b.get();
 
       let id = c.compiler_id();
       compiler_trampoline.insert(id, c.codegen_internal_trampoline());
@@ -290,8 +290,8 @@ pub fn management_main(
                 }
                 // We've gotten jitted output
                 // Commit it & Update new JIT Data
-                JITOut::JITData { moduleid, abs8, rel } => {
-                  process_jit(resolve.as_ref(), &mut samgr, &mut evmap, moduleid, abs8, rel);
+                JITOut::JITData { moduleid, jitdata } => {
+                  process_jit(resolve.as_ref(), &mut samgr, &mut evmap, moduleid, jitdata);
                 }
               }
             }
@@ -325,11 +325,10 @@ fn process_jit(
   sajit: &mut JITMemoryManager,
   evmap: &mut WriteHandle<u64, SafeSwappableCodeStore>,
   moduleid: u64,
-  abs8: CacheData,
-  rel: CacheData,
+  cache: CacheData,
 ) {
-  // Commit abs8 ONLY though
-  match abs8 {
+  // Upload
+  match cache {
     CacheData::None => {}
     cache => {
       resolver.update_cache(moduleid, cache.clone());
@@ -359,10 +358,5 @@ fn process_jit(
         }
       }
     }
-  }
-
-  match rel {
-    CacheData::None => {}
-    cache => resolver.update_cache(moduleid, cache.clone()),
   }
 }

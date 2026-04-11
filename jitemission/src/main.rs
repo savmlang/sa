@@ -11,6 +11,6 @@ fn main() {
 
   worker.pass1();
 
-  let mut cranelift = compiler_infra()[0].get_abs8();
+  let mut cranelift = compiler_infra()[0].get();
   cranelift.compile(&worker.out, &worker.jump);
 }

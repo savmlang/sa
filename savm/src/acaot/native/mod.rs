@@ -17,14 +17,6 @@ pub enum CompilerId {
 }
 
 pub trait NativeCompiler {
-  fn create_abs8() -> Box<dyn NativeCompiler>
-  where
-    Self: Sized;
-
-  fn create_rel() -> Option<Box<dyn NativeCompiler>>
-  where
-    Self: Sized;
-
   fn compiler_id(&self) -> CompilerId;
 
   fn prime(
@@ -45,24 +37,21 @@ pub trait NativeCompiler {
 }
 
 pub trait NativeCompilerBuilder: Send + Sync {
-  fn get_abs8(&self) -> Box<dyn NativeCompiler>;
-
-  fn get_rel(&self) -> Option<Box<dyn NativeCompiler>>;
+  fn get(&self) -> Box<dyn NativeCompiler>;
 
   fn abs_cache(&self) -> CacheLevel;
   fn rel_cache(&self) -> CacheLevel;
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct CompilerBuilder<T: NativeCompiler + Sized + Send + Sync>(PhantomData<T>);
+pub struct CompilerBuilder<T: NativeCompiler + Sized + Send + Sync>(
+  PhantomData<T>,
+  fn() -> Box<dyn NativeCompiler>,
+);
 
 impl<T: NativeCompiler + Sized + Sync + Send> NativeCompilerBuilder for CompilerBuilder<T> {
-  fn get_abs8(&self) -> Box<dyn NativeCompiler> {
-    T::create_abs8()
-  }
-
-  fn get_rel(&self) -> Option<Box<dyn NativeCompiler>> {
-    T::create_rel()
+  fn get(&self) -> Box<dyn NativeCompiler> {
+    (self.1)()
   }
 
   fn abs_cache(&self) -> CacheLevel {
@@ -77,6 +66,6 @@ impl<T: NativeCompiler + Sized + Sync + Send> NativeCompilerBuilder for Compiler
 pub fn compiler_infra() -> &'static [&'static dyn NativeCompilerBuilder] {
   &[
     #[cfg(feature = "cranelift")]
-    &CompilerBuilder(PhantomData::<SaVMCranelift>),
+    &CompilerBuilder(PhantomData::<SaVMCranelift>, SaVMCranelift::create_abs8),
   ]
 }

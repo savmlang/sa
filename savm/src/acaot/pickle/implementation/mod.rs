@@ -251,14 +251,13 @@ pub fn call_mov(pickle: &PickleInstruction, _ws: &mut WorkingSet, taskstate: &mu
 
     match source {
       12 => {
-        taskstate.r1.selfref = taskstate.scratchpad;
-      }
-      13 => {
         taskstate.r1.selfref = taskstate.largepad;
       }
-      _ => unsafe {
-        (*resolve_ptr!(taskstate => target)).selfref = resolve_ptr!(taskstate => target);
-      },
+      13 => {
+        // Get pointer to global state
+        todo!("RW Global State isn't yet implemented")
+      }
+      _ => panic!("source == target but special ids don't match"),
     }
   } else {
     let rsrc = resolve!(taskstate => source);

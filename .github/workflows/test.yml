@@ -4,6 +4,39 @@ on:
   push:
 
 jobs:
+  jitemitvm:
+    name: Run test
+
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: nightly
+
+      - name: Install salloc
+        working-directory: sart/saffi/libsalloc/allocator
+        run: |
+          cargo build --release
+
+          sudo cp ./target/release/libsalloc.so /usr/lib/libsalloc.so
+          sudo ldconfig
+
+      - name: Run
+        working-directory: bin/jitemission
+        run: |
+          cargo run --release
+
   init:
     name: Run test
 

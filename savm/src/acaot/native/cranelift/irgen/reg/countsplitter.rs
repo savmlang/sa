@@ -1,3 +1,5 @@
+use std::arch::is_aarch64_feature_detected;
+
 use cranelift::prelude::*;
 
 use crate::acaot::native::cranelift::irgen::reg::ClifTypeMapping;
@@ -50,33 +52,57 @@ pub fn break_simd_waterfall(
 
   // Waterfall load
   {
-    // Don't emit only 1x AVX512 hint
-    // atleast 2
-    //
-    // Because it slows down systems
-    // + calculate the offset as well
-    while count >= 2 * b512_threshold {
-      loadinst.extend_from_slice(&[
-        (offset, map.simd_width_type(64), b512_flags),
-        (offset + 64, map.simd_width_type(64), b512_flags),
-      ]);
-      offset += 2 * 64;
+    #[cfg(target_arch = "x86_64")]
+    {
+      // Don't emit only 1x AVX512 hint
+      // atleast 2
+      //
+      // Because it slows down systems
+      // + calculate the offset as well
+      if is_x86_feature_detected!("avx512f")
+        && is_x86_feature_detected!("avx512bitalg")
+        && is_x86_feature_detected!("avx512dq")
+        && is_x86_feature_detected!("avx512vl")
+        && is_x86_feature_detected!("avx512vbmi")
+      {
+        while count >= 2 * b512_threshold {
+          loadinst.extend_from_slice(&[
+            (offset, map.simd_width_type(64), b512_flags),
+            (offset + 64, map.simd_width_type(64), b512_flags),
+          ]);
+          offset += 2 * 64;
 
-      count -= 2 * b512_threshold;
+          count -= 2 * b512_threshold;
+        }
+      }
+
+      if is_x86_feature_detected!("avx2") {
+        while count >= b256_threshold {
+          loadinst.push((offset, map.simd_width_type(32), b256_flags));
+          offset += 32;
+
+          count -= b256_threshold;
+        }
+      }
+
+      if is_x86_feature_detected!("sse4.2") {
+        while count >= b128_threshold {
+          loadinst.push((offset, map.simd_width_type(16), b128_flags));
+          offset += 16;
+
+          count -= b128_threshold;
+        }
+      }
     }
 
-    while count >= b256_threshold {
-      loadinst.push((offset, map.simd_width_type(32), b256_flags));
-      offset += 32;
+    #[cfg(target_arch = "aarch64")]
+    if is_aarch64_feature_detected!("neon") {
+      while count >= b128_threshold {
+        loadinst.push((offset, map.simd_width_type(16), b128_flags));
+        offset += 16;
 
-      count -= b256_threshold;
-    }
-
-    while count >= b128_threshold {
-      loadinst.push((offset, map.simd_width_type(16), b128_flags));
-      offset += 16;
-
-      count -= b128_threshold;
+        count -= b128_threshold;
+      }
     }
 
     while count >= b64_threshold {

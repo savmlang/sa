@@ -6,10 +6,11 @@ use cranelift::prelude::{
 use crate::acaot::native::cranelift::CompilerMeta;
 
 mod countsplitter;
-mod resolve_get;
+pub(crate) mod regmap;
+mod resolve;
 
 pub use countsplitter::*;
-pub use resolve_get::*;
+pub use resolve::*;
 
 pub fn get(builder: &mut FunctionBuilder, reg: &mut Option<Variable>) -> Variable {
   let curr = builder.current_block().unwrap();

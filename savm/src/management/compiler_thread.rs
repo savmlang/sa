@@ -5,11 +5,7 @@ use crossbeam_channel::{Receiver, Sender};
 use crate::{BytecodeResolver, CODE_CACHE, CacheData, CacheLevel, acaot::native::compiler_infra};
 
 pub enum JITOut {
-  JITData {
-    moduleid: u64,
-    abs8: CacheData,
-    rel: CacheData,
-  },
+  JITData { moduleid: u64, jitdata: CacheData },
   Stopped,
 }
 
@@ -54,41 +50,21 @@ pub fn compiler(
       }
     });
 
-    let mut rel = CacheData::None;
-    {
-      if let Some(mut c_rel) = builder.get_rel() {
-        match resolve.as_ref().get_cache(moduleid, builder.rel_cache()) {
-          CacheData::None => {
-            let (inst, jmp) = bytecode.clone();
-
-            rel = c_rel.compile(inst.as_ref(), jmp.as_ref());
-          }
-          e => {
-            rel = e;
-          }
-        }
-      }
-    }
-
-    let abs8;
+    let jitdata;
     let (inst, jmp) = bytecode;
     {
       match resolve.as_ref().get_cache(moduleid, builder.abs_cache()) {
         CacheData::None => {
-          let mut c_abs8 = builder.get_abs8();
+          let mut compiler = builder.get();
 
-          abs8 = c_abs8.compile(inst.as_ref(), jmp.as_ref());
+          jitdata = compiler.compile(inst.as_ref(), jmp.as_ref());
         }
         e => {
-          abs8 = e;
+          jitdata = e;
         }
       }
     }
 
-    _ = tx.send(JITOut::JITData {
-      moduleid,
-      abs8,
-      rel,
-    });
+    _ = tx.send(JITOut::JITData { moduleid, jitdata });
   }
 }

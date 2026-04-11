@@ -27,6 +27,7 @@ use std::{
 pub mod irgen;
 
 static GLOBAL_ISA: OnceLock<Arc<dyn TargetIsa>> = OnceLock::new();
+static GLOBAL_ISA_OPTIMIZED: OnceLock<Arc<dyn TargetIsa>> = OnceLock::new();
 
 pub struct SaVMCranelift {
   pub abs8: bool,
@@ -34,59 +35,66 @@ pub struct SaVMCranelift {
 }
 
 impl SaVMCranelift {
-  fn get_cached_isa() -> Arc<dyn TargetIsa> {
-    GLOBAL_ISA
-      .get_or_init(|| {
-        let settings = settings::builder();
-        builder()
-          .expect("SaVM: Unsupported Host")
-          .finish(Flags::new(settings))
-          .expect("SaVM: Failed to finish ISA")
-      })
-      .clone()
+  fn get_cached_isa(highspeed: bool) -> Arc<dyn TargetIsa> {
+    if highspeed {
+      &GLOBAL_ISA_OPTIMIZED
+    } else {
+      &GLOBAL_ISA
+    }
+    .get_or_init(|| {
+      let mut settings = settings::builder();
+      if highspeed {
+        settings.set("opt_level", "speed");
+        settings.set("regalloc_algorithm", "backtracking");
+      } else {
+        settings.set("regalloc_algorithm", "single_pass");
+      }
+
+      let mut flags = Flags::new(settings);
+
+      if highspeed {
+        flags.enable_alias_analysis();
+      }
+
+      builder()
+        .expect("SaVM: Unsupported Host")
+        .finish(flags)
+        .expect("SaVM: Failed to finish ISA")
+    })
+    .clone()
   }
 
-  fn new() -> Self {
+  fn new(highspeed: bool) -> Self {
     Self {
       abs8: true,
-      isa: Self::get_cached_isa(),
+      isa: Self::get_cached_isa(highspeed),
     }
+  }
+
+  pub fn create_abs8() -> Box<dyn NativeCompiler>
+  where
+    Self: Sized,
+  {
+    #[cfg(any(
+      target_arch = "x86_64",
+      target_arch = "aarch64",
+      target_arch = "riscv64"
+    ))]
+    return Box::new(Self::new(false));
+  }
+
+  pub fn create_rel_optimized() -> Box<dyn NativeCompiler>
+  where
+    Self: Sized,
+  {
+    let mut o = Self::new(true);
+    o.abs8 = false;
+
+    Box::new(o)
   }
 }
 
 impl NativeCompiler for SaVMCranelift {
-  fn create_abs8() -> Box<dyn NativeCompiler>
-  where
-    Self: Sized,
-  {
-    #[cfg(any(
-      target_arch = "x86_64",
-      target_arch = "aarch64",
-      target_arch = "riscv64"
-    ))]
-    return Box::new(Self::new());
-  }
-
-  fn create_rel() -> Option<Box<dyn NativeCompiler>>
-  where
-    Self: Sized,
-  {
-    #[cfg(any(
-      target_arch = "x86_64",
-      target_arch = "aarch64",
-      target_arch = "riscv64"
-    ))]
-    return Some({
-      let mut o = Self::new();
-      o.abs8 = false;
-
-      Box::new(o)
-    });
-
-    #[allow(unreachable_code)]
-    return None;
-  }
-
   fn compiler_id(&self) -> super::CompilerId {
     super::CompilerId::Cranelift
   }
@@ -274,9 +282,15 @@ impl NativeCompiler for SaVMCranelift {
     {
       let mut ctx = Context::for_function(f);
 
-      let compiled = ctx
-        .compile(isa, &mut Default::default())
-        .unwrap_or_else(|_| abort());
+      let compiled = ctx.compile(isa, &mut Default::default());
+
+      let compiled = (|| {
+        #[cfg(debug_assertions)]
+        return compiled.unwrap();
+
+        #[cfg(not(debug_assertions))]
+        return compiled.unwrap_or_else(|_| abort());
+      })();
     }
 
     // todo!()

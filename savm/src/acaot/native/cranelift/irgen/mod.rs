@@ -1,10 +1,13 @@
 use std::{mem::offset_of, ptr::copy_nonoverlapping};
 
 use crate::acaot::{
-  native::cranelift::{CompilerMeta, irgen::reg::TypeOrWidth},
+  native::cranelift::{
+    CompilerMeta,
+    irgen::reg::{TypeOrWidth, break_simd_waterfall, resolve_reg},
+  },
   pickle::def::{
     PICKLE_OPCODE_HINT, PICKLE_OPCODE_JIF, PICKLE_OPCODE_JMP, PICKLE_OPCODE_MARK,
-    PICKLE_OPCODE_REG, PickleInstruction,
+    PICKLE_OPCODE_MOV, PICKLE_OPCODE_REG, PickleInstruction,
   },
 };
 use cranelift::prelude::{
@@ -28,8 +31,6 @@ pub fn compile(
   let mut idx = 0usize;
 
   loop {
-    println!("Idx rn - {idx}");
-
     if idx == pickle.len() {
       break;
     }
@@ -109,6 +110,7 @@ pub fn compile(
 
         let (then, other) = if intent == 0 {
           // Jump If Zero
+          // brif(src, next_code, [], target_block, [])
           (newblock, userblock)
         } else {
           (userblock, newblock)
@@ -116,6 +118,34 @@ pub fn compile(
 
         builder.ins().brif(src, then, [], other, []);
         builder.switch_to_block(newblock);
+      }
+      PICKLE_OPCODE_MOV => {
+        let source = op.u1;
+        let target = op.u2;
+
+        // Special Pointers
+        if source == target && source > 7 {
+          let r1 = resolve_reg(builder, meta, 0);
+          let val = match source {
+            12 => builder.ins().load(
+              I64,
+              MemFlags::trusted(),
+              meta.vmtaskstate,
+              offset_of!(VMTaskState, largepad) as i32,
+            ),
+            _ => unreachable!(),
+          };
+
+          builder.def_var(r1, val);
+        } else {
+          let src = resolve_reg(builder, meta, source);
+
+          let tgt = resolve_reg(builder, meta, target);
+          let tgt = builder.use_var(tgt);
+
+          // Do a MOV
+          builder.def_var(src, tgt);
+        }
       }
       _ => {}
     }
@@ -162,10 +192,13 @@ pub fn compile(
       offset_of!(VMTaskState, scratchpad) as i32,
     );
 
-    for offset in [0, 64, 128] {
-      let lr = builder.ins().load(I64X8, mf, stack_scratchpad_addr, offset);
-
-      builder.ins().store(mf, lr, scratchpad_addr, offset);
+    for (offset, typ, mflags) in break_simd_waterfall(64, TypeOrWidth::Type(0).clif_mapping(), 8) {
+      let lr = builder
+        .ins()
+        .load(typ, mflags, stack_scratchpad_addr, offset as i32);
+      builder
+        .ins()
+        .store(mflags, lr, scratchpad_addr, offset as i32);
     }
 
     builder.ins().return_(&[]);
