@@ -7,12 +7,7 @@ jobs:
   jitemitvm:
     name: Run jitemission
 
-    strategy:
-      fail-fast: true
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
@@ -23,6 +18,14 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: nightly
+
+      - name: Install salloc
+        working-directory: sart/saffi/libsalloc/allocator
+        run: |
+          cargo build --release
+
+          sudo cp ./target/release/libsalloc.so /usr/lib/libsalloc.so
+          sudo ldconfig
 
       - name: Run
         working-directory: jitemission
