@@ -33,7 +33,7 @@ jobs:
           sudo ldconfig
 
       - name: Run
-        working-directory: bin/jitemission
+        working-directory: jitemission
         run: |
           cargo run --release
 
