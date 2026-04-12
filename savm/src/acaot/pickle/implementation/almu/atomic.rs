@@ -186,7 +186,7 @@ fn call_store<T: Atomicable + Clone + Copy>(
     let forgiving = std::ptr::null_mut();
 
     let o1 =
-      (std::ptr::read_unaligned(resolve_location_src!(taskstate => o1_raw forgiving)).pointer
+      (std::ptr::read_unaligned(resolve_location_src!(taskstate => o1_raw)).pointer
         as *mut T)
         .offset(of1 as _);
     let o2 = (resolve_location_src!(taskstate => o2_raw forgiving) as *mut T).offset(of2 as _);
