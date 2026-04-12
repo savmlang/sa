@@ -19,18 +19,12 @@ jobs:
         with:
           toolchain: nightly
 
-      - name: Install salloc
-        working-directory: sart/saffi/libsalloc/allocator
+      - name: Run
         run: |
           cargo build --release
 
-          sudo cp ./target/release/libsalloc.so /usr/lib/libsalloc.so
-          sudo ldconfig
-
-      - name: Run
-        working-directory: jitemission
-        run: |
-          cargo run --release
+          cd jitemission
+          cargo run --release --package jitemission
 
   init:
     name: Run test
@@ -56,9 +50,11 @@ jobs:
           python-version: "3.14"
 
       - name: Run
-        working-directory: bin/satest
         run: |
-          cargo run --release
+          cargo build --release
+
+          cd bin/satest
+          cargo run --release --package satest
 
           echo "Python (Test #1)"
           python bench/1.py
