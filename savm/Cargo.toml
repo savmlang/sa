@@ -28,7 +28,7 @@ cranelift = { version = "^0.130", features = [
   "native",
   "frontend",
 ], optional = true }
-llvm-sys = { version = "=221", default-features = false, features = [
+llvm-sys = { version = "=221.0.1", default-features = false, features = [
   "force-static",
   "disable-alltargets-init",
 ], optional = true }
