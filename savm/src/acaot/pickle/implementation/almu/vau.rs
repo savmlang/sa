@@ -8,23 +8,16 @@ use std::ptr::{self, addr_of_mut};
 macro_rules! arithprelude {
     ($ws:ident, $task:ident) => {
       {
-      // [<type tag (3 bits)> <count bit>] [Src1 (4-bits)] [Src2 (4-bits)] [Target1 (4-bits)] (16b)
+      // [<type tag (4 bits)>] [Src1 (4-bits)] [Src2 (4-bits)] [Target1 (4-bits)] (16b)
       // [<Carry/Sigflow bit>] [<saturation bit>] [Padding] (16b)
       let flags = arrcastint!($ws, start = 0, stop = 4, u32);
 
       let instdefined = flags as u16;
 
       let topflags = (flags >> 16) as u16;
-      let countbit = (topflags >> 12 as u8) & 0x01;
-      let typetag = topflags >> 13 as u8;
+      let typetag = (topflags >> 12) as u8;
 
-      let count_data = arrcastint!($ws, start = 4, stop = 8, u32);
-
-      let count = if (countbit == 0) {
-        count_data
-      } else {
-        unsafe { $task.r1.u32 }
-      };
+      let count = arrcastint!($ws, start = 4, stop = 8, u32);
 
       let offset1 = arrcastint!($ws, start = 8, stop = 12, i32);
       let offset2 = arrcastint!($ws, start = 12, stop = 16, i32);
@@ -139,7 +132,7 @@ pub fn call_vadd(_: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMT
 
   debug_assert!(!(carry && saturate));
   debug_assert!(count != 0);
-  debug_assert!(!((carry || saturate) && count != 1));
+  debug_assert!(!(carry && count != 1));
 
   {
     match (carry, saturate, typetag) {
@@ -206,7 +199,7 @@ pub fn call_vsub(_: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMT
 
   debug_assert!(!(carry && saturate));
   debug_assert!(count != 0);
-  debug_assert!(!((carry || saturate) && count != 1));
+  debug_assert!(!(carry && count != 1));
 
   {
     match (carry, saturate, typetag) {
@@ -339,9 +332,9 @@ macro_rules! divlikeprelude {
 
         let typetag = (args >> 12) as u8;
 
-        let t1 = arrcastint!($ws, start = 8, stop = 12, i32);
-                let t2 = arrcastint!($ws, start = 12, stop = 16, i32);
-        let t3 = arrcastint!($ws, start = 16, stop = 20, i32);
+        let t1 = arrcastint!($ws, start = 0, stop = 4, i32);
+        let t2 = arrcastint!($ws, start = 4, stop = 8, i32);
+        let t3 = arrcastint!($ws, start = 8, stop = 12, i32);
 
         let src1 = {
           let src = (args >> 8 as u8) & 0x0F;

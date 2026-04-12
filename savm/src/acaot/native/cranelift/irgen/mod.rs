@@ -6,8 +6,12 @@ use crate::acaot::{
     irgen::reg::{TypeOrWidth, break_simd_waterfall, resolve_reg},
   },
   pickle::def::{
-    PICKLE_OPCODE_HINT, PICKLE_OPCODE_JIF, PICKLE_OPCODE_JMP, PICKLE_OPCODE_MARK,
-    PICKLE_OPCODE_MOV, PICKLE_OPCODE_REG, PickleInstruction,
+    PICKLE_OPCODE_DIV, PICKLE_OPCODE_HINT, PICKLE_OPCODE_JIF, PICKLE_OPCODE_JMP,
+    PICKLE_OPCODE_MARK, PICKLE_OPCODE_MOV, PICKLE_OPCODE_REG, PICKLE_OPCODE_REM,
+    PICKLE_OPCODE_VABS, PICKLE_OPCODE_VADD, PICKLE_OPCODE_VADDF, PICKLE_OPCODE_VCMP,
+    PICKLE_OPCODE_VDIVF, PICKLE_OPCODE_VFMA, PICKLE_OPCODE_VMUL, PICKLE_OPCODE_VMULF,
+    PICKLE_OPCODE_VNEG, PICKLE_OPCODE_VSUB, PICKLE_OPCODE_VSUBF, PICKLE_OPCODE_WS_PUT,
+    PickleInstruction,
   },
 };
 use cranelift::prelude::{
@@ -17,6 +21,7 @@ use cranelift::prelude::{
 };
 use sart::ctr::VMTaskState;
 
+mod almu;
 mod reg;
 
 pub fn compile(
@@ -147,7 +152,35 @@ pub fn compile(
           builder.def_var(src, tgt);
         }
       }
-      _ => {}
+
+      // VCMP
+      PICKLE_OPCODE_VCMP => almu::hwnd_vcmp(builder, meta, op),
+
+      // Add, Sub, Mul, Div, Rem
+      PICKLE_OPCODE_VADD => almu::hwnd_vadd(builder, meta, op),
+      PICKLE_OPCODE_VSUB => almu::hwnd_vsub(builder, meta, op),
+      PICKLE_OPCODE_VMUL => almu::hwnd_vmul(builder, meta, op),
+      PICKLE_OPCODE_DIV => almu::hwnd_div(builder, meta, op),
+      PICKLE_OPCODE_REM => almu::hwnd_rem(builder, meta, op),
+
+      // F - Add, Sub, Mul, Div
+      PICKLE_OPCODE_VADDF => almu::handle_vaddf(builder, meta, op),
+      PICKLE_OPCODE_VSUBF => almu::handle_vsubf(builder, meta, op),
+      PICKLE_OPCODE_VMULF => almu::handle_vmulf(builder, meta, op),
+      PICKLE_OPCODE_VDIVF => almu::handle_vdivf(builder, meta, op),
+
+      // FMA
+      PICKLE_OPCODE_VFMA => almu::handle_vfma(builder, meta, op),
+
+      // VDATA OP
+      PICKLE_OPCODE_VABS => almu::hwnd_vabs(builder, meta, op),
+      PICKLE_OPCODE_VNEG => almu::hwnd_vneg(builder, meta, op),
+
+      // No-Op
+      PICKLE_OPCODE_WS_PUT => {}
+      _ => {
+        // Figure out impl for 37 other remaining opcodes
+      }
     }
 
     idx += 1;
@@ -196,6 +229,7 @@ pub fn compile(
       let lr = builder
         .ins()
         .load(typ, mflags, stack_scratchpad_addr, offset as i32);
+
       builder
         .ins()
         .store(mflags, lr, scratchpad_addr, offset as i32);

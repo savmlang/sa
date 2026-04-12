@@ -214,6 +214,21 @@ pub enum StoreResolver {
 }
 
 impl StoreResolver {
+  pub fn waterfall_typerating(&self) -> Box<[Type]> {
+    match self {
+      Self::Pointer { storeseq, .. } => storeseq.iter().map(|&(_, x, _)| x).collect::<Box<[_]>>(),
+      Self::Regs {
+        mapout,
+        typedata,
+        values,
+      } => mapout
+        .waterfall
+        .iter()
+        .map(|&(_, x, _)| x)
+        .collect::<Box<[_]>>(),
+    }
+  }
+
   pub fn total(&self) -> usize {
     match self {
       Self::Pointer { storeseq, .. } => storeseq.len(),
@@ -386,36 +401,42 @@ impl TypeOrWidth {
           x1: I64,
           xreg: I64,
           signed: *typ == 4,
+          float: false,
         },
         1 | 5 => ClifTypeMapping {
           width: 4,
           x1: I32,
           xreg: I32X2,
           signed: *typ == 5,
+          float: false,
         },
         2 | 6 => ClifTypeMapping {
           width: 2,
           x1: I16,
           xreg: I16X4,
           signed: *typ == 6,
+          float: false,
         },
         3 | 7 => ClifTypeMapping {
           width: 1,
           x1: I8,
           xreg: I8X8,
           signed: *typ == 7,
+          float: false,
         },
         8 => ClifTypeMapping {
           width: 8,
           x1: F64,
           xreg: F64,
           signed: false,
+          float: true,
         },
         9 => ClifTypeMapping {
           width: 4,
           x1: F32,
           xreg: F32X2,
           signed: false,
+          float: true,
         },
         _ => unreachable!(),
       },
@@ -436,6 +457,7 @@ pub struct ClifTypeMapping {
   pub x1: Type,
   pub xreg: Type,
   pub signed: bool,
+  pub float: bool,
 }
 
 impl ClifTypeMapping {

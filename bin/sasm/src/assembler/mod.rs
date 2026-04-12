@@ -1,15 +1,15 @@
-use phf::{Map, phf_map};
+use phf::{phf_map, Map};
 use std::{
   borrow::Cow,
   collections::{HashMap, HashSet},
 };
 
 use crate::{
-  GLOB_MACROS, GLOB_VALUES,
   assembler::{
     macros::{AssertOp, MacroJIT, MicroJITBuilder},
     number::parse_expr,
   },
+  GLOB_MACROS, GLOB_VALUES,
 };
 
 use sart::ctr::parse_instrution;
@@ -125,15 +125,11 @@ static IMPORTS: Map<&'static str, OutValue> = phf_map! {
   "largepad" => OutValue::u8(9),
   "ptr" => OutValue::u8(10),
 
-  // Count
-  "COUNT_ABSOLUTE" => OutValue::u1(0),
-  "COUNT_FROM_R1" => OutValue::u1(1),
-
   // Widths
-  "w64" => OutValue::u2(0),
-  "w32" => OutValue::u2(1),
-  "w16" => OutValue::u2(2),
-  "w8" => OutValue::u2(3),
+  "w64" => OutValue::u4(0),
+  "w32" => OutValue::u4(1),
+  "w16" => OutValue::u4(2),
+  "w8" => OutValue::u4(3),
 
   // JZ,JNZ Flags
   "OP_JZ" => OutValue::u1(0),
@@ -241,6 +237,8 @@ static IMPORTS: Map<&'static str, OutValue> = phf_map! {
   "f64" => OutValue::u4(8),
   "f32" => OutValue::u4(9),
 
+  "FOP_f64" => OutValue::u1(0),
+  "FOP_f32" => OutValue::u1(1),
 };
 
 #[derive(Debug, Hash, Clone, Copy, PartialEq, Eq)]

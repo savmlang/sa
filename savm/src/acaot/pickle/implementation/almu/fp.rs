@@ -13,23 +13,16 @@ macro_rules! arithprelude {
     {
     // `vaddf <flags as u16> <count in u32> <base src1 as i32> <base src2 as i32> <base target1 as i32>`
     // The flags is split like this into (4-bits + 3 x 4-bit parts):
-    //   [0 <inst defined> <float type> <count bit>] [Src1] [Src2] [Target1]
+    //   [00 <inst defined> <float type>] [Src1] [Src2] [Target1]
     let f1 = $pickle.u1;
     let f2 = $pickle.u2;
 
     let flags = u16::from_ne_bytes([f1, f2]);
 
-    let countbit = ((flags >> 12) & 0x01) as u8;
-    let fptype = ((flags >> 13) & 0x01) as u8;
-    let inst = ((flags >> 14) & 0x01) as u8;
+    let fptype = ((flags >> 12) & 0x01) as u8;
+    let inst = ((flags >> 13) & 0x01) as u8;
 
-    let count_data = arrcastint!($ws, start = 0, stop = 4, u32);
-
-    let count = if (countbit == 0) {
-      count_data
-    } else {
-      unsafe { $task.r1.u32 }
-    };
+    let count = arrcastint!($ws, start = 0, stop = 4, u32);
 
     let offset1 = arrcastint!($ws, start = 4, stop = 8, i32);
     let offset2 = arrcastint!($ws, start = 8, stop = 12, i32);

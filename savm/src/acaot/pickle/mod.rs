@@ -175,11 +175,11 @@ impl<T: Seek + Read> PickleWorker<T> {
     });
   }
 
-  // `vfma [<flags as u20> <padding [4bits]> i.e. single u24 in LE] <count in u32> <base src1 as i32> <base src2 as i32> <base src3 as i32> <base target1 as i32>`
+  // `vfma <flags as u16> <padding [8bits]> <count in u32> <base src1 as i32> <base src2 as i32> <base src3 as i32> <base target1 as i32>`
   fn handle_vfma(&mut self) {
     let opcode = PICKLE_OPCODE_VFMA;
     let [flags1, flags2] = self.bytecode.extract::<2>().swap_if_be();
-    let [flags3] = self.bytecode.extract::<1>();
+    let [memflags] = self.bytecode.extract::<1>();
 
     let mut copy = [0u8; 20];
     copy[0..4].copy_from_slice(&self.bytecode.extract::<4>().swap_if_be());
@@ -193,7 +193,7 @@ impl<T: Seek + Read> PickleWorker<T> {
       opcode: opcode,
       u1: flags1,
       u2: flags2,
-      u3: flags3,
+      u3: memflags,
     });
   }
 
@@ -437,8 +437,7 @@ impl<T: Seek + Read> PickleWorker<T> {
   fn handle_vcmp(&mut self) {
     let [r0] = self.bytecode.extract::<1>();
 
-    let count = r0 >> 7;
-    let operation = r0 & 0x7F;
+    let operation = r0 & 0xFF;
 
     let mut total: [u8; 18] = [0; 18];
     total[0..2].copy_from_slice(&self.bytecode.extract::<2>().swap_if_be());
@@ -451,8 +450,8 @@ impl<T: Seek + Read> PickleWorker<T> {
 
     self.out.push(PickleInstruction {
       opcode: PICKLE_OPCODE_VCMP,
-      u1: count,
-      u2: operation,
+      u1: operation & 0x1F,
+      u2: operation >> 5,
       u3: 0,
     });
   }

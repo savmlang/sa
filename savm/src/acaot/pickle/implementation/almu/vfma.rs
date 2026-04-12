@@ -83,14 +83,9 @@ pub fn call_vfma(pickle: &PickleInstruction, ws: &mut WorkingSet, ts: &mut VMTas
   unsafe {
     let flags = u16::from_ne_bytes([pickle.u1, pickle.u2]);
 
-    let floattype = (pickle.u3 >> 1) & 0x01;
+    let floattype = pickle.u3 & 0x01;
 
-    let countbit = pickle.u3 & 0x01;
-    let count = {
-      let countdata = arrcastint!(ws, start = 0, stop = 4, u32);
-
-      if countbit == 0 { countdata } else { ts.r1.u32 }
-    };
+    let count = arrcastint!(ws, start = 0, stop = 4, u32);
 
     let flags_src1 = (flags >> 12) as u8 & 0x0F;
     let flags_src2 = (flags >> 8) as u8 & 0x0F;

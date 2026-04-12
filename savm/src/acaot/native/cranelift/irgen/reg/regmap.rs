@@ -1,6 +1,6 @@
 use std::ops::{Range, Rem};
 
-use cranelift::prelude::Type;
+use cranelift::prelude::{MemFlags, Type};
 
 use crate::acaot::native::cranelift::irgen::reg::{ClifTypeMapping, break_simd_waterfall};
 
@@ -16,9 +16,11 @@ pub fn regmapper(reg0: u8, offset_bytes: i32, typedata: ClifTypeMapping, count: 
 
   let regs = (reg0..(reg0 + totalregstouched));
 
-  let map = break_simd_waterfall(8, typedata, count)
-    .into_iter()
-    .map(|(additive_offset, dtype, _)| {
+  let waterfall = break_simd_waterfall(8, typedata, count);
+
+  let map = waterfall
+    .iter()
+    .map(|&(additive_offset, dtype, _)| {
       let offset_cnt_additive = additive_offset / wdt;
 
       let total_lanes = dtype.lane_count();
@@ -43,6 +45,7 @@ pub fn regmapper(reg0: u8, offset_bytes: i32, typedata: ClifTypeMapping, count: 
 
   RegMapOut {
     regstouched: regs,
+    waterfall,
     map,
   }
 }
@@ -50,6 +53,7 @@ pub fn regmapper(reg0: u8, offset_bytes: i32, typedata: ClifTypeMapping, count: 
 #[derive(Debug, Clone)]
 pub struct RegMapOut {
   pub regstouched: Range<u8>,
+  pub waterfall: Vec<(u32, Type, MemFlags)>,
   pub map: Vec<RegMapped>,
 }
 

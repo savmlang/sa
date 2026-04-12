@@ -368,11 +368,8 @@ macro_rules! arrcastint {
 
 #[inline(always)]
 pub fn call_vcmp(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
-  let count_bit = pickle.u1;
-
-  let op_width = pickle.u2;
-  let op = op_width & 0x1F;
-  let width = op_width >> 5;
+  let op = pickle.u1;
+  let width = pickle.u2;
 
   let srcflags = arrcastint!(ws, start = 0, stop = 2, u16);
 
@@ -380,11 +377,7 @@ pub fn call_vcmp(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
   let _src2 = ((srcflags >> 8) & 0xF) as u8;
   let _target = ((srcflags >> 4) & 0xF) as u8;
 
-  let count = if count_bit == 0 {
-    arrcastint!(ws, start = 2, stop = 6, u32)
-  } else {
-    unsafe { taskstate.r1.u32 }
-  };
+  let count = arrcastint!(ws, start = 2, stop = 6, u32);
 
   let offset1 = arrcastint!(ws, start = 6, stop = 10, i32);
   let offset2 = arrcastint!(ws, start = 10, stop = 14, i32);

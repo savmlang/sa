@@ -52,64 +52,75 @@ pub fn break_simd_waterfall(
 
   // Waterfall load
   {
-    #[cfg(target_arch = "x86_64")]
-    {
-      // Don't emit only 1x AVX512 hint
-      // atleast 2
-      //
-      // Because it slows down systems
-      // + calculate the offset as well
-      if is_x86_feature_detected!("avx512f")
-        && is_x86_feature_detected!("avx512bitalg")
-        && is_x86_feature_detected!("avx512dq")
-        && is_x86_feature_detected!("avx512vl")
-        && is_x86_feature_detected!("avx512vbmi")
+    // Don't even think of SIMD if payload < 16bytes
+    if width * count >= 16 {
+      #[cfg(target_arch = "x86_64")]
       {
-        while count >= 2 * b512_threshold {
-          loadinst.extend_from_slice(&[
-            (offset, map.simd_width_type(64), b512_flags),
-            (offset + 64, map.simd_width_type(64), b512_flags),
-          ]);
-          offset += 2 * 64;
+        // Don't emit only 1x AVX512 hint
+        // atleast 2
+        //
+        // Because it slows down systems
+        // + calculate the offset as well
+        if is_x86_feature_detected!("avx512f")
+          && is_x86_feature_detected!("avx512bitalg")
+          && is_x86_feature_detected!("avx512dq")
+          && is_x86_feature_detected!("avx512vl")
+          && is_x86_feature_detected!("avx512vbmi")
+        {
+          if b512_threshold > 0 {
+            while count >= 2 * b512_threshold {
+              loadinst.extend_from_slice(&[
+                (offset, map.simd_width_type(64), b512_flags),
+                (offset + 64, map.simd_width_type(64), b512_flags),
+              ]);
+              offset += 2 * 64;
 
-          count -= 2 * b512_threshold;
+              count -= 2 * b512_threshold;
+            }
+          }
+        }
+
+        if is_x86_feature_detected!("avx2") {
+          if b256_threshold > 0 {
+            while count >= b256_threshold {
+              loadinst.push((offset, map.simd_width_type(32), b256_flags));
+              offset += 32;
+
+              count -= b256_threshold;
+            }
+          }
+        } else if is_x86_feature_detected!("sse2") {
+          if b128_threshold > 0 {
+            while count >= b128_threshold {
+              loadinst.push((offset, map.simd_width_type(16), b128_flags));
+              offset += 16;
+
+              count -= b128_threshold;
+            }
+          }
         }
       }
 
-      if is_x86_feature_detected!("avx2") {
-        while count >= b256_threshold {
-          loadinst.push((offset, map.simd_width_type(32), b256_flags));
-          offset += 32;
+      if b128_threshold > 0 {
+        #[cfg(target_arch = "aarch64")]
+        if is_aarch64_feature_detected!("neon") {
+          while count >= b128_threshold {
+            loadinst.push((offset, map.simd_width_type(16), b128_flags));
+            offset += 16;
 
-          count -= b256_threshold;
-        }
-      }
-
-      if is_x86_feature_detected!("sse4.2") {
-        while count >= b128_threshold {
-          loadinst.push((offset, map.simd_width_type(16), b128_flags));
-          offset += 16;
-
-          count -= b128_threshold;
+            count -= b128_threshold;
+          }
         }
       }
     }
 
-    #[cfg(target_arch = "aarch64")]
-    if is_aarch64_feature_detected!("neon") {
-      while count >= b128_threshold {
-        loadinst.push((offset, map.simd_width_type(16), b128_flags));
-        offset += 16;
+    if b64_threshold > 0 {
+      while count >= b64_threshold {
+        loadinst.push((offset, map.simd_width_type(8), b64_flags));
+        offset += 8;
 
-        count -= b128_threshold;
+        count -= b64_threshold;
       }
-    }
-
-    while count >= b64_threshold {
-      loadinst.push((offset, map.simd_width_type(8), b64_flags));
-      offset += 8;
-
-      count -= b64_threshold;
     }
 
     if b32_threshold > 0 {
