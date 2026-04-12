@@ -55,14 +55,6 @@ jobs:
         with:
           python-version: "3.14"
 
-      - name: Install salloc
-        working-directory: sart/saffi/libsalloc/allocator
-        run: |
-          cargo build --release
-
-          sudo cp ./target/release/libsalloc.so /usr/lib/libsalloc.so
-          sudo ldconfig
-
       - name: Run
         working-directory: bin/satest
         run: |

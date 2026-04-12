@@ -1,0 +1,10 @@
+[workspace]
+members = ["sart/saffi/libsalloc", "sajit", "sart", "sart/saffi/ffi", "sart/saffi/salloc", "savm", "jitemission", "bin/sapacker", "bin/sasm", "bin/satest", "bin/savmrun"]
+resolver = "3"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
