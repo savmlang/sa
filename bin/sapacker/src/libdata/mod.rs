@@ -1,7 +1,6 @@
 use std::{
   fs::{self, File},
   io,
-  os::windows::fs::MetadataExt,
   path::PathBuf,
 };
 
@@ -26,7 +25,7 @@ pub fn emit(path: &mut PathBuf, conn: &Connection) {
 
           let pth = y.path();
 
-          let size = fs::metadata(&pth).unwrap().file_size();
+          let size = fs::metadata(&pth).unwrap().len();
 
           const ONE_GIB: u64 = 1024 * 1024 * 1024;
           if size > ONE_GIB {
