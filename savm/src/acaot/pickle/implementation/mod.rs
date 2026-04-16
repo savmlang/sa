@@ -12,7 +12,11 @@ pub use almu::*;
 mod threading;
 pub use threading::*;
 
-use sart::{ctr::VMTaskState, structures::QuadPackedData};
+use sart::{
+  ctr::{AggressiveMatrixExtension, VMTaskState},
+  salloc,
+  structures::QuadPackedData,
+};
 
 use crate::acaot::pickle::def::{
   PICKLE_DISPATCH_TABLE, PICKLE_OPCODE_JIF, PICKLE_OPCODE_JMP, PICKLE_OPCODE_MARK,
@@ -26,12 +30,48 @@ pub struct WorkingSet {
   pub largepad: *mut QuadPackedData, // SIZE_128KB allocated
   pub largepad_cursor: usize,
   pub relocmap: Arc<HashMap<u64, usize, ahash::RandomState>>,
+
+  // AME
+  pub ame: *mut AggressiveMatrixExtension,
+  pub ame_free: bool,
+
+  // Branch Predictor
   pub jmp: (u64, usize),
 }
 
 // the largepad is a LIFO-ONLY Queue
 // Anything lese is UB
 impl WorkingSet {
+  pub fn getame(&mut self) -> *mut AggressiveMatrixExtension {
+    let allocame = || unsafe {
+      salloc::aligned_malloc(
+        size_of::<AggressiveMatrixExtension>(),
+        align_of::<AggressiveMatrixExtension>(),
+      ) as *mut AggressiveMatrixExtension
+    };
+
+    if self.ame_free {
+      self.ame_free = false;
+
+      if self.ame.is_null() {
+        self.ame = allocame();
+      }
+
+      return self.ame;
+    }
+
+    allocame()
+  }
+
+  pub fn freeame(&mut self, ame: *mut AggressiveMatrixExtension) {
+    if self.ame == ame {
+      self.ame_free = true;
+      return;
+    }
+
+    unsafe { salloc::aligned_free(ame as _) };
+  }
+
   pub fn allocate(&mut self, size: u64, align: u64) -> *mut QuadPackedData {
     // FAST PATH: Specific Alignment (No Header)
     // We skip the req_size calculation entirely here.

@@ -73,9 +73,7 @@ pub fn call_vrot(pickle: &PickleInstruction, ws: &mut WorkingSet, ts: &mut VMTas
   unsafe {
     let rot = pickle.u3;
 
-    let op = (rot >> 1) & 0x01;
-
-    let countbit = rot & 0x01;
+    let op = rot & 0x01;
 
     let flags = u16::from_ne_bytes([pickle.u1, pickle.u2]);
 
@@ -83,7 +81,7 @@ pub fn call_vrot(pickle: &PickleInstruction, ws: &mut WorkingSet, ts: &mut VMTas
     let count = {
       let countdata = arrcastint!(ws, start = 0, stop = 4, u32);
 
-      if countbit == 0 { countdata } else { ts.r1.u32 }
+      countdata
     };
 
     let flags_src1 = (flags as u8) & 0x0F;

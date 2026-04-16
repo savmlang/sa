@@ -10,10 +10,12 @@ use crate::acaot::{
 use cranelift::{codegen::ir::Endianness, prelude::*};
 
 mod fp;
+mod vbit;
 mod vcmp;
 mod vdataop;
 
 pub use fp::*;
+pub use vbit::*;
 pub use vcmp::*;
 pub use vdataop::*;
 

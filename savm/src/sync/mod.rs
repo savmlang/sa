@@ -2,8 +2,11 @@ use std::{
   cell::UnsafeCell,
   hint::cold_path,
   mem::zeroed,
-  ptr,
-  sync::{Arc, OnceLock},
+  ptr::{self, null_mut},
+  sync::{
+    Arc, OnceLock,
+    atomic::{Ordering, compiler_fence},
+  },
 };
 
 use sart::{ctr::VMTaskState, salloc, structures::QuadPackedData};
@@ -37,6 +40,10 @@ impl Drop for VMState {
     unsafe {
       salloc::aligned_free(self.ws.largepad as _);
       salloc::aligned_free(self.ts[0].scratchpad as _);
+
+      if !self.ws.ame.is_null() {
+        salloc::aligned_free(self.ws.ame as _);
+      }
     }
   }
 }
@@ -47,6 +54,8 @@ thread_local! {
       arr: &[],
       largepad: unsafe { salloc::aligned_malloc(SIZE_128KB, 8) as _ },
       largepad_cursor: 0,
+      ame: null_mut(),
+      ame_free: true,
       jmp: (0, 0),
       relocmap: Default::default()
     },
@@ -55,7 +64,7 @@ thread_local! {
 
       let alloca = salloc::aligned_malloc(SCRATCHPAD, 64) as *mut QuadPackedData;
       for (i, t) in ts.iter_mut().enumerate() {
-        t.scratchpad = alloca.add(i * 24 * size_of::<QuadPackedData>());
+        t.scratchpad = alloca.add(i * 24);
       }
 
       ts
@@ -76,15 +85,15 @@ impl VM {
     let mut run_jit = false;
 
     VMSTAT.with(|x| unsafe {
-      let t = &mut *x.get();
+      let t = x.get();
 
-      t.ws.jmp = (0, jumps.get(&0).map(|x| *x).unwrap_or_default());
-      t.ws.relocmap = jumps;
+      (*t).ws.jmp = (0, jumps.get(&0).map(|x| *x).unwrap_or_default());
+      (*t).ws.relocmap = jumps;
 
-      let ts = t.ts.get_unchecked_mut(t.cindex);
+      let ts = (*t).ts.as_mut_ptr().add((*t).cindex as usize);
 
-      ts.engine_or_pt.pt = self as *const _ as _;
-      ts.curline_or_resume.usi = 0;
+      (*ts).engine_or_pt.pt = self as *const _ as _;
+      (*ts).curline_or_resume.usi = 0;
 
       let mut atmark = false;
 
@@ -111,29 +120,36 @@ impl VM {
         // We use loop-in-a-loop to correctly manage state!
         // eg, yield that makes it re-check for JIT
         loop {
-          if ts.curline_or_resume.usi == leng {
+          if (*ts).curline_or_resume.usi == leng {
             break 'jcheck;
           }
 
-          let pickle = dt.get_unchecked(ts.curline_or_resume.usi);
+          let pickle = dt.get_unchecked((*ts).curline_or_resume.usi);
 
           // USE A NO-OP to our benefit
           if pickle.opcode == PICKLE_OPCODE_HINT
             && [PICKLE_OPCODE_MARK].iter().any(|x| *x == pickle.u1)
           {
-            ts.curline_or_resume.usi += 3;
+            (*ts).curline_or_resume.usi += 3;
             atmark = true;
             continue 'jcheck;
           }
 
           if pickle.opcode == PICKLE_OPCODE_HINT {
             let dptr = dt.as_ptr();
-            ts.engine_or_pt.pt = dptr as _;
+            (*ts).engine_or_pt.pt = dptr as _;
           }
 
-          (PICKLE_DISPATCH_TABLE.get_unchecked(pickle.opcode as usize))(pickle, &mut t.ws, ts);
+          // Ensure the state's reflected
+          compiler_fence(Ordering::SeqCst);
+          (PICKLE_DISPATCH_TABLE.get_unchecked(pickle.opcode as usize))(
+            pickle,
+            &mut (*t).ws,
+            &mut *ts,
+          );
+          compiler_fence(Ordering::SeqCst);
 
-          ts.curline_or_resume.usi += 1;
+          (*ts).curline_or_resume.usi += 1;
         }
       }
     });
@@ -145,10 +161,13 @@ impl VM {
     }
 
     cold_path();
+    return self.ame_free(sectionid);
   }
 
   #[cfg(feature = "native")]
-  pub(crate) fn dispatch_jit(&self, _: u64) {}
+  pub(crate) fn dispatch_jit(&self, _sectionid: u64) {
+    return self.ame_free(_sectionid);
+  }
 
   fn pickle_section(&self, sectionid: u64) {
     // Compile
@@ -171,5 +190,18 @@ impl VM {
 
     // TODO: Replace with `become`
     return self.call_section(sectionid);
+  }
+
+  fn ame_free(&self, _sectionid: u64) {
+    VMSTAT.with(|vtsk| unsafe {
+      let vm = &mut *vtsk.get();
+
+      for tsk in &mut vm.ts {
+        if !tsk.ame.is_null() {
+          vm.ws.freeame(tsk.ame);
+          tsk.ame = null_mut();
+        }
+      }
+    })
   }
 }

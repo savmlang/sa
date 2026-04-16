@@ -1,0 +1,32 @@
+{
+  "name": "sacli",
+  "private": true,
+  "version": "1.0.0",
+  "description": "The official CLI for managing SaVM dependencies",
+  "keywords": [
+    "cli"
+  ],
+  "homepage": "https://github.com/savmlang/sa#readme",
+  "bugs": {
+    "url": "https://github.com/savmlang/sa/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/savmlang/sa.git"
+  },
+  "license": "SEE LICENSE IN ../LICENSE",
+  "author": "A. Chakraborty",
+  "type": "module",
+  "main": "src/index.js",
+  "dependencies": {
+    "@clack/prompts": "^1",
+    "tar": "^7"
+  },
+  "devDependencies": {
+    "@types/node": "^25"
+  },
+  "engines": {
+    "node": ">=24",
+    "npm": ">=11"
+  }
+}

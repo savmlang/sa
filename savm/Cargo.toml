@@ -40,7 +40,7 @@ sart = { path = "../sart" }
 sajit = { version = "0.0.1", path = "../sajit", optional = true }
 
 [features]
-default = ["cranelift"]
+default = ["cranelift", "llvm"]
 llvm = ["dep:llvm-sys", "native"]
 cranelift = ["dep:cranelift", "native"]
 native = ["dep:sajit", "dep:evmap", "dep:crossbeam-channel"]

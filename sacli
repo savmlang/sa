@@ -1,0 +1,15 @@
+#!/bin/sh
+
+if [ ! -d "./scripts/cli/node_modules" ]; then
+  echo "🏗️  Preparing SaCLI"
+  
+  (
+    cd ./scripts/cli || exit 1
+    npm i
+  )
+
+  echo "✅ SaCLI is booting up"
+  echo ""
+fi
+
+node ./scripts/cli/src/index.js "$@"

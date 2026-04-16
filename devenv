@@ -1,0 +1,10 @@
+#!/bin/sh
+
+if [ ! -d "./llvm" ]; then
+  echo "LLVM is not installed - please run './sacli' first to install it" >&2
+  exit 1
+fi
+
+export LLVM_SYS_211_PREFIX="$(pwd)/llvm/bin"
+
+echo "✅ Your developer environment has been set up for LLVM"

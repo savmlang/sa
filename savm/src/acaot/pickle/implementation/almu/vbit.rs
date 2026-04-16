@@ -75,15 +75,13 @@ pub fn call_vbit(pickle: &PickleInstruction, ws: &mut WorkingSet, ts: &mut VMTas
 
     let op = count >> 4;
 
-    let countbit = count & 0x01;
-
     let flags = u16::from_ne_bytes([pickle.u1, pickle.u2]);
 
     let width = (flags >> 14) as u8;
     let count = {
       let countdata = arrcastint!(ws, start = 0, stop = 4, u32);
 
-      if countbit == 0 { countdata } else { ts.r1.u32 }
+      countdata
     };
 
     let flags_src1 = (flags as u8) & 0x0F;
