@@ -1,3 +1,37 @@
 {
-  "rust-analyzer.linkedProjects": ["./Cargo.toml"]
+  "rust-analyzer.linkedProjects": ["./Cargo.toml"],
+  "terminal.integrated.profiles.windows": {
+    "SaVM Development": {
+      "path": [
+        "pwsh",
+        "pwsh.exe",
+        "powershell.exe",
+        "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+      ],
+      "color": "terminal.ansiGreen",
+      "icon": "vm-running",
+      "args": ["-NoExit", "-File", "${workspaceFolder}/devenv.ps1"]
+    }
+  },
+  "terminal.integrated.defaultProfile.windows": "SaVM Development",
+  "terminal.integrated.profiles.linux": {
+    "SaVM Development": {
+      "path": ["dash", "ksh", "bash", "/bin/sh"],
+      "color": "terminal.ansiGreen",
+      "icon": "vm-running",
+      "env": {
+        "ENV": "${workspaceFolder}/devenv"
+      },
+      "args": ["-i"]
+    }
+  },
+  "terminal.integrated.defaultProfile.linux": "SaVM Development",
+  "terminal.integrated.profiles.osx": {
+    "SaVM Development": {
+      "path": "zsh",
+      "color": "terminal.ansiGreen",
+      "args": ["--rcs", "${workspaceFolder}/devenv"]
+    }
+  },
+  "terminal.integrated.defaultProfile.osx": "SaVM Development"
 }
