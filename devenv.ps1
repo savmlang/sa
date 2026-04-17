@@ -4,7 +4,7 @@ if ($true -ne (Test-Path "./llvm")) {
   exit 1
 }
 
-$env:LLVM_SYS_211_PREFIX = "$(Get-Location)$([IO.Path]::DirectorySeparatorChar)llvm$([IO.Path]::DirectorySeparatorChar)bin"
+$env:LLVM_SYS_221_PREFIX = "$(Get-Location)$([IO.Path]::DirectorySeparatorChar)llvm$([IO.Path]::DirectorySeparatorChar)bin"
 
 "✅ Your session has been loaded with SaVM Required Environment Variables"
 
