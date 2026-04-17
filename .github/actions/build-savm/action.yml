@@ -1,0 +1,27 @@
+name: Build SaVM
+
+description: Builds SaVM
+
+inputs:
+  llvmargs:
+    description: "SaCLI llvm args"
+    required: false
+    default: "--llvm-probe"
+
+runs:
+  using: composite
+
+  steps:
+    - name: Setup LLVM
+      shell: powershell
+      run: |
+        ./sacli.ps1 llvm ${{ inputs.llvmargs }}
+
+    - name: Build SaVM
+      shell: powershell
+      env:
+        LIBRARY_PATH: ${{ github.workspace }}/target/release
+      run: |
+        ./devenv.ps1
+
+        cargo build --release

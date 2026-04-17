@@ -19,16 +19,13 @@ jobs:
         with:
           toolchain: nightly
 
+      - name: Build SaVM
+        uses: ./.github/actions/build-savm
+
       - name: Run
         env:
           LIBRARY_PATH: ${{ github.workspace }}/target/release
         run: |
-          chomod +x ./sacli
-          ./sacli llvm --llvm-probe
-          . ./devenv
-
-          cargo build --release
-
           cd jitemission
           cargo run --release --package jitemission
 
@@ -55,16 +52,13 @@ jobs:
         with:
           python-version: "3.14"
 
+      - name: Build SaVM
+        uses: ./.github/actions/build-savm
+
       - name: Run
         env:
           LIBRARY_PATH: ${{ github.workspace }}/target/release
         run: |
-          chomod +x ./sacli
-          ./sacli llvm --llvm-probe
-          . ./devenv
-
-          cargo build --release
-
           cd bin/satest
           cargo run --release --package satest
 
