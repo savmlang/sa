@@ -46,6 +46,20 @@ export default async function handlellvm(argv0) {
       }
 
       llvmbuild = val.replace("--llvm-build=", "");
+    } else if (val == "--llvm-probe") {
+      if (llvmbuild) {
+        log.warn(
+          "`--llvm-build` and `--llvm-probe` are not compatible. Overriding to latest one",
+        );
+      }
+
+      llvmbuild = probe_llvm();
+
+      if (llvmbuild) {
+        log.success(`Successfully probed LLVM - ${llvmbuild}`);
+      } else {
+        log.warn(`LLVM Probe could not detect target os`);
+      }
     } else {
       log.warn(`Ignoring unknown argument ${val}`);
     }
@@ -128,3 +142,45 @@ export default async function handlellvm(argv0) {
 
   log.success("LLVM has been downloaded and successfully extracted!");
 }
+
+const probe_llvm = () => {
+  let os = "";
+  switch (process.platform) {
+    case "win32":
+      os = "pc-windows-msvc";
+      break;
+    case "darwin":
+      os = "apple-darwin";
+      break;
+    case "linux":
+      os = "linux-gnu";
+      break;
+    default:
+      return undefined;
+  }
+
+  switch (process.arch) {
+    case "arm":
+      return `llvm-static-arm-${os}eabihf.tar.gz`;
+    case "arm64":
+      if (os == "apple-darwin") {
+        return `llvm-static-arm64-apple-darwin.tar.gz`;
+      }
+
+      return `llvm-static-arm64-${os}.tar.gz`;
+    case "ia32":
+      return `llvm-static-i686-${os}.tar.gz`;
+    case "x64":
+      return `llvm-static-x86_64-${os}.tar.gz`;
+    case "mipsel":
+      return `llvm-static-mips64el-${os}.tar.gz`;
+    case "riscv64":
+      return `llvm-static-riscv64-${os}.tar.gz`;
+    case "ppc64":
+      return `llvm-static-powerpc64le-${os}.tar.gz`;
+    case "loong64":
+      return `llvm-static-loongarch64-${os}.tar.gz`;
+    default:
+      return undefined;
+  }
+};
