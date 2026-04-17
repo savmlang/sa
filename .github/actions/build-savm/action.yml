@@ -13,12 +13,12 @@ runs:
 
   steps:
     - name: Setup LLVM
-      shell: powershell
+      shell: pwsh
       run: |
         ./sacli.ps1 llvm ${{ inputs.llvmargs }}
 
     - name: Build SaVM
-      shell: powershell
+      shell: pwsh
       env:
         LIBRARY_PATH: ${{ github.workspace }}/target/release
       run: |
