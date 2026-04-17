@@ -23,6 +23,10 @@ jobs:
         env:
           LIBRARY_PATH: ${{ github.workspace }}/target/release
         run: |
+          chomod +x ./sacli
+          ./sacli llvm --llvm-probe
+          . ./devenv
+
           cargo build --release
 
           cd jitemission
@@ -55,6 +59,10 @@ jobs:
         env:
           LIBRARY_PATH: ${{ github.workspace }}/target/release
         run: |
+          chomod +x ./sacli
+          ./sacli llvm --llvm-probe
+          . ./devenv
+
           cargo build --release
 
           cd bin/satest
