@@ -30,9 +30,17 @@ runs:
   using: composite
 
   steps:
-    - uses: dtolnay/rust-toolchain@stable
+    - name: Setup Rust (Full)
+      if: inputs.builder == 'cargo'
+      uses: dtolnay/rust-toolchain@stable
       with:
         targets: ${{ inputs.rusttarget }}
+        toolchain: nightly
+
+    - name: Setup Rust (Light)
+      if: inputs.builder == 'cargo'
+      uses: dtolnay/rust-toolchain@stable
+      with:
         toolchain: nightly
 
     - name: Setup NodeJS
@@ -92,6 +100,11 @@ runs:
           $env:LLVM_SYS_221_PREFIX = "${{ github.workspace }}/llvm/install"
           $env:RUSTFLAGS = "-L native=/project/target/${{ inputs.rusttarget }}/release -L native=/target/${{ inputs.rusttarget }}/release"
           $env:LIBRARY_PATH = "/project/target/release:/target/release:/target/${{ inputs.rusttarget }}/release:/project/target/${{ inputs.rusttarget }}/release"
+        }
+
+        if ("${{ inputs.rusttarget }}" -eq "loongarch64-unknown-linux-gnu") {
+          # Disable LTO to prevent the linker crash
+          $env:RUSTFLAGS = "$env:RUSTFLAGS -C lto=off"
         }
 
         ${{ inputs.builder }} build ${{ inputs.argv }} --release -p salloc -v
