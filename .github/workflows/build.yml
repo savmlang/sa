@@ -31,7 +31,7 @@ jobs:
       - name: Build SaVM
         uses: ./.github/actions/build-savm
         with:
-          llvmargs: --llvm-build=${{ matrix.target }}
+          llvmargs: --llvm-build=llvm-static-${{ matrix.target }}.tar.gz
           feature: ${{ matrix.feature }}
           rusttarget: ${{ matrix.target }}
           argv: --target ${{ matrix.target }}
