@@ -40,12 +40,16 @@ jobs:
           argv: --target ${{ matrix.target }}
 
   darwin:
-    name: Build SaVM ${{ matrix.feature }} (${{ matrix.target }})
+    name: Build SaVM ${{ matrix.feature }} (${{ matrix.target[0] }})
 
     strategy:
       fail-fast: true
       matrix:
-        target: [ x86_64-apple-darwin, aarch64-apple-darwin ]
+        target:
+          [
+            [ x86_64-apple-darwin, x86_64-apple-darwin ],
+            [ aarch64-apple-darwin, arm64-apple-darwin ],
+          ]
         feature: [ nano, standard, pro, pro_standard ]
 
     runs-on: macos-26
@@ -61,13 +65,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          llvmargs: --llvm-build=llvm-static-${{ matrix.target }}.tar.gz
+          llvmargs: --llvm-build=llvm-static-${{ matrix.target[1] }}.tar.gz
           feature: ${{ matrix.feature }}
-          rusttarget: ${{ matrix.target }}
-          argv: --target ${{ matrix.target }}
+          rusttarget: ${{ matrix.target[0] }}
+          argv: --target ${{ matrix.target[0] }}
 
   linux:
-    name: Build SaVM ${{ matrix.feature }} (${{ matrix.target }})
+    name: Build SaVM ${{ matrix.feature }} (${{ matrix.target[0] }})
 
     strategy:
       fail-fast: true
@@ -75,20 +79,20 @@ jobs:
         feature: [ nano, standard, pro, pro_standard ]
         target:
           [
-            aarch64-unknown-linux-gnu,
-            x86_64-unknown-linux-gnu,
-            i686-unknown-linux-gnu,
+            [ aarch64-unknown-linux-gnu, aarch64-linux-gnu ],
+            [ x86_64-unknown-linux-gnu, x86_64-linux-gnu ],
+            [ i686-unknown-linux-gnu, i686-linux-gnu ],
           ]
 
         include:
           - os: ubuntu-22.04-arm
-            target: aarch64-unknown-linux-gnu
+            target: [ aarch64-unknown-linux-gnu, aarch64-linux-gnu ]
 
         exclude:
-          - target: i686-unknown-linux-gnu
+          - target: [ i686-unknown-linux-gnu, i686-linux-gnu ]
             feature: standard
 
-          - target: i686-unknown-linux-gnu
+          - target: [ i686-unknown-linux-gnu, i686-linux-gnu ]
             feature: pro_standard
 
     runs-on: ${{ matrix.os || 'ubuntu-22.04' }}
@@ -104,10 +108,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          llvmargs: --llvm-build=llvm-static-${{ matrix.target }}.tar.gz
+          llvmargs: --llvm-build=llvm-static-${{ matrix.target[1] }}.tar.gz
           feature: ${{ matrix.feature }}
-          rusttarget: ${{ matrix.target }}
-          argv: --target ${{ matrix.target }}
+          rusttarget: ${{ matrix.target[0] }}
+          argv: --target ${{ matrix.target[0] }}
 
   linux_cross:
     name: Build SaVM ${{ matrix.feature }} (${{ matrix.target }})
@@ -117,23 +121,15 @@ jobs:
       matrix:
         target:
           [
-            arm-unknown-linux-gnueabihf,
-            loongarch64-unknown-linux-gnu,
-            mips64el-unknown-linux-gnuabi64,
-            powerpc64le-unknown-linux-gnu,
-            riscv64gc-unknown-linux-gnu,
+            [ arm-unknown-linux-gnueabihf, arm-linux-gnu ],
+            [ loongarch64-unknown-linux-gnu, loongarch64-linux-gnu ],
+            [ mips64el-unknown-linux-gnuabi64, mips64el-linux-gnu ],
+            [ powerpc64le-unknown-linux-gnu, powerpc64le-linux-gnu ],
+            [ riscv64gc-unknown-linux-gnu, riscv64-linux-gnu ],
           ]
         feature: [ nano, pro ]
 
         include:
-          - target: mips64el-unknown-linux-gnuabi64
-            llvmtarget: mips64el-unknown-linux-gnu
-            feature: nano
-
-          - target: mips64el-unknown-linux-gnuabi64
-            llvmtarget: mips64el-unknown-linux-gnu
-            feature: pro
-
           - target: riscv64gc-unknown-linux-gnu
             feature: standard
 
@@ -159,7 +155,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           llvmargs: |
-            --llvm-build=llvm-static-${{ matrix.llvmtarget || matrix.target }}.tar.gz
+            --llvm-build=llvm-static-${{ matrix.target[1] }}.tar.gz
           feature: ${{ matrix.feature }}
-          argv: --target ${{ matrix.target }}
+          argv: --target ${{ matrix.target[0] }}
           builder: cross
