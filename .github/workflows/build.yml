@@ -1,6 +1,7 @@
 name: SaVM Build Test
 
 on:
+  push:
   workflow_dispatch:
 
 jobs:
@@ -72,16 +73,16 @@ jobs:
       fail-fast: true
       matrix:
         feature: [ nano, standard, pro, pro_standard ]
+        target:
+          [
+            aarch64-unknown-linux-gnu,
+            x86_64-unknown-linux-gnu,
+            i686-unknown-linux-gnu,
+          ]
 
         include:
           - os: ubuntu-22.04-arm
             target: aarch64-unknown-linux-gnu
-
-          - os: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
-
-          - os: ubuntu-22.04
-            target: i686-unknown-linux-gnu
 
         exclude:
           - target: i686-unknown-linux-gnu
@@ -90,7 +91,7 @@ jobs:
           - target: i686-unknown-linux-gnu
             feature: pro_standard
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.os || 'ubuntu-22.04' }}
 
     steps:
       - name: Checkout
@@ -146,6 +147,11 @@ jobs:
         uses: actions/checkout@v6
         with:
           submodules: recursive
+
+      - name: Setup QEMU
+        run: |
+          # This registers binfmt_misc handlers for all architectures
+          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
       - name: Build SaVM
         uses: ./.github/actions/build-savm
