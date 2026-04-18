@@ -93,5 +93,5 @@ runs:
           $env:LIBRARY_PATH = "/project/target/release:/project/target/${{ inputs.rusttarget }}/release"
         }
 
-        ${{ inputs.builder }} build ${{ inputs.argv }} --release -p salloc
-        ${{ inputs.builder }} build ${{ inputs.argv }} --release --no-default-features --features savmrun/${{ inputs.feature }}
+        ${{ inputs.builder }} build ${{ inputs.argv }} --release -p salloc -v
+        ${{ inputs.builder }} build ${{ inputs.argv }} --release --no-default-features --features savmrun/${{ inputs.feature }} -v
