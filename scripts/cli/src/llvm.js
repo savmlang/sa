@@ -113,7 +113,7 @@ export default async function handlellvm(argv0) {
   const chdir = cwd();
   // Clears the LLVM directory
   await rm(`${chdir}/llvm`, { recursive: true, force: true }).catch(() => {});
-  await mkdir(`${chdir}/llvm/bin`, { recursive: true }).catch(() => {});
+  await mkdir(`${chdir}/llvm/install`, { recursive: true }).catch(() => {});
 
   const llvmtar = `${chdir}/llvm/llvm.tar.gz`;
 
@@ -134,7 +134,7 @@ export default async function handlellvm(argv0) {
   const extractspin = spinner();
   extractspin.start("Extracting...");
   await tar.extract({
-    cwd: `${chdir}/llvm/bin`,
+    cwd: `${chdir}/llvm/install`,
     keepExisting: false,
     file: llvmtar,
   });

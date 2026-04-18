@@ -12,6 +12,11 @@ runs:
   using: composite
 
   steps:
+    - name: Setup NodeJS
+      uses: actions/setup-node@v6
+      with:
+        node-version: ">=24"
+
     - name: Setup LLVM
       shell: pwsh
       run: |
