@@ -1,0 +1,29 @@
+name: SaVM Shell
+
+description: Run a command on SaVM
+
+inputs:
+  shell:
+    description: Shell to use
+    required: true
+  run:
+    description: Command to run
+    required: true
+
+runs:
+  using: composite
+
+  steps:
+    - name: Run on bash
+      if: inputs.shell == 'bash'
+      shell: bash
+      run: |
+        . ./devenv
+        ${{ inputs.run }}
+
+    - name: Run on pwsh
+      if: inputs.shell == 'pwsh'
+      shell: pwsh
+      run: |
+        ./devenv.ps1
+        ${{ inputs.run }}
