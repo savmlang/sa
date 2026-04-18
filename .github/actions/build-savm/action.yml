@@ -53,5 +53,5 @@ runs:
       run: |
         ./devenv.ps1
 
-        ${{ inputs.builder }} build --release -p salloc
+        ${{ inputs.builder }} build ${{ inputs.argv }} --release -p salloc
         ${{ inputs.builder }} build ${{ inputs.argv }} --release --no-default-features --features savmrun/${{ inputs.feature }}
