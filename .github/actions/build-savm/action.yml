@@ -89,7 +89,7 @@ runs:
         }
 
         if ("${{ inputs.builder }}" -eq "cross") {
-          $env:LLVM_SYS_221_PREFIX = "/llvm/install"
+          $env:LLVM_SYS_221_PREFIX = "/project/llvm/install"
           $env:LIBRARY_PATH = "/project/target/${{ inputs.rusttarget }}/release"
         }
 
