@@ -48,8 +48,10 @@ runs:
     - name: Build SaVM
       shell: pwsh
       env:
-        LIBRARY_PATH: ${{ github.workspace }}/target/release
+        LIBRARY_PATH: |
+          ${{ github.workspace }}/target/release,${{ github.workspace }}/${{ inputs.rusttarget }}/release
       run: |
         ./devenv.ps1
 
+        ${{ inputs.builder }} build --release -p salloc
         ${{ inputs.builder }} build ${{ inputs.argv }} --release --no-default-features --features savmrun/${{ inputs.feature }}
