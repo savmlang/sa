@@ -32,7 +32,7 @@ jobs:
           shell: bash
           run: |
             cd jitemission
-            cargo run --release --package jitemission
+            cargo run --release
 
   init:
     name: Run test

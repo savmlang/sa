@@ -83,5 +83,10 @@ runs:
       run: |
         ./devenv.ps1
 
+        if ("${{ inputs.rusttarget }}" -eq "i686-unknown-linux-gnu") {
+          $env:CFLAGS="-fno-stack-protector"
+          $env:RUSTFLAGS = "-C link-arg=-fno-stack-protector"
+        }
+
         ${{ inputs.builder }} build ${{ inputs.argv }} --release -p salloc
         ${{ inputs.builder }} build ${{ inputs.argv }} --release --no-default-features --features savmrun/${{ inputs.feature }}
