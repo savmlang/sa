@@ -89,9 +89,9 @@ runs:
         }
 
         if ("${{ inputs.builder }}" -eq "cross") {
-          $env:LLVM_SYS_221_PREFIX = "/project/llvm/install"
+          $env:LLVM_SYS_221_PREFIX = "${{ github.workspace }}/llvm/install"
           $env:RUSTFLAGS = "-L native=/project/target/${{ inputs.rusttarget }}/release"
-          $env:LIBRARY_PATH = "/project/target/release:/project/target/${{ inputs.rusttarget }}/release"
+          $env:LIBRARY_PATH = "/target/release:/target/${{ inputs.rusttarget }}/release"
         }
 
         ${{ inputs.builder }} build ${{ inputs.argv }} --release -p salloc -v

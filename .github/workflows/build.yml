@@ -58,7 +58,8 @@ jobs:
           ]
         feature: [ nano, standard, pro, pro_standard ]
 
-    runs-on: macos-26
+    runs-on: ${{ matrix.target[0] == 'aarch64-apple-darwin' && 'macos-15' ||
+      'macos-15-intel' }}
 
     steps:
       - name: Checkout
@@ -164,5 +165,6 @@ jobs:
           llvmargs: |
             --llvm-build=llvm-static-${{ matrix.target[1] }}.tar.gz
           feature: ${{ matrix.feature }}
+          rusttarget: ${{ matrix.target[0] }}
           argv: --target ${{ matrix.target[0] }}
           builder: cross
