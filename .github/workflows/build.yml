@@ -20,7 +20,7 @@ jobs:
           - target: i686-pc-windows-msvc
             feature: pro_standard
 
-    runs-on: windows-latest
+    runs-on: windows-11-arm
 
     steps:
       - name: Checkout
