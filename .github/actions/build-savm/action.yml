@@ -50,8 +50,15 @@ runs:
       shell: bash
       run: chmod +x ${{ github.workspace }}/llvm/install/bin/*
 
+    - name: Set up Dependencies
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-multilib g++-multilib
+
     - name: Set up QEMU
-      if: runner.os == 'Linux' && runner.arch =='ARM64'
+      if: runner.os == 'Linux'
       shell: bash
       run: |
         file /home/runner/work/sa/sa/llvm/install/bin/llvm-config
