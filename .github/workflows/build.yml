@@ -52,7 +52,8 @@ jobs:
           ]
         feature: [ nano, standard, pro, pro_standard ]
 
-    runs-on: macos-26
+    runs-on: |
+      ${{ matrix.target[0] == 'aarch64-apple-darwin' && 'macos-26' ||  'macos-15-intel' }}
 
     steps:
       - name: Checkout
@@ -114,7 +115,7 @@ jobs:
           argv: --target ${{ matrix.target[0] }}
 
   linux_cross:
-    name: Build SaVM ${{ matrix.feature }} (${{ matrix.target }})
+    name: Build SaVM ${{ matrix.feature }} (${{ matrix.target[0] }})
 
     strategy:
       fail-fast: true
@@ -130,10 +131,10 @@ jobs:
         feature: [ nano, pro ]
 
         include:
-          - target: riscv64gc-unknown-linux-gnu
+          - target: [ riscv64gc-unknown-linux-gnu, riscv64-linux-gnu ]
             feature: standard
 
-          - target: riscv64gc-unknown-linux-gnu
+          - target: [ riscv64gc-unknown-linux-gnu, riscv64-linux-gnu ]
             feature: pro_standard
 
     runs-on: ubuntu-latest
