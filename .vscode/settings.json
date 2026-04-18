@@ -1,5 +1,6 @@
 {
   "rust-analyzer.linkedProjects": ["./Cargo.toml"],
+  "rust-analyzer.cargo.features": ["savm/dev", "savmrun/pro_standard"],
   "terminal.integrated.profiles.windows": {
     "SaVM Development": {
       "path": [
