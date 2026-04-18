@@ -58,8 +58,7 @@ jobs:
           ]
         feature: [ nano, standard, pro, pro_standard ]
 
-    runs-on: |
-      ${{ matrix.target[0] == 'aarch64-apple-darwin' && 'macos-26' ||  'macos-15-intel' }}
+    runs-on: macos-26
 
     steps:
       - name: Checkout

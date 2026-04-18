@@ -90,6 +90,7 @@ runs:
 
         if ("${{ inputs.builder }}" -eq "cross") {
           $env:LLVM_SYS_221_PREFIX = "/project/llvm/install"
+          $env:RUSTFLAGS = "-L native=/project/target/${{ inputs.rusttarget }}/release"
           $env:LIBRARY_PATH = "/project/target/release:/project/target/${{ inputs.rusttarget }}/release"
         }
 
