@@ -1,5 +1,6 @@
 [build]
 build-std = true
+pre-build = ["ls /project"]
 
 [build.env]
 passthrough = ["LIBRARY_PATH", "CFLAGS", "RUSTFLAGS", "LLVM_SYS_221_PREFIX"]
