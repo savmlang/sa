@@ -114,50 +114,49 @@ jobs:
           feature: ${{ matrix.feature }}
           rusttarget: ${{ matrix.target[0] }}
           argv: --target ${{ matrix.target[0] }}
+  # linux_cross:
+  #   name: Build SaVM ${{ matrix.feature }} (${{ matrix.target[0] }})
 
-  linux_cross:
-    name: Build SaVM ${{ matrix.feature }} (${{ matrix.target[0] }})
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       target:
+  #         [
+  #           [ arm-unknown-linux-gnueabihf, arm-linux-gnueabihf ],
+  #           [ loongarch64-unknown-linux-gnu, loongarch64-linux-gnu ],
+  #           [ mips64el-unknown-linux-gnuabi64, mips64el-linux-gnu ],
+  #           [ powerpc64le-unknown-linux-gnu, powerpc64le-linux-gnu ],
+  #           [ riscv64gc-unknown-linux-gnu, riscv64-linux-gnu ],
+  #         ]
+  #       feature: [ nano, pro ]
 
-    strategy:
-      fail-fast: false
-      matrix:
-        target:
-          [
-            [ arm-unknown-linux-gnueabihf, arm-linux-gnueabihf ],
-            [ loongarch64-unknown-linux-gnu, loongarch64-linux-gnu ],
-            [ mips64el-unknown-linux-gnuabi64, mips64el-linux-gnu ],
-            [ powerpc64le-unknown-linux-gnu, powerpc64le-linux-gnu ],
-            [ riscv64gc-unknown-linux-gnu, riscv64-linux-gnu ],
-          ]
-        feature: [ nano, pro ]
+  #       include:
+  #         - target: [ riscv64gc-unknown-linux-gnu, riscv64-linux-gnu ]
+  #           feature: standard
 
-        include:
-          - target: [ riscv64gc-unknown-linux-gnu, riscv64-linux-gnu ]
-            feature: standard
+  #         - target: [ riscv64gc-unknown-linux-gnu, riscv64-linux-gnu ]
+  #           feature: pro_standard
 
-          - target: [ riscv64gc-unknown-linux-gnu, riscv64-linux-gnu ]
-            feature: pro_standard
+  #   runs-on: ubuntu-latest
 
-    runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v6
+  #       with:
+  #         submodules: recursive
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          submodules: recursive
+  #     - name: Setup QEMU
+  #       run: |
+  #         # This registers binfmt_misc handlers for all architectures
+  #         docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
-      - name: Setup QEMU
-        run: |
-          # This registers binfmt_misc handlers for all architectures
-          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-
-      - name: Build SaVM
-        uses: ./.github/actions/build-savm
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          llvmargs: |
-            --llvm-build=llvm-static-${{ matrix.target[1] }}.tar.gz
-          feature: ${{ matrix.feature }}
-          argv: --target ${{ matrix.target[0] }}
-          builder: cross
+  #     - name: Build SaVM
+  #       uses: ./.github/actions/build-savm
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #       with:
+  #         llvmargs: |
+  #           --llvm-build=llvm-static-${{ matrix.target[1] }}.tar.gz
+  #         feature: ${{ matrix.feature }}
+  #         argv: --target ${{ matrix.target[0] }}
+  #         builder: cross

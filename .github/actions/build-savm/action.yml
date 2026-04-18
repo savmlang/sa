@@ -59,8 +59,11 @@ runs:
     - name: Build SaVM
       shell: pwsh
       env:
+        DYLD_LIBRARY_PATH: |
+          ${{ github.workspace }}/target/release,${{ github.workspace }}/${{ inputs.rusttarget }}/release
         LIBRARY_PATH: |
           ${{ github.workspace }}/target/release,${{ github.workspace }}/${{ inputs.rusttarget }}/release
+        RUST_BACKTRACE: 1
       run: |
         ./devenv.ps1
 
