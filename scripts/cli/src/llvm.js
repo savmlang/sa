@@ -20,6 +20,13 @@ export default async function handlellvm(argv0) {
   spin.start();
   spin.message("Resolving LLVM from releases");
 
+  const headers = {};
+
+  if (process.env["GITHUB_TOKEN"]) {
+    headers["Authorization"] = `Bearer ${process.env["GITHUB_TOKEN"]}`;
+    log.success("Using GITHUB_TOKEN provided!");
+  }
+
   /**
    * @type {{ assets: { name: string, browser_download_url: string, size: number }[] }}
    */
@@ -28,6 +35,7 @@ export default async function handlellvm(argv0) {
     {
       headers: {
         "user-agent": "SaCLI",
+        ...headers,
       },
     },
   ).then((d) => d.json());

@@ -30,6 +30,8 @@ jobs:
 
       - name: Build SaVM
         uses: ./.github/actions/build-savm
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           llvmargs: --llvm-build=llvm-static-${{ matrix.target }}.tar.gz
           feature: ${{ matrix.feature }}
