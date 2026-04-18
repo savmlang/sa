@@ -50,13 +50,16 @@ runs:
       shell: bash
       run: chmod +x ${{ github.workspace }}/llvm/install/bin/*
 
-    - name: Linux Specific
+    - name: Set up QEMU
+      if: runner.os == 'Linux' && runner.arch =='ARM64'
       shell: bash
-      if: runner.os == 'Linux'
-      continue-on-error: true
       run: |
-        /home/runner/work/sa/sa/llvm/install/bin/llvm-config --version
-        ldd /home/runner/work/sa/sa/llvm/install/bin/llvm-config
+        file /home/runner/work/sa/sa/llvm/install/bin/llvm-config
+
+        sudo apt-get update
+        sudo apt-get install -y qemu-user-static binfmt-support
+
+        sudo update-binfmts --enable
 
     - name: Setup cross
       shell: bash
