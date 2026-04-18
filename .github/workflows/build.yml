@@ -1,0 +1,37 @@
+name: SaVM Build Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  win32:
+    name: Build SaVM ${{ matrix.feature }} (${{ matrix.target }})
+
+    strategy:
+      fail-fast: true
+      matrix:
+        target: [ x86_64-pc-windows-msvc, aarch64-pc-windows-msvc, i686-pc-windows-msvc ]
+        feature: [ nano, standard, pro, pro_standard ]
+
+        exclude:
+          - target: i686-pc-windows-msvc
+            feature: standard
+
+          - target: i686-pc-windows-msvc
+            feature: pro_standard
+
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Build SaVM
+        uses: ./.github/actions/build-savm
+        with:
+          llvmargs: ${{ matrix.target }}
+          feature: ${{ matrix.feature }}
+          rusttarget: ${{ matrix.target }}
+          argv: --target ${{ matrix.target }}
