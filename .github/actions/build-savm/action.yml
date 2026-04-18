@@ -50,6 +50,14 @@ runs:
       shell: bash
       run: chmod +x ${{ github.workspace }}/llvm/install/bin/*
 
+    - name: Linux Specific
+      shell: bash
+      if: runner.os == 'Linux'
+      continue-on-error: true
+      run: |
+        /home/runner/work/sa/sa/llvm/install/bin/llvm-config --version
+        ldd /home/runner/work/sa/sa/llvm/install/bin/llvm-config
+
     - name: Setup cross
       shell: bash
       if: inputs.builder == 'cross'
@@ -59,8 +67,8 @@ runs:
     - name: Build SaVM
       shell: pwsh
       env:
-        DYLD_LIBRARY_PATH: ${{ github.workspace }}/${{ inputs.rusttarget }}/release
-        LIBRARY_PATH: ${{ github.workspace }}/${{ inputs.rusttarget }}/release
+        DYLD_LIBRARY_PATH: ${{ github.workspace }}/target/${{ inputs.rusttarget }}/release
+        LIBRARY_PATH: ${{ github.workspace }}/target/${{ inputs.rusttarget }}/release
         RUST_BACKTRACE: 1
       run: |
         ./devenv.ps1

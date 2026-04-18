@@ -4,6 +4,10 @@ on:
   push:
   workflow_dispatch:
 
+permissions:
+  contents: write
+  attestations: write
+
 jobs:
   win32:
     name: Build SaVM ${{ matrix.feature }} (${{ matrix.target }})
@@ -76,7 +80,7 @@ jobs:
     name: Build SaVM ${{ matrix.feature }} (${{ matrix.target[0] }})
 
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         feature: [ nano, standard, pro, pro_standard ]
         target:
