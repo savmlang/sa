@@ -47,6 +47,7 @@ jobs:
     name: Build SaVM ${{ matrix.feature }} (${{ matrix.target[0] }})
 
     strategy:
+      max-parallel: 1
       fail-fast: false
       matrix:
         target:
@@ -80,6 +81,7 @@ jobs:
 
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix:
         feature: [ nano, standard, pro, pro_standard ]
         target:
