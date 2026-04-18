@@ -5,7 +5,7 @@ if [ ! -d "./llvm" ]; then
   exit 1
 fi
 
-export LLVM_SYS_221_PREFIX="$(pwd)/llvm/bin"
+export LLVM_SYS_221_PREFIX="$(pwd)/llvm/install"
 
 echo "✅ Your session has been loaded with SaVM Required Environment Variables"
 
