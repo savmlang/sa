@@ -88,5 +88,10 @@ runs:
           $env:RUSTFLAGS = "-C link-arg=-fno-stack-protector"
         }
 
+        if ("${{ inputs.builder }}" -eq "cross") {
+          $env:LLVM_SYS_221_PREFIX = "/llvm/install"
+          $env:LIBRARY_PATH = "/project/target/${{ inputs.rusttarget }}/release"
+        }
+
         ${{ inputs.builder }} build ${{ inputs.argv }} --release -p salloc
         ${{ inputs.builder }} build ${{ inputs.argv }} --release --no-default-features --features savmrun/${{ inputs.feature }}
