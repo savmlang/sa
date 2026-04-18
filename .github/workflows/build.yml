@@ -37,3 +37,123 @@ jobs:
           feature: ${{ matrix.feature }}
           rusttarget: ${{ matrix.target }}
           argv: --target ${{ matrix.target }}
+
+  darwin:
+    name: Build SaVM ${{ matrix.feature }} (${{ matrix.target }})
+
+    strategy:
+      fail-fast: true
+      matrix:
+        target: [ x86_64-apple-darwin, aarch64-apple-darwin ]
+        feature: [ nano, standard, pro, pro_standard ]
+
+    runs-on: macos-26
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Build SaVM
+        uses: ./.github/actions/build-savm
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          llvmargs: --llvm-build=llvm-static-${{ matrix.target }}.tar.gz
+          feature: ${{ matrix.feature }}
+          rusttarget: ${{ matrix.target }}
+          argv: --target ${{ matrix.target }}
+
+  linux:
+    name: Build SaVM ${{ matrix.feature }} (${{ matrix.target }})
+
+    strategy:
+      fail-fast: true
+      matrix:
+        feature: [ nano, standard, pro, pro_standard ]
+
+        include:
+          - os: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+
+          - os: ubuntu-22.04
+            target: i686-unknown-linux-gnu
+
+        exclude:
+          - target: i686-unknown-linux-gnu
+            feature: standard
+
+          - target: i686-unknown-linux-gnu
+            feature: pro_standard
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Build SaVM
+        uses: ./.github/actions/build-savm
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          llvmargs: --llvm-build=llvm-static-${{ matrix.target }}.tar.gz
+          feature: ${{ matrix.feature }}
+          rusttarget: ${{ matrix.target }}
+          argv: --target ${{ matrix.target }}
+
+  linux_cross:
+    name: Build SaVM ${{ matrix.feature }} (${{ matrix.target }})
+
+    strategy:
+      fail-fast: true
+      matrix:
+        target:
+          [
+            arm-unknown-linux-gnueabihf,
+            loongarch64-unknown-linux-gnu,
+            mips64el-unknown-linux-gnuabi64,
+            powerpc64le-unknown-linux-gnu,
+            riscv64gc-unknown-linux-gnu,
+          ]
+        feature: [ nano, pro ]
+
+        include:
+          - target: mips64el-unknown-linux-gnuabi64
+            llvmtarget: mips64el-unknown-linux-gnu
+            feature: nano
+
+          - target: mips64el-unknown-linux-gnuabi64
+            llvmtarget: mips64el-unknown-linux-gnu
+            feature: pro
+
+          - target: riscv64gc-unknown-linux-gnu
+            feature: standard
+
+          - target: riscv64gc-unknown-linux-gnu
+            feature: pro_standard
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Build SaVM
+        uses: ./.github/actions/build-savm
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          llvmargs: |
+            --llvm-build=llvm-static-${{ matrix.llvmtarget || matrix.target }}.tar.gz
+          feature: ${{ matrix.feature }}
+          argv: --target ${{ matrix.target }}
+          builder: cross

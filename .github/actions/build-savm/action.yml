@@ -45,6 +45,12 @@ runs:
       run: |
         ./sacli.ps1 llvm ${{ inputs.llvmargs }}
 
+    - name: Setup cross
+      shell: bash
+      if: inputs.builder == 'cross'
+      run: |
+        cargo install cross --git https://github.com/cross-rs/cross
+
     - name: Build SaVM
       shell: pwsh
       env:
