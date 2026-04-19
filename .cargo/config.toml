@@ -1,0 +1,13 @@
+[target.arm-unknown-linux-gnueabihf]
+rustflags = [
+  "-Z",
+  "tls-model=global-dynamic",
+  "-C",
+  "relocation-model=pic",
+  "-C",
+  "link-arg=-Wl,--allow-shlib-undefined",
+  "-L",
+  "native=/project/target/arm-unknown-linux-gnueabihf/release",
+  "-L",
+  "native=/target/arm-unknown-linux-gnueabihf/release",
+]
