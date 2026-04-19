@@ -26,12 +26,21 @@ inputs:
     description: Args to pass to builder
     required: false
 
+  rust:
+    description: Should we install rust
+    default: "true"
+    required: false
+
+  rustflags:
+    description: Default rustflags
+    required: false
+
 runs:
   using: composite
 
   steps:
     - name: Setup Rust (Full)
-      if: inputs.builder == 'cargo'
+      if: inputs.builder == 'cargo' && inputs.rust == 'true'
       uses: dtolnay/rust-toolchain@stable
       with:
         targets: ${{ inputs.rusttarget }}
@@ -94,7 +103,7 @@ runs:
 
         if ("${{ inputs.rusttarget }}" -eq "i686-unknown-linux-gnu") {
           $env:CFLAGS="-fno-stack-protector"
-          $env:RUSTFLAGS = "-C link-arg=-fno-stack-protector"
+          $env:RUSTFLAGS = "${{ inputs.rustflags }} -C link-arg=-fno-stack-protector"
         }
 
         if ("${{ inputs.builder }}" -eq "cross") {
