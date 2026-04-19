@@ -108,10 +108,5 @@ runs:
           $env:RUSTFLAGS = "$env:RUSTFLAGS -C link-arg=-fuse-ld=lld -C lto=off"
         }
 
-        if ("${{ inputs.rusttarget }}" -eq "arm-unknown-linux-gnueabihf") {
-          # Disable LTO to prevent the linker crash
-          $env:RUSTFLAGS = "$env:RUSTFLAGS -C lto=off -C relocation-model=pic -C link-arg=-Wl,--allow-shlib-undefined -C link-arg=-lgcc -C link-arg=-lc"
-        }
-
         ${{ inputs.builder }} build ${{ inputs.argv }} --release -p salloc
         ${{ inputs.builder }} build ${{ inputs.argv }} --release --no-default-features --features savmrun/${{ inputs.feature }}
