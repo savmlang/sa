@@ -13,7 +13,6 @@ jobs:
     name: Build SaVM ${{ matrix.feature }} (${{ matrix.target }})
 
     strategy:
-      max-parallel: 1
       fail-fast: true
       matrix:
         target: [ x86_64-pc-windows-msvc, aarch64-pc-windows-msvc, i686-pc-windows-msvc ]
@@ -48,8 +47,7 @@ jobs:
     name: Build SaVM ${{ matrix.feature }} (${{ matrix.target[0] }})
 
     strategy:
-      max-parallel: 1
-      fail-fast: false
+      fail-fast: true
       matrix:
         target:
           [
@@ -81,8 +79,7 @@ jobs:
     name: Build SaVM ${{ matrix.feature }} (${{ matrix.target[0] }})
 
     strategy:
-      fail-fast: false
-      max-parallel: 1
+      fail-fast: true
       matrix:
         feature: [ nano, standard, pro, pro_standard ]
         target:
@@ -217,14 +214,11 @@ jobs:
     name: Build SaVM ${{ matrix.feature }} (${{ matrix.target[0] }})
 
     strategy:
-      max-parallel: 1
-      fail-fast: false
+      fail-fast: true
       matrix:
         target:
           [
             [ armv7-unknown-linux-gnueabihf, arm-linux-gnueabihf ],
-            # [ loongarch64-unknown-linux-gnu, loongarch64-linux-gnu ],
-          # [ mips64el-unknown-linux-gnuabi64, mips64el-linux-gnu ],
             [ powerpc64le-unknown-linux-gnu, powerpc64le-linux-gnu ],
             [ riscv64gc-unknown-linux-gnu, riscv64-linux-gnu ],
           ]
