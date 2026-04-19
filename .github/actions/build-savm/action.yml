@@ -98,6 +98,7 @@ runs:
         DYLD_LIBRARY_PATH: ${{ github.workspace }}/target/${{ inputs.rusttarget }}/release
         LIBRARY_PATH: ${{ github.workspace }}/target/${{ inputs.rusttarget }}/release
         RUST_BACKTRACE: 1
+        RUSTC_BOOTSTRAP: 1
       run: |
         ./devenv.ps1
 
