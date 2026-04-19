@@ -108,5 +108,5 @@ runs:
           $env:RUSTFLAGS = "$env:RUSTFLAGS -C lto=off"
         }
 
-        ${{ inputs.builder }} build ${{ inputs.argv }} --release -p salloc -v
-        ${{ inputs.builder }} build ${{ inputs.argv }} --release --no-default-features --features savmrun/${{ inputs.feature }} -v
+        ${{ inputs.builder }} build ${{ inputs.argv }} --release -p salloc
+        ${{ inputs.builder }} build ${{ inputs.argv }} --release --no-default-features --features savmrun/${{ inputs.feature }}

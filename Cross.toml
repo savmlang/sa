@@ -1,4 +1,4 @@
-[build]
+[target.mips64el-unknown-linux-gnu]
 build-std = true
 
 [build.env]
