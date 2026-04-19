@@ -1,0 +1,11 @@
+[target.loongarch64-unknown-linux-gnu]
+linker = "clang"
+rustflags = [
+  "-C",
+  "link-arg=--target=loongarch64-unknown-linux-gnu",
+  "-C",
+  "link-arg=-fuse-ld=lld",
+  # Points to the sysroot provided by the cross image so clang finds crt1.o, etc.
+  "-C",
+  "link-arg=--sysroot=/usr/loongarch64-unknown-linux-gnu",
+]

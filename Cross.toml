@@ -4,11 +4,9 @@ build-std = ["core", "alloc", "proc_macro", "std"]
 [target.loongarch64-unknown-linux-gnu]
 pre-build = [
   "apt-get update && apt-get install -y wget lsb-release software-properties-common gnupg",
-  "wget https://apt.llvm.org/llvm.sh",
-  "chmod +x llvm.sh",
-  "./llvm.sh 22",
-  "ln -s /usr/bin/lld-22 /usr/bin/lld",
-  "ln -s /usr/bin/ld.lld-22 /usr/bin/ld.lld",
+  "wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && ./llvm.sh 22",
+  "ln -sf /usr/bin/clang-22 /usr/bin/clang",
+  "ln -sf /usr/bin/ld.lld-22 /usr/bin/ld.lld",
 ]
 
 [build.env]
