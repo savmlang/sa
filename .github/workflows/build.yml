@@ -191,7 +191,7 @@ jobs:
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
           echo "deb http://deb.debian.org/debian sid main" | sudo tee -a /etc/apt/sources.list
-          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 0E98404D3748C07A 648ACFD622F3D138
+          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6ED0E7B82643E131 78DBA3BC47EF2265
 
           sudo apt update
           sudo apt install ${{ matrix.target.tools }}
