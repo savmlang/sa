@@ -129,7 +129,7 @@ jobs:
 
       matrix:
         target:
-          - target: mips64el-unknown-linux-gnuabi64
+          - name: mips64el-unknown-linux-gnuabi64
             llvm: mips64el-linux-gnu
             rustflags: |
               -Zbuild-std=std,core,alloc -C linker=clang -C link-arg=--target=mips64el-unknown-linux-gnuabi64 -C link-arg=-fuse-ld=lld -C link-arg=--sysroot=/usr/mips64el-linux-gnuabi64
@@ -144,7 +144,7 @@ jobs:
               chmod +x llvm.sh
               sudo ./llvm.sh 22
 
-          - target: loongarch64-unknown-linux-gnu
+          - name: loongarch64-unknown-linux-gnu
             llvm: loongarch64-linux-gnu
             buildstd: false
             rustflags: |
@@ -190,7 +190,7 @@ jobs:
           # This registers binfmt_misc handlers for all architectures
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
-          echo "deb http://deb.debian.org/debian sid main" >> /etc/apt/sources.list
+          sudo echo "deb http://deb.debian.org/debian sid main" >> /etc/apt/sources.list
 
           sudo apt update
           sudo apt install ${{ matrix.target.tools }}
