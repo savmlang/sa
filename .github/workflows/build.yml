@@ -131,7 +131,7 @@ jobs:
           [
             [ armv7-unknown-linux-gnueabihf, arm-linux-gnueabihf ],
             [ loongarch64-unknown-linux-gnu, loongarch64-linux-gnu ],
-            [ mips64el-unknown-linux-gnuabi64, mips64el-linux-gnu ],
+            # [ mips64el-unknown-linux-gnuabi64, mips64el-linux-gnu ],
             [ powerpc64le-unknown-linux-gnu, powerpc64le-linux-gnu ],
             [ riscv64gc-unknown-linux-gnu, riscv64-linux-gnu ],
           ]
