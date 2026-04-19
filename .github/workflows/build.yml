@@ -131,13 +131,15 @@ jobs:
         target:
           - name: mips64el-unknown-linux-gnuabi64
             llvm: mips64el-linux-gnu
-            rustflags: |
-              -Zbuild-std=std,core,alloc -C linker=clang -C link-arg=--target=mips64el-unknown-linux-gnuabi64 -C link-arg=-fuse-ld=lld -C link-arg=--sysroot=/usr/mips64el-linux-gnuabi64
+            rustflags: >-
+              -Zbuild-std=std,core,alloc  -C linker=clang  -C
+              link-arg=--target=mips64el-unknown-linux-gnuabi64  -C
+              link-arg=-fuse-ld=lld  -C
+              link-arg=--sysroot=/usr/mips64el-linux-gnuabi64
             buildstd: true
-            tools: |
-              gcc-mips64el-linux-gnuabi64 g++-mips64el-linux-gnuabi64 \
-              binutils-mips64el-linux-gnuabi64 \
-              libc6-dev-mips64el-cross \ 
+            tools: >-
+              gcc-mips64el-linux-gnuabi64 g++-mips64el-linux-gnuabi64
+              binutils-mips64el-linux-gnuabi64 libc6-dev-mips64el-cross
               lsb-release software-properties-common gnupg
             buildllvm: |
               wget https://apt.llvm.org/llvm.sh
@@ -147,13 +149,14 @@ jobs:
           - name: loongarch64-unknown-linux-gnu
             llvm: loongarch64-linux-gnu
             buildstd: false
-            rustflags: |
-              -C linker=clang -C link-arg=--target=loongarch64-unknown-linux-gnu -C link-arg=-fuse-ld=lld -C link-arg=--sysroot=/usr/loongarch64-unknown-linux-gnu
-            tools: |
-              gcc-loongarch64-linux-gnu \
-              binutils-loongarch64-linux-gnu \
-              libc6-dev-loong64-cross \
-              wget lsb-release \
+            rustflags: >-
+              -C linker=clang  -C
+              link-arg=--target=loongarch64-unknown-linux-gnu  -C
+              link-arg=-fuse-ld=lld  -C
+              link-arg=--sysroot=/usr/loongarch64-unknown-linux-gnu
+            tools: >-
+              gcc-loongarch64-linux-gnu binutils-loongarch64-linux-gnu
+              libc6-dev-loong64-cross wget lsb-release
               software-properties-common gnupg
             buildllvm: |
               wget https://apt.llvm.org/llvm.sh
