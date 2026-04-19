@@ -132,7 +132,7 @@ jobs:
           - name: mips64el-unknown-linux-gnuabi64
             llvm: mips64el-linux-gnu
             cargoflags: >-
-              -Zbuild-std=std,core,alloc
+              "-Zbuild-std=std,core,alloc"
             rustflags: >-
               -C linker=clang  -C
               link-arg=--target=mips64el-unknown-linux-gnuabi64  -C

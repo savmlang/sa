@@ -99,6 +99,9 @@ runs:
         LIBRARY_PATH: ${{ github.workspace }}/target/${{ inputs.rusttarget }}/release
         RUST_BACKTRACE: 1
         RUSTC_BOOTSTRAP: 1
+
+        CC_loongarch64_unknown_linux_gnu: clang-22
+        AR_loongarch64_unknown_linux_gnu: llvm-ar-22
       run: |
         ./devenv.ps1
 
