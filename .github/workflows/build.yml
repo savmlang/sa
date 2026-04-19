@@ -131,8 +131,10 @@ jobs:
         target:
           - name: mips64el-unknown-linux-gnuabi64
             llvm: mips64el-linux-gnu
+            cargoflags: >-
+              -Zbuild-std=std,core,alloc
             rustflags: >-
-              -Zbuild-std=std,core,alloc  -C linker=clang  -C
+              -C linker=clang  -C
               link-arg=--target=mips64el-unknown-linux-gnuabi64  -C
               link-arg=-fuse-ld=lld  -C
               link-arg=--sysroot=/usr/mips64el-linux-gnuabi64
@@ -150,14 +152,13 @@ jobs:
             llvm: loongarch64-linux-gnu
             buildstd: false
             rustflags: >-
-              -C linker=clang  -C
-              link-arg=--target=loongarch64-unknown-linux-gnu  -C
-              link-arg=-fuse-ld=lld  -C
-              link-arg=--sysroot=/usr/loongarch64-unknown-linux-gnu
+              -C linker=clang-22 -C
+              link-arg=--target=loongarch64-unknown-linux-gnu -C
+              link-arg=-fuse-ld=lld -C
+              link-arg=--sysroot=/usr/loongarch64-unknown-linux-gnu -C
+              target-feature=-lsx,-lasx
             tools: >-
-              -t sid gcc-loongarch64-linux-gnu binutils-loongarch64-linux-gnu
-              libc6-dev-loong64-cross wget lsb-release
-              software-properties-common gnupg
+              clang libc6-dev-loong64-cross
             buildllvm: |
               wget https://apt.llvm.org/llvm.sh
               chmod +x llvm.sh
@@ -193,15 +194,6 @@ jobs:
           # This registers binfmt_misc handlers for all architectures
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
-          echo "deb http://deb.debian.org/debian sid main" | sudo tee -a /etc/apt/sources.list
-          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6ED0E7B82643E131 78DBA3BC47EF2265
-
-          sudo bash -c 'cat <<EOF > /etc/apt/preferences.d/sid-pin
-          Package: *
-          Pin: release o=Debian,n=sid
-          Pin-Priority: 100
-          EOF'
-
           sudo apt update
           sudo apt install ${{ matrix.target.tools }}
 
@@ -216,7 +208,7 @@ jobs:
             --llvm-build=llvm-static-${{ matrix.target.llvm }}.tar.gz
           feature: ${{ matrix.feature }}
           rusttarget: ${{ matrix.target.name }}
-          argv: --target ${{ matrix.target.name }}
+          argv: --target ${{ matrix.target.name }} ${{ matrix.target.cargoflags }}
           builder: cargo
           rust: "false"
           rustflags: ${{ matrix.target.rustflags }}
