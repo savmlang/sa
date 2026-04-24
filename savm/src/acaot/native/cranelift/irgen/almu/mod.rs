@@ -9,15 +9,21 @@ use crate::acaot::{
 };
 use cranelift::{codegen::ir::Endianness, prelude::*};
 
+mod atomic;
 mod fp;
 mod vbit;
 mod vcmp;
 mod vdataop;
+mod vmcore;
+mod vscncop;
 
+pub use atomic::*;
 pub use fp::*;
 pub use vbit::*;
 pub use vcmp::*;
 pub use vdataop::*;
+pub use vmcore::*;
+pub use vscncop::*;
 
 #[macro_export]
 macro_rules! readws {

@@ -6,11 +6,13 @@ use crate::acaot::{
     irgen::reg::{TypeOrWidth, break_simd_waterfall, resolve_reg},
   },
   pickle::def::{
-    PICKLE_OPCODE_DIV, PICKLE_OPCODE_HINT, PICKLE_OPCODE_JIF, PICKLE_OPCODE_JMP,
-    PICKLE_OPCODE_MARK, PICKLE_OPCODE_MOV, PICKLE_OPCODE_REG, PICKLE_OPCODE_REM,
-    PICKLE_OPCODE_VABS, PICKLE_OPCODE_VADD, PICKLE_OPCODE_VADDF, PICKLE_OPCODE_VBIT,
-    PICKLE_OPCODE_VCMP, PICKLE_OPCODE_VDIVF, PICKLE_OPCODE_VFMA, PICKLE_OPCODE_VMUL,
-    PICKLE_OPCODE_VMULF, PICKLE_OPCODE_VNEG, PICKLE_OPCODE_VROT, PICKLE_OPCODE_VSUB,
+    PICKLE_OPCODE_ATOMIC, PICKLE_OPCODE_CAST, PICKLE_OPCODE_DIV, PICKLE_OPCODE_HINT,
+    PICKLE_OPCODE_JIF, PICKLE_OPCODE_JMP, PICKLE_OPCODE_MARK, PICKLE_OPCODE_MOV, PICKLE_OPCODE_REG,
+    PICKLE_OPCODE_REM, PICKLE_OPCODE_SCRATCH, PICKLE_OPCODE_VABS, PICKLE_OPCODE_VADD,
+    PICKLE_OPCODE_VADDF, PICKLE_OPCODE_VBIT, PICKLE_OPCODE_VCMP, PICKLE_OPCODE_VCNT,
+    PICKLE_OPCODE_VCOPY, PICKLE_OPCODE_VDIVF, PICKLE_OPCODE_VFCAST, PICKLE_OPCODE_VFMA,
+    PICKLE_OPCODE_VFOP, PICKLE_OPCODE_VMINIMAX, PICKLE_OPCODE_VMUL, PICKLE_OPCODE_VMULF,
+    PICKLE_OPCODE_VNEG, PICKLE_OPCODE_VROT, PICKLE_OPCODE_VSH, PICKLE_OPCODE_VSUB,
     PICKLE_OPCODE_VSUBF, PICKLE_OPCODE_WS_PUT, PickleInstruction,
   },
 };
@@ -178,10 +180,26 @@ pub fn compile(
       PICKLE_OPCODE_VBIT => almu::hwnd_vbit(builder, meta, op),
       PICKLE_OPCODE_VROT => almu::hwnd_vrot(builder, meta, op),
 
+      // VSH
+      PICKLE_OPCODE_VSH => almu::hwnd_vsh(builder, meta, op),
+
+      // MINIMAX
+      PICKLE_OPCODE_VMINIMAX => almu::hwnd_vminimax(builder, meta, op),
+
+      PICKLE_OPCODE_CAST => almu::hwnd_cast(builder, meta, op),
+      PICKLE_OPCODE_VFCAST => almu::hwnd_vfcast(builder, meta, op),
+      PICKLE_OPCODE_VCNT => almu::hwnd_vcnt(builder, meta, op),
+      PICKLE_OPCODE_VFOP => almu::hwnd_vfop(builder, meta, op),
+      PICKLE_OPCODE_VCOPY => almu::hwnd_vcopy(builder, meta, op),
+
+      // Yeah - its a libcall. Full stop
+      PICKLE_OPCODE_SCRATCH => almu::hwnd_scratch(builder, meta, &op),
+      PICKLE_OPCODE_ATOMIC => almu::hwnd_atomic(builder, meta, op),
+
       // No-Op
       PICKLE_OPCODE_WS_PUT => {}
       _ => {
-        // Figure out impl for 37 other remaining opcodes
+        // Figure out impl for 35 other remaining opcodes
       }
     }
 
@@ -227,7 +245,9 @@ pub fn compile(
       offset_of!(VMTaskState, scratchpad) as i32,
     );
 
-    for (offset, typ, mflags) in break_simd_waterfall(64, TypeOrWidth::Type(0).clif_mapping(), 8) {
+    for (offset, typ, mflags) in
+      break_simd_waterfall(64, TypeOrWidth::Type(0).clif_mapping(), 8, None)
+    {
       let lr = builder
         .ins()
         .load(typ, mflags, stack_scratchpad_addr, offset as i32);

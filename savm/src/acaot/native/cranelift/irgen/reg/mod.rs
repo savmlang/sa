@@ -8,9 +8,11 @@ use crate::acaot::native::cranelift::CompilerMeta;
 mod countsplitter;
 pub(crate) mod regmap;
 mod resolve;
+mod stackload;
 
 pub use countsplitter::*;
 pub use resolve::*;
+pub use stackload::*;
 
 pub fn get(builder: &mut FunctionBuilder, reg: &mut Option<Variable>) -> Variable {
   let curr = builder.current_block().unwrap();

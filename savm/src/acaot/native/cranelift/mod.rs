@@ -7,7 +7,7 @@ use cranelift::{
   codegen::{
     Context,
     cursor::Cursor,
-    ir::{ArgumentPurpose, Function, StackSlot},
+    ir::{ArgumentPurpose, ConstantPool, FuncRef, Function, SigRef, StackSlot, UserExternalName},
   },
   native::builder,
   prelude::{
@@ -244,6 +244,7 @@ impl NativeCompiler for SaVMCranelift {
       let epilogue = builder.create_block();
 
       CompilerMeta {
+        rel: !self.abs8,
         scratchpad: builder.create_sized_stack_slot(StackSlotData::new(
           StackSlotKind::ExplicitDynamicSlot,
           192,
@@ -271,6 +272,13 @@ impl NativeCompiler for SaVMCranelift {
         r6: None,
         r7: None,
         r8: None,
+        sigref: Default::default(),
+        isa,
+        ctr: 0,
+        callconv: isa.default_call_conv(),
+        revmap: Default::default(),
+        vmimports: Default::default(),
+        constpool: ConstantPool::new(),
       }
     };
 
@@ -298,8 +306,9 @@ impl NativeCompiler for SaVMCranelift {
   }
 }
 
-#[derive(Debug, Clone)]
-pub struct CompilerMeta {
+#[derive(Clone)]
+pub struct CompilerMeta<'a> {
+  pub rel: bool,
   pub ws: [u8; 20],
 
   // Main Blocks
@@ -331,6 +340,80 @@ pub struct CompilerMeta {
 
   // Blockmaps
   pub blockmap: HashMap<u64, IBlock>,
+
+  pub isa: &'a dyn TargetIsa,
+  pub callconv: CallConv,
+
+  pub ctr: u64,
+  // SigRef
+  pub sigref: HashMap<SigStore, SigRef>,
+  // Returns the funcref associated
+  pub revmap: HashMap<LocSrc, FuncRef>,
+  // Resolve a virtual u32,u32 -> Real LocSrc
+  pub vmimports: HashMap<(u32, u32), LocSrc>,
+
+  pub constpool: ConstantPool,
+}
+
+impl<'a> CompilerMeta<'a> {
+  pub fn ctr_get_val(ctr: &mut u64) -> (u32, u32) {
+    let lo = *ctr as u32;
+    let hi = (*ctr >> 32) as u32;
+
+    *ctr += 1;
+
+    (hi, lo)
+  }
+
+  pub fn get_fn(&mut self, builder: &mut FunctionBuilder, loc: LocSrc, sig: SigRef) -> FuncRef {
+    let revmap = &mut self.revmap;
+    let rel = self.rel;
+    let ctr = &mut self.ctr;
+    let vmimports = &mut self.vmimports;
+
+    let fref = *revmap.entry(loc).or_insert_with(|| {
+      let (hi, lo) = Self::ctr_get_val(ctr);
+
+      let user_ref = builder
+        .func
+        .declare_imported_user_function(UserExternalName {
+          namespace: hi,
+          index: lo,
+        });
+
+      let fref = builder.import_function(ExtFuncData {
+        name: ExternalName::User(user_ref),
+        signature: sig,
+        colocated: matches!(loc, LocSrc::LibCall(_)) && rel,
+        patchable: false,
+      });
+
+      vmimports.insert((hi, lo), loc);
+      fref
+    });
+
+    fref
+  }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum LocSrc {
+  VCopyNoAlias,
+  VCopyOverlapping,
+  VMScratchAction,
+  LibCall(u64),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum SigStore {
+  VCopyCommon,
+  VMScratch,
+
+  SaFFICall,
+  SaFFICallAsyncQ,
+  SaFFICallAsyncO,
+
+  LibDefined(u64),
 }
 
 #[derive(Debug, Clone, Copy)]

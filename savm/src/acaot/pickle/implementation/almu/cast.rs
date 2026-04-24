@@ -1,5 +1,9 @@
 use crate::{
-  acaot::pickle::{def::PickleInstruction, implementation::WorkingSet},
+  acaot::pickle::{
+    def::PickleInstruction,
+    implementation::WorkingSet,
+    reader::cast::{CAST, parse_cast},
+  },
   arrcastint, resolve_location_src,
 };
 use sart::ctr::VMTaskState;
@@ -48,25 +52,17 @@ pub fn call_cast(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
   unsafe {
     // The 16-bit args are distributed as follows (4x4-bit slices):
     //   [Type tag Initial] [Type tag Final] [Src1] [Target1]
-    let flags = u16::from_ne_bytes([pickle.u1, pickle.u2]);
+    let CAST {
+      offset_src: offset1,
+      offset_target: offset2,
+      src,
+      target,
+      type_initial: tag_initial,
+      type_final: tag_final,
+    } = parse_cast(pickle, ws.arr);
 
-    let offset1 = arrcastint!(ws, start = 0, stop = 4, i32);
-    let offset2 = arrcastint!(ws, start = 4, stop = 8, i32);
-
-    let src1 = {
-      let src1 = (flags as u8) >> 4;
-
-      resolve_location_src!(taskstate => src1)
-    };
-
-    let target = {
-      let target1 = (flags as u8) & 0x0F;
-
-      resolve_location_src!(taskstate => target1)
-    };
-
-    let tag_initial = (flags >> 12) as u8;
-    let tag_final = ((flags >> 8) as u8) & 0x0F;
+    let src1 = resolve_location_src!(taskstate => src);
+    let target = resolve_location_src!(taskstate => target);
 
     cast_grammar!(
       src1 = src1, tag_initial = tag_initial
@@ -158,10 +154,30 @@ pub fn call_cast(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
 
       // Floating
       { 8 } f64 => {
+        { 0 } u64,
+        { 1 } u32,
+        { 2 } u16,
+        { 3 } u8,
+        { 4 } i64,
+        { 5 } i32,
+        { 6 } i16,
+        { 7 } i8,
+
+        // Float Native
         { 8 } f64,
         { 9 } f32
       },
       { 9 } f32 => {
+        { 0 } u64,
+        { 1 } u32,
+        { 2 } u16,
+        { 3 } u8,
+        { 4 } i64,
+        { 5 } i32,
+        { 6 } i16,
+        { 7 } i8,
+
+        // Float Native
         { 8 } f64,
         { 9 } f32
       }

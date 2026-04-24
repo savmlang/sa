@@ -4,7 +4,13 @@ use cranelift::prelude::{MemFlags, Type};
 
 use crate::acaot::native::cranelift::irgen::reg::{ClifTypeMapping, break_simd_waterfall};
 
-pub fn regmapper(reg0: u8, offset_bytes: i32, typedata: ClifTypeMapping, count: u32) -> RegMapOut {
+pub fn regmapper(
+  reg0: u8,
+  offset_bytes: i32,
+  typedata: ClifTypeMapping,
+  count: u32,
+  assumedwdt: Option<u32>,
+) -> RegMapOut {
   let wdt = typedata.width();
 
   let cnts_in_1_reg = typedata.xreg.lane_count();
@@ -16,7 +22,7 @@ pub fn regmapper(reg0: u8, offset_bytes: i32, typedata: ClifTypeMapping, count: 
 
   let regs = (reg0..(reg0 + totalregstouched));
 
-  let waterfall = break_simd_waterfall(8, typedata, count);
+  let waterfall = break_simd_waterfall(8, typedata, count, assumedwdt);
 
   let map = waterfall
     .iter()

@@ -1,6 +1,9 @@
 use std::arch::is_aarch64_feature_detected;
 
-use cranelift::prelude::*;
+use cranelift::prelude::{
+  types::{I8, I16, I32, I64},
+  *,
+};
 
 use crate::acaot::native::cranelift::irgen::reg::ClifTypeMapping;
 
@@ -17,21 +20,70 @@ fn memflags(alignment: u8, width: u8) -> MemFlags {
 pub fn break_simd_waterfall(
   alignment: u8,
   map: ClifTypeMapping,
+  count: u32,
+  assumedwdt: Option<u32>,
+) -> Vec<(u32, Type, MemFlags)> {
+  if let Some(assumed) = assumedwdt {
+    debug_assert!(assumed >= map.width());
+    let cheat_type = get_cheat_type(assumed);
+
+    let mut cheat = break_simd_waterfall_inner(
+      alignment,
+      ClifTypeMapping {
+        float: false,
+        signed: false,
+        width: assumed.cast_signed(),
+        x1: cheat_type,
+        xreg: cheat_type,
+      },
+      count,
+    );
+
+    let mut offsetctr = 0;
+    cheat.iter_mut().for_each(|(offset, ty, mflags)| {
+      let lanes = ty.lane_count();
+
+      *ty = map.x1.by(lanes).unwrap();
+      *offset = offsetctr;
+
+      let truewidth = lanes * map.width();
+      offsetctr += truewidth;
+
+      *mflags = memflags(alignment, truewidth as u8);
+    });
+
+    return cheat;
+  }
+
+  break_simd_waterfall_inner(alignment, map, count)
+}
+
+fn get_cheat_type(assumed: u32) -> Type {
+  match assumed {
+    8 => I64,
+    4 => I32,
+    2 => I16,
+    1 => I8,
+    _ => unreachable!(),
+  }
+}
+
+pub fn break_simd_waterfall_inner(
+  alignment: u8,
+  map: ClifTypeMapping,
   mut count: u32,
 ) -> Vec<(u32, Type, MemFlags)> {
   let mut loadinst = vec![];
 
   // Over reserve
-  loadinst.reserve(count as usize);
+  loadinst.reserve((count / map.width()).max(1) as usize);
 
   let width = map.width();
 
-  // Vector
+  // Vector (Threshold in terms of count infact)
   let b512_threshold = 64 / width;
   let b256_threshold = 32 / width;
   let b128_threshold = 16 / width;
-
-  // Scalar
   let b64_threshold = 8 / width;
   let b32_threshold = 4 / width;
   let b16_threshold = 2 / width;
@@ -89,7 +141,9 @@ pub fn break_simd_waterfall(
               count -= b256_threshold;
             }
           }
-        } else if is_x86_feature_detected!("sse2") {
+        }
+
+        if is_x86_feature_detected!("sse2") {
           if b128_threshold > 0 {
             while count >= b128_threshold {
               loadinst.push((offset, map.simd_width_type(16), b128_flags));

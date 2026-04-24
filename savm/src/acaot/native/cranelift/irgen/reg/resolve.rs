@@ -12,6 +12,7 @@ use cranelift::{
   },
 };
 
+#[inline(always)]
 pub fn resolve_location_src_load(
   builder: &mut FunctionBuilder,
   meta: &mut CompilerMeta,
@@ -23,12 +24,28 @@ pub fn resolve_location_src_load(
   offset: i32,
   count: u32,
 ) -> Box<[Value]> {
+  resolve_location_src_load_assumedwdt(builder, meta, typ, locsrc, alignment, offset, count, None)
+}
+
+pub fn resolve_location_src_load_assumedwdt(
+  builder: &mut FunctionBuilder,
+  meta: &mut CompilerMeta,
+  typ: TypeOrWidth,
+
+  // Location-src
+  locsrc: u8,
+  alignment: Option<u8>,
+  offset: i32,
+  count: u32,
+
+  assumedwdt: Option<u32>,
+) -> Box<[Value]> {
   let typedata = typ.clif_mapping();
   let ofset = offset * typedata.width as i32;
 
   match locsrc {
     0..=7 => {
-      let out = regmapper(locsrc, ofset, typedata, count);
+      let out = regmapper(locsrc, ofset, typedata, count, assumedwdt);
 
       let regs = out
         .regstouched
@@ -85,7 +102,7 @@ pub fn resolve_location_src_load(
       let ptr = builder.ins().stack_addr(I64, meta.scratchpad, ofset);
       let alignment = get_max_alignment(64, ofset);
 
-      break_simd_waterfall(alignment, typedata, count)
+      break_simd_waterfall(alignment, typedata, count, assumedwdt)
         .into_iter()
         .map(|(offset, mem, memflags)| builder.ins().load(mem, memflags, ptr, offset.cast_signed()))
         .collect::<Box<[_]>>()
@@ -96,7 +113,7 @@ pub fn resolve_location_src_load(
       let ptr = builder.ins().iadd_imm(baseptr, ofset as i64);
       let alignment = get_max_alignment(alignment.unwrap_or(8), ofset);
 
-      break_simd_waterfall(alignment, typedata, count)
+      break_simd_waterfall(alignment, typedata, count, assumedwdt)
         .into_iter()
         .map(|(offset, mem, memflags)| builder.ins().load(mem, memflags, ptr, offset.cast_signed()))
         .collect::<Box<[_]>>()
@@ -108,7 +125,7 @@ pub fn resolve_location_src_load(
       let ptr = builder.use_var(r2);
       let alignment = alignment.unwrap_or(1);
 
-      break_simd_waterfall(alignment, typedata, count)
+      break_simd_waterfall(alignment, typedata, count, assumedwdt)
         .into_iter()
         .map(|(offset, mem, memflags)| builder.ins().load(mem, memflags, ptr, offset.cast_signed()))
         .collect::<Box<[_]>>()
@@ -128,12 +145,28 @@ pub fn resolve_location_src_store(
   offset: i32,
   count: u32,
 ) -> StoreResolver {
+  resolve_location_src_store_assumedwdt(builder, meta, typ, locsrc, alignment, offset, count, None)
+}
+
+pub fn resolve_location_src_store_assumedwdt(
+  builder: &mut FunctionBuilder,
+  meta: &mut CompilerMeta,
+  typ: TypeOrWidth,
+
+  // Location-src
+  locsrc: u8,
+  alignment: Option<u8>,
+  offset: i32,
+  count: u32,
+
+  assumedwdt: Option<u32>,
+) -> StoreResolver {
   let typedata = typ.clif_mapping();
   let ofset = offset * typedata.width as i32;
 
   match locsrc {
     0..=7 => {
-      let mapout = regmapper(locsrc, ofset, typedata, count);
+      let mapout = regmapper(locsrc, ofset, typedata, count, assumedwdt);
 
       StoreResolver::Regs {
         mapout,
@@ -146,7 +179,8 @@ pub fn resolve_location_src_store(
       let ptr = builder.ins().stack_addr(I64, meta.scratchpad, ofset);
       let alignment = get_max_alignment(64, ofset);
 
-      let waterfall = break_simd_waterfall(alignment, typedata, count).into_boxed_slice();
+      let waterfall =
+        break_simd_waterfall(alignment, typedata, count, assumedwdt).into_boxed_slice();
 
       StoreResolver::Pointer {
         baseptr: ptr,
@@ -160,7 +194,8 @@ pub fn resolve_location_src_store(
       let ptr = builder.ins().iadd_imm(baseptr, ofset as i64);
       let alignment = get_max_alignment(alignment.unwrap_or(8), ofset);
 
-      let waterfall = break_simd_waterfall(alignment, typedata, count).into_boxed_slice();
+      let waterfall =
+        break_simd_waterfall(alignment, typedata, count, assumedwdt).into_boxed_slice();
 
       StoreResolver::Pointer {
         baseptr: ptr,
@@ -175,7 +210,7 @@ pub fn resolve_location_src_store(
       let ptr = builder.use_var(r2);
       let alignment = alignment.unwrap_or(1);
 
-      let data = break_simd_waterfall(alignment, typedata, count).into_boxed_slice();
+      let data = break_simd_waterfall(alignment, typedata, count, assumedwdt).into_boxed_slice();
 
       StoreResolver::Pointer {
         baseptr: ptr,

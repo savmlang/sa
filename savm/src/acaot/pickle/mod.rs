@@ -8,6 +8,7 @@ use sart::ctr::*;
 use crate::acaot::pickle::def::{PickleInstruction, *};
 
 pub mod def;
+pub mod reader;
 
 pub mod implementation;
 
@@ -86,11 +87,12 @@ impl<T: Seek + Read> PickleWorker<T> {
   fn handle_atomic(&mut self) {
     let opcode = PICKLE_OPCODE_ATOMIC;
 
-    let flags_offset_v0_v1 = self.bytecode.extract::<3>().swap_if_be();
+    let flags_offset_v0_v1 = self.bytecode.extract::<4>();
 
-    let mut cp = [0; 4];
-    cp[0..2].copy_from_slice(&self.bytecode.extract::<2>());
-    cp[2..4].copy_from_slice(&self.bytecode.extract::<2>().swap_if_be());
+    let mut cp = [0; 6];
+    cp[0..1].copy_from_slice(&[flags_offset_v0_v1[3]]);
+    cp[1..3].copy_from_slice(&self.bytecode.extract::<2>());
+    cp[3..5].copy_from_slice(&self.bytecode.extract::<2>().swap_if_be());
     self.emit_copy_bytes(opcode, cp);
 
     self.out.push(PickleInstruction {
@@ -203,11 +205,11 @@ impl<T: Seek + Read> PickleWorker<T> {
     let [flags1, flags2] = self.bytecode.extract::<2>().swap_if_be();
     let [maxbit] = self.bytecode.extract::<1>();
 
-    let mut copy = [0u8; 16];
+    let mut copy = [0u8; 8];
     copy[0..4].copy_from_slice(&self.bytecode.extract::<4>().swap_if_be());
-    copy[4..8].copy_from_slice(&self.bytecode.extract::<4>().swap_if_be());
-    copy[8..12].copy_from_slice(&self.bytecode.extract::<4>().swap_if_be());
-    copy[12..16].copy_from_slice(&self.bytecode.extract::<4>().swap_if_be());
+    copy[4..5].copy_from_slice(&self.bytecode.extract::<1>().swap_if_be());
+    copy[5..6].copy_from_slice(&self.bytecode.extract::<1>().swap_if_be());
+    copy[6..7].copy_from_slice(&self.bytecode.extract::<1>().swap_if_be());
     self.emit_copy_bytes(opcode, copy);
 
     self.out.push(PickleInstruction {
@@ -223,11 +225,10 @@ impl<T: Seek + Read> PickleWorker<T> {
     let opcode = PICKLE_OPCODE_VCNT;
     let [flags1, flags2] = self.bytecode.extract::<2>().swap_if_be();
 
-    let mut copy = [0u8; 16];
+    let mut copy = [0u8; 6];
     copy[0..4].copy_from_slice(&self.bytecode.extract::<4>().swap_if_be());
-    copy[4..8].copy_from_slice(&self.bytecode.extract::<4>().swap_if_be());
-    copy[8..12].copy_from_slice(&self.bytecode.extract::<4>().swap_if_be());
-    copy[12..16].copy_from_slice(&self.bytecode.extract::<4>().swap_if_be());
+    copy[4..5].copy_from_slice(&self.bytecode.extract::<1>().swap_if_be());
+    copy[5..6].copy_from_slice(&self.bytecode.extract::<1>().swap_if_be());
     self.emit_copy_bytes(opcode, copy);
 
     self.out.push(PickleInstruction {
@@ -242,20 +243,19 @@ impl<T: Seek + Read> PickleWorker<T> {
   fn handle_vsh(&mut self) {
     let opcode = PICKLE_OPCODE_VSH;
     let [flags1, flags2] = self.bytecode.extract::<2>().swap_if_be();
-    let [countbit] = self.bytecode.extract::<1>();
 
-    let mut copy = [0u8; 16];
+    let mut copy = [0u8; 8];
     copy[0..4].copy_from_slice(&self.bytecode.extract::<4>().swap_if_be());
-    copy[4..8].copy_from_slice(&self.bytecode.extract::<4>().swap_if_be());
-    copy[8..12].copy_from_slice(&self.bytecode.extract::<4>().swap_if_be());
-    copy[12..16].copy_from_slice(&self.bytecode.extract::<4>().swap_if_be());
+    copy[4..5].copy_from_slice(&self.bytecode.extract::<1>().swap_if_be());
+    copy[5..6].copy_from_slice(&self.bytecode.extract::<1>().swap_if_be());
+    copy[6..7].copy_from_slice(&self.bytecode.extract::<1>().swap_if_be());
     self.emit_copy_bytes(opcode, copy);
 
     self.out.push(PickleInstruction {
       opcode: opcode,
       u1: flags1,
       u2: flags2,
-      u3: countbit,
+      u3: 0,
     });
   }
 
@@ -401,10 +401,7 @@ impl<T: Seek + Read> PickleWorker<T> {
   }
 
   fn handle_vcopy(&mut self) {
-    let [dt, src_flags] = self.bytecode.extract::<2>();
-
-    let count = dt >> 7;
-    let flags = dt & 0x7F;
+    let [mflags, src_flags] = self.bytecode.extract::<2>();
 
     let mut copy = [0u8; 12];
     copy[0..4].copy_from_slice(&self.bytecode.extract::<4>().swap_if_be());
@@ -414,9 +411,9 @@ impl<T: Seek + Read> PickleWorker<T> {
 
     self.out.push(PickleInstruction {
       opcode: PICKLE_OPCODE_VCOPY,
-      u1: count,
-      u2: flags,
-      u3: src_flags,
+      u1: mflags,
+      u2: src_flags,
+      u3: 0,
     });
   }
 

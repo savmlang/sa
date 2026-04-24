@@ -5,7 +5,11 @@ use std::ptr::null_mut;
 use sart::ctr::VMTaskState;
 
 use crate::{
-  acaot::pickle::{def::PickleInstruction, implementation::WorkingSet},
+  acaot::pickle::{
+    def::PickleInstruction,
+    implementation::WorkingSet,
+    reader::corevm::{SCRATCH, parse_scratch},
+  },
   resolve,
 };
 
@@ -37,36 +41,30 @@ import! {
 }
 
 pub fn call_scratch(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
-  let op_class = pickle.u1;
+  let scratch = parse_scratch(pickle, ws.arr.as_ref());
 
-  let payload = u16::from_ne_bytes([pickle.u2, pickle.u3]);
+  match scratch {
+    SCRATCH::Allocate {
+      size_reg,
+      align_reg,
+    } => unsafe {
+      let size = resolve!(taskstate => size_reg).u64 as usize;
+      let align = resolve!(taskstate => align_reg).u64 as usize;
 
-  match op_class {
-    // Allocate
-    // `[padding (6-bits)] size_reg[4-bits] align_reg[4-bits]`
-    0b00 => {
-      let size_reg = payload as u8 >> 4;
-      let align_reg = payload as u8 & 0x0F;
+      debug_assert!(taskstate.largepad.is_null());
+      debug_assert!(align == 0 || align.is_power_of_two());
 
-      unsafe {
-        let size = resolve!(taskstate => size_reg).u64;
-        let align = resolve!(taskstate => align_reg).u64;
-
-        debug_assert!(taskstate.largepad.is_null());
-        debug_assert!(align == 0 || align.is_power_of_two());
-
-        taskstate.largepad = ws.allocate(size, align);
-      }
-    }
+      taskstate.largepad = ws.allocate(size, align);
+    },
     // Drop classic
-    0b01 => {
+    SCRATCH::DropClassic => {
       let pt = taskstate.largepad;
       taskstate.largepad = null_mut();
 
       ws.free(pt);
     }
     // Drop (alignment was given at alloc)
-    0b10 => {
+    SCRATCH::DropAligned => {
       let pt = taskstate.largepad;
       taskstate.largepad = null_mut();
 

@@ -1,5 +1,12 @@
 use crate::{
-  acaot::pickle::{def::PickleInstruction, implementation::WorkingSet},
+  acaot::pickle::{
+    def::PickleInstruction,
+    implementation::WorkingSet,
+    reader::{
+      cast::{VFCAST, parse_vfcast},
+      vfop::{FOP_CEIL, FOP_FLOOR, FOP_ROUND, FOP_SQRT, FOP_TRUNC, VFOP, parse_vfop},
+    },
+  },
   arrcastint, resolve_location_src,
 };
 use sart::{ctr::VMTaskState, structures::QuadPackedData};
@@ -26,45 +33,36 @@ macro_rules! intop {
 // Flags are like this:
 //   [padding (3-bits)] [float type (1 bit)] [Src1 (4-bits)] [Target1 (4-bits)] [count bit (1-bit)] [Sub-Op (3-bit)]
 pub fn call_vfop(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
-  let flags = u16::from_le_bytes([pickle.u1, pickle.u2]);
+  let VFOP {
+    src,
+    target,
+    offset_src: offset1,
+    offset_target: offset2,
+    count,
+    subop,
+    typetag,
+  } = parse_vfop(pickle, ws.arr.as_ref());
 
-  let count_data = arrcastint!(ws, start = 0, stop = 4, u32);
+  let src1 = resolve_location_src!(taskstate => src);
+  let target1 = resolve_location_src!(taskstate => target);
 
-  let offset1 = arrcastint!(ws, start = 4, stop = 8, i32);
-  let offset2 = arrcastint!(ws, start = 8, stop = 12, i32);
-
-  let subop = (flags as u8) & 0x7;
-
-  let countbit = ((flags as u8) >> 3) & 0x1;
-  let count = if countbit == 0 {
-    count_data
-  } else {
-    unsafe { taskstate.r1.u32 }
-  };
-
-  let target1 = (flags as u8) >> 4;
-
-  let src1 = (flags >> 8) as u8 & 0xF;
-
-  let float_type = ((flags >> 12) as u8) & 0x1;
-
-  match float_type {
+  match typetag {
     // f64
-    0 => match subop {
-      0 => intop!((count f64) target1 = src1 ceil { offset1, offset2 }),
-      1 => intop!((count f64) target1 = src1 floor { offset1, offset2 }),
-      2 => intop!((count f64) target1 = src1 trunc { offset1, offset2 }),
-      3 => intop!((count f64) target1 = src1 round { offset1, offset2 }),
-      4 => intop!((count f64) target1 = src1 sqrt { offset1, offset2 }),
+    8 => match subop {
+      FOP_CEIL => intop!((count f64) target1 = src1 ceil { offset1, offset2 }),
+      FOP_FLOOR => intop!((count f64) target1 = src1 floor { offset1, offset2 }),
+      FOP_TRUNC => intop!((count f64) target1 = src1 trunc { offset1, offset2 }),
+      FOP_ROUND => intop!((count f64) target1 = src1 round { offset1, offset2 }),
+      FOP_SQRT => intop!((count f64) target1 = src1 sqrt { offset1, offset2 }),
       _ => panic!(),
     },
     // f32
-    1 => match subop {
-      0 => intop!((count f32) target1 = src1 ceil { offset1, offset2 }),
-      1 => intop!((count f32) target1 = src1 floor { offset1, offset2 }),
-      2 => intop!((count f32) target1 = src1 trunc { offset1, offset2 }),
-      3 => intop!((count f32) target1 = src1 round { offset1, offset2 }),
-      4 => intop!((count f32) target1 = src1 sqrt { offset1, offset2 }),
+    9 => match subop {
+      FOP_CEIL => intop!((count f32) target1 = src1 ceil { offset1, offset2 }),
+      FOP_FLOOR => intop!((count f32) target1 = src1 floor { offset1, offset2 }),
+      FOP_TRUNC => intop!((count f32) target1 = src1 trunc { offset1, offset2 }),
+      FOP_ROUND => intop!((count f32) target1 = src1 round { offset1, offset2 }),
+      FOP_SQRT => intop!((count f32) target1 = src1 sqrt { offset1, offset2 }),
       _ => panic!(),
     },
     _ => panic!(),
@@ -76,96 +74,63 @@ pub fn call_vfop(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
 // Flags are like this:
 //   [Padding] [count bit (1-bit)] [op (1-bit)] [f width (1-bit)] [int type tag (3 bits)] [Src1 (4-bits)] [Target1 (4-bits)]
 pub fn call_vfcast(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
-  let flags = u16::from_le_bytes([pickle.u1, pickle.u2]);
+  let VFCAST {
+    offset_src,
+    offset_target,
+    count,
+    src,
+    target,
+    type_initial,
+    type_final,
+  } = parse_vfcast(pickle, ws.arr.as_ref());
 
-  let target1 = {
-    let tg = (flags as u8) & 0x0F;
+  let f = match (type_initial, type_final) {
+    // f64 -> iN
+    (8, 0) => as_cast::<f64, u64>,
+    (8, 1) => as_cast::<f64, u32>,
+    (8, 2) => as_cast::<f64, u16>,
+    (8, 3) => as_cast::<f64, u8>,
+    (8, 4) => as_cast::<f64, i64>,
+    (8, 5) => as_cast::<f64, i32>,
+    (8, 6) => as_cast::<f64, i16>,
+    (8, 7) => as_cast::<f64, i8>,
 
-    resolve_location_src!(taskstate => tg)
-  };
-  let src1 = {
-    let s1 = ((flags >> 4) as u8) & 0x0F;
+    // f32 -> iN
+    (9, 0) => as_cast::<f32, u64>,
+    (9, 1) => as_cast::<f32, u32>,
+    (9, 2) => as_cast::<f32, u16>,
+    (9, 3) => as_cast::<f32, u8>,
+    (9, 4) => as_cast::<f32, i64>,
+    (9, 5) => as_cast::<f32, i32>,
+    (9, 6) => as_cast::<f32, i16>,
+    (9, 7) => as_cast::<f32, i8>,
 
-    resolve_location_src!(taskstate => s1)
-  };
-  let typetag = (flags >> 8) as u8 & 0x07;
-  let fwidth = (flags >> 11) as u8 & 0x01;
-  let op = (flags >> 12) as u8 & 0x01;
-  let countbit = (flags >> 13) as u8 & 0x01;
+    // iN -> f32
+    (0, 9) => as_cast::<u64, f32>,
+    (1, 9) => as_cast::<u32, f32>,
+    (2, 9) => as_cast::<u16, f32>,
+    (3, 9) => as_cast::<u8, f32>,
+    (4, 9) => as_cast::<i64, f32>,
+    (5, 9) => as_cast::<i32, f32>,
+    (6, 9) => as_cast::<i16, f32>,
+    (7, 9) => as_cast::<i8, f32>,
 
-  let count_data = arrcastint!(ws, start = 0, stop = 4, u32);
+    // iN -> f64
+    (0, 8) => as_cast::<u64, f64>,
+    (1, 8) => as_cast::<u32, f64>,
+    (2, 8) => as_cast::<u16, f64>,
+    (3, 8) => as_cast::<u8, f64>,
+    (4, 8) => as_cast::<i64, f64>,
+    (5, 8) => as_cast::<i32, f64>,
+    (6, 8) => as_cast::<i16, f64>,
+    (7, 8) => as_cast::<i8, f64>,
 
-  let offset1 = arrcastint!(ws, start = 4, stop = 8, i32);
-  let offset2 = arrcastint!(ws, start = 8, stop = 12, i32);
-
-  let count = if countbit == 0 {
-    count_data
-  } else {
-    unsafe { taskstate.r1.u32 }
-  };
-
-  // Match and dispatch
-  let f = match fwidth {
-    // f64
-    0 => match op {
-      // f* to i*
-      0 => match typetag {
-        0 => as_cast::<f64, u64>,
-        1 => as_cast::<f64, u32>,
-        2 => as_cast::<f64, u16>,
-        3 => as_cast::<f64, u8>,
-        4 => as_cast::<f64, i64>,
-        5 => as_cast::<f64, i32>,
-        6 => as_cast::<f64, i16>,
-        7 => as_cast::<f64, i8>,
-        _ => panic!(),
-      },
-      // i* to f*
-      1 => match typetag {
-        0 => as_cast::<u64, f64>,
-        1 => as_cast::<u32, f64>,
-        2 => as_cast::<u16, f64>,
-        3 => as_cast::<u8, f64>,
-        4 => as_cast::<i64, f64>,
-        5 => as_cast::<i32, f64>,
-        6 => as_cast::<i16, f64>,
-        7 => as_cast::<i8, f64>,
-        _ => panic!(),
-      },
-      _ => panic!(),
-    },
-    // f64
-    1 => match op {
-      // f* to i*
-      0 => match typetag {
-        0 => as_cast::<f32, u64>,
-        1 => as_cast::<f32, u32>,
-        2 => as_cast::<f32, u16>,
-        3 => as_cast::<f32, u8>,
-        4 => as_cast::<f32, i64>,
-        5 => as_cast::<f32, i32>,
-        6 => as_cast::<f32, i16>,
-        7 => as_cast::<f32, i8>,
-        _ => panic!(),
-      },
-      // i* to f*
-      1 => match typetag {
-        0 => as_cast::<u64, f32>,
-        1 => as_cast::<u32, f32>,
-        2 => as_cast::<u16, f32>,
-        3 => as_cast::<u8, f32>,
-        4 => as_cast::<i64, f32>,
-        5 => as_cast::<i32, f32>,
-        6 => as_cast::<i16, f32>,
-        7 => as_cast::<i8, f32>,
-        _ => panic!(),
-      },
-      _ => panic!(),
-    },
-    _ => panic!(),
+    _ => unreachable!(),
   };
 
-  f(src1, target1, offset1, offset2, count);
+  let src1 = resolve_location_src!(taskstate => src);
+  let target1 = resolve_location_src!(taskstate => target);
+  f(src1, target1, offset_src, offset_target, count);
 }
 
 trait CastTo<Target> {

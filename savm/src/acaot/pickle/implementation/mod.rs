@@ -72,15 +72,12 @@ impl WorkingSet {
     unsafe { salloc::aligned_free(ame as _) };
   }
 
-  pub fn allocate(&mut self, size: u64, align: u64) -> *mut QuadPackedData {
+  pub fn allocate(&mut self, size: usize, align: usize) -> *mut QuadPackedData {
     // FAST PATH: Specific Alignment (No Header)
     // We skip the req_size calculation entirely here.
     if align != 0 {
       return unsafe {
-        sart::salloc::aligned_malloc(
-          (size as usize) * size_of::<QuadPackedData>(),
-          align as usize,
-        ) as _
+        sart::salloc::aligned_malloc(size * size_of::<QuadPackedData>(), align) as _
       };
     }
 

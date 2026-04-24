@@ -1,5 +1,9 @@
 use crate::{
-  acaot::pickle::{def::PickleInstruction, implementation::WorkingSet},
+  acaot::pickle::{
+    def::PickleInstruction,
+    implementation::WorkingSet,
+    reader::vsh::{VSH, parse_vsh},
+  },
   arrcastint, resolve_location_src,
 };
 use sart::{ctr::VMTaskState, structures::QuadPackedData};
@@ -75,34 +79,31 @@ const fn calc_offset(op: u8, ty: u8) -> usize {
 // `vsh <flags as u16> <padding (6-bits)> <op bit (1-bit)> <count bit (1-bit)> <count in u32> <base src1 as i32> <amount i.e. src2 as i32> <base target1 as i32>`
 pub fn call_vsh(pickle: &PickleInstruction, ws: &mut WorkingSet, ts: &mut VMTaskState) {
   unsafe {
-    let rot = pickle.u3;
-
-    let op = (rot >> 1) & 0x01;
-
-    let countbit = rot & 0x01;
-
-    let flags = u16::from_ne_bytes([pickle.u1, pickle.u2]);
-
-    let typ = (flags >> 12) as u8;
-    let count = {
-      let countdata = arrcastint!(ws, start = 0, stop = 4, u32);
-
-      if countbit == 0 { countdata } else { ts.r1.u32 }
-    };
-
-    let flags_src1 = (flags as u8) & 0x0F;
-    let flags_src2 = (flags as u8) >> 4 & 0x0F;
-    let flags_tg = (flags >> 12) as u8 & 0x0F;
+    let VSH {
+      op,
+      flags_src1,
+      flags_src2,
+      flags_target,
+      count,
+      of_src1,
+      of_src2,
+      of_target,
+      typ,
+    } = parse_vsh(pickle, &ws.arr);
 
     let src1 = resolve_location_src!(ts => flags_src1);
     let src2 = resolve_location_src!(ts => flags_src2);
-    let tg = resolve_location_src!(ts => flags_tg);
-
-    let of_src1 = arrcastint!(ws, start = 4, stop = 8, i32);
-    let of_src2 = arrcastint!(ws, start = 8, stop = 12, i32);
-    let of_tg = arrcastint!(ws, start = 12, stop = 16, i32);
+    let tg = resolve_location_src!(ts => flags_target);
 
     let offset = calc_offset(op, typ);
-    (_DISPATCH.get_unchecked(offset))(src1, src2, tg, of_src1, of_src2, of_tg, count);
+    (_DISPATCH.get_unchecked(offset))(
+      src1,
+      src2,
+      tg,
+      of_src1 as _,
+      of_src2 as _,
+      of_target as _,
+      count,
+    );
   }
 }
