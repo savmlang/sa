@@ -4,7 +4,8 @@ use sajit::{
   Executable, MemoryExecutableApi, WriteFnResult, advanced::MemoryExecutable,
   relocations::Relocation,
 };
-use sart::structures::jit::JITReloc;
+
+use crate::acaot::JITReloc;
 
 pub struct JITMemoryManager {
   quick: Vec<Pin<Box<MemoryExecutable>>>,
@@ -107,6 +108,6 @@ impl Drop for JITMemoryManager {
   }
 }
 
-fn calculate_relocation(rl: JITReloc) -> Box<[Relocation]> {
+pub fn calculate_relocation(rl: &[JITReloc]) -> Box<[Relocation]> {
   todo!()
 }

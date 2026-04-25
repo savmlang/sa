@@ -22,12 +22,15 @@ use std::{
 
 use ahash::HashMap;
 use moka::sync::{CacheBuilder, SegmentedCache};
-use sart::{code::SwappableCodeStore, ctr::CVMTaskState, structures::jit::JITReloc};
+use sart::{code::SwappableCodeStore, ctr::CVMTaskState};
 
 pub use sart;
 use tokio::runtime::{Builder, Runtime};
 
-use crate::{acaot::pickle::def::PickleInstruction, management::management_main};
+use crate::{
+  acaot::{JITReloc, pickle::def::PickleInstruction},
+  management::management_main,
+};
 
 pub mod executor;
 pub(crate) mod management;
@@ -51,6 +54,8 @@ pub enum SymbolMapTableInfo {
   MixedSizedBytecode,
 }
 
+pub type JITRelocs = Arc<[JITReloc]>;
+
 #[derive(Debug, Clone)]
 pub enum CacheData {
   None,
@@ -60,19 +65,19 @@ pub enum CacheData {
   },
   CraneliftAbs8 {
     binary: Arc<[u8]>,
-    reloc: JITReloc,
+    reloc: JITRelocs,
   },
   CraneliftRel {
     binary: Arc<[u8]>,
-    reloc: JITReloc,
+    reloc: JITRelocs,
   },
   LLVMAbs8 {
     binary: Arc<[u8]>,
-    reloc: JITReloc,
+    reloc: JITRelocs,
   },
   LLVMRel {
     binary: Arc<[u8]>,
-    reloc: JITReloc,
+    reloc: JITRelocs,
   },
 }
 

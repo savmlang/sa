@@ -1,13 +1,20 @@
-use crate::acaot::{
-  native::{NativeCompiler, cranelift::irgen::compile},
-  pickle::def::PickleInstruction,
+use super::{JITReloc, LocSrc, SigStore};
+use crate::{
+  CacheData,
+  acaot::{
+    native::{NativeCompiler, cranelift::irgen::compile},
+    pickle::def::PickleInstruction,
+  },
 };
 use ahash::{HashMap, HashMapExt};
 use cranelift::{
   codegen::{
-    Context,
+    Context, FinalizedRelocTarget,
     cursor::Cursor,
-    ir::{ArgumentPurpose, ConstantPool, FuncRef, Function, SigRef, StackSlot, UserExternalName},
+    ir::{
+      ArgumentPurpose, ConstantPool, FuncRef, Function, SigRef, StackSlot, UserExternalName,
+      UserExternalNameRef,
+    },
   },
   native::builder,
   prelude::{
@@ -287,7 +294,7 @@ impl NativeCompiler for SaVMCranelift {
     // Compile
     builder.finalize();
     println!("Built this : {f:?}");
-    {
+    let (bin, relocs) = {
       let mut ctx = Context::for_function(f);
 
       let compiled = ctx.compile(isa, &mut Default::default());
@@ -299,10 +306,48 @@ impl NativeCompiler for SaVMCranelift {
         #[cfg(not(debug_assertions))]
         return compiled.unwrap_or_else(|_| abort());
       })();
-    }
 
-    // todo!()
-    crate::CacheData::None
+      let code: Arc<[u8]> = compiled.buffer.data().into();
+      let relocs = compiled
+        .buffer
+        .relocs()
+        .iter()
+        .map(|reloc| {
+          let addend = reloc.addend;
+
+          match &reloc.target {
+            FinalizedRelocTarget::ExternalName(name) => match name {
+              ExternalName::User(usr) => {
+                let srcloc = ws.vmimports.get(usr).unwrap();
+
+                JITReloc {
+                  addend,
+                  offset: reloc.offset,
+                  loc: *srcloc,
+                }
+              }
+              e => unreachable!("Unkexpected {e:?}"),
+            },
+            _ => unreachable!("target::Func shouldn't be a reloc"),
+          }
+        })
+        .collect::<Arc<[_]>>();
+
+      (code, relocs)
+    };
+
+    if ws.rel {
+      CacheData::CraneliftAbs8 {
+        binary: bin,
+        reloc: relocs,
+      }
+    } else {
+      CacheData::CraneliftAbs8 {
+        binary: bin,
+        reloc: relocs,
+      }
+    }
+    // crate::CacheData::None
   }
 }
 
@@ -350,7 +395,7 @@ pub struct CompilerMeta<'a> {
   // Returns the funcref associated
   pub revmap: HashMap<LocSrc, FuncRef>,
   // Resolve a virtual u32,u32 -> Real LocSrc
-  pub vmimports: HashMap<(u32, u32), LocSrc>,
+  pub vmimports: HashMap<UserExternalNameRef, LocSrc>,
 
   pub constpool: ConstantPool,
 }
@@ -388,32 +433,12 @@ impl<'a> CompilerMeta<'a> {
         patchable: false,
       });
 
-      vmimports.insert((hi, lo), loc);
+      vmimports.insert(user_ref, loc);
       fref
     });
 
     fref
   }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum LocSrc {
-  VCopyNoAlias,
-  VCopyOverlapping,
-  VMScratchAction,
-  LibCall(u64),
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum SigStore {
-  VCopyCommon,
-  VMScratch,
-
-  SaFFICall,
-  SaFFICallAsyncQ,
-  SaFFICallAsyncO,
-
-  LibDefined(u64),
 }
 
 #[derive(Debug, Clone, Copy)]

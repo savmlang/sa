@@ -5,6 +5,9 @@ on:
     paths:
       - ./savm/**/*
 
+permissions:
+  contents: read
+
 jobs:
   jitemitvm:
     name: Run jitemission

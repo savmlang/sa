@@ -120,7 +120,7 @@ pub fn parse_scratch(pickle: &PickleInstruction, ws: &[u8]) -> SCRATCH {
   }
 }
 
-extern "C" fn scratch_ffi(
+pub extern "C" fn jitcall_scratch_ffi(
   op: u8,
   ws: *mut WorkingSet,
   arg1: *mut QuadPackedData,

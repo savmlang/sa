@@ -24,7 +24,36 @@
 //! ## Meet the project
 //! Designed for years, written in days!
 
+use serde::{Deserialize, Serialize};
+
 pub mod pickle;
 
 #[cfg(feature = "native")]
 pub mod native;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum LocSrc {
+  VCopyNoAlias,
+  VCopyOverlapping,
+  VMScratchAction,
+  LibCall(u64),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum SigStore {
+  VCopyCommon,
+  VMScratch,
+
+  SaFFICall,
+  SaFFICallAsyncQ,
+  SaFFICallAsyncO,
+
+  LibDefined(u64),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JITReloc {
+  pub addend: i64,
+  pub loc: LocSrc,
+  pub offset: u32,
+}

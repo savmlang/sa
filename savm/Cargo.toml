@@ -38,6 +38,7 @@ sart = { path = "../sart" }
 
 # SaVM Native Linker and CodeAllocator
 sajit = { version = "0.0.1", path = "../sajit", optional = true }
+serde = { version = "1.0.228", features = ["derive"] }
 
 [features]
 default = []

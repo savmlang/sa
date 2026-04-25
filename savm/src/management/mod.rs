@@ -3,10 +3,21 @@ use crate::{
   acaot::pickle::{PickleWorker, def::PickleInstruction},
 };
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
+#[cfg(feature = "native")]
+use sajit::relocations::{RelocKind, Relocation};
 use std::sync::Arc;
 
 #[cfg(feature = "native")]
-use crate::SafeSwappableCodeStore;
+use crate::{
+  SafeSwappableCodeStore,
+  acaot::{
+    LocSrc,
+    pickle::reader::corevm::{
+      jitcall_scratch_ffi, jitcall_vcopy_noalias, jitcall_vcopy_overlapping,
+    },
+  },
+  executor::corevm_libcall,
+};
 #[cfg(feature = "native")]
 use evmap::handles::WriteHandle;
 #[cfg(feature = "native")]
@@ -339,22 +350,48 @@ fn process_jit(
           abort();
         }
         CacheData::CraneliftAbs8 { binary, reloc } | CacheData::LLVMAbs8 { binary, reloc } => {
-          todo!();
-          // let bin = sajit.write_quick(&binary, relocs);
+          let relocs = reloc
+            .iter()
+            .map(|reloc| {
+              let mut relocdata = Relocation {
+                addend: reloc.addend,
+                kind: (|| {
+                  #[cfg(target_pointer_width = "64")]
+                  return RelocKind::Abs8;
 
-          // if let Some(jitblob) = evmap.get_one(&moduleid) {
-          //   // Case `usize` back into the `*mut JIT`
-          //   let mgr = unsafe { &**jitblob };
+                  #[cfg(target_pointer_width = "32")]
+                  return RelocKind::Abs4;
+                })(),
+                offset: reloc.offset,
+                symbol_addr: (corevm_libcall as *const ()).addr() as _,
+              };
 
-          //   _ = unsafe { mgr.set(0, bin, None) };
-          // } else {
-          //   let mgr = Box::new(SwappableCodeStore::new(bin));
+              relocdata.symbol_addr = match &reloc.loc {
+                LocSrc::VCopyNoAlias => (jitcall_vcopy_noalias as *const ()).addr() as _,
+                LocSrc::VCopyOverlapping => (jitcall_vcopy_overlapping as *const ()).addr() as _,
+                LocSrc::VMScratchAction => (jitcall_scratch_ffi as *const ()).addr() as _,
+                _ => relocdata.symbol_addr,
+              };
 
-          //   _ = unsafe { mgr.set(0, bin, None) };
+              relocdata
+            })
+            .collect::<Box<_>>();
 
-          //   evmap.insert(moduleid, Box::into_raw(mgr));
-          //   evmap.publish();
-          // }
+          let bin = sajit.write_quick(&binary, &relocs);
+
+          if let Some(jitblob) = evmap.get_one(&moduleid) {
+            // Case `usize` back into the `*mut JIT`
+            let mgr = unsafe { &**jitblob };
+
+            _ = unsafe { mgr.set(0, bin, None) };
+          } else {
+            let mgr = Box::new(SwappableCodeStore::new(bin));
+
+            _ = unsafe { mgr.set(0, bin, None) };
+
+            evmap.insert(moduleid, Box::into_raw(mgr));
+            evmap.publish();
+          }
         }
       }
     }

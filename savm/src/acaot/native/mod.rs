@@ -1,11 +1,16 @@
 use std::{collections::HashMap, marker::PhantomData, sync::Arc};
 
+use sart::structures::serde;
+use sart::structures::serde::{Deserialize, Serialize};
+
 #[cfg(feature = "cranelift")]
 use crate::acaot::native::cranelift::SaVMCranelift;
 use crate::{CacheData, CacheLevel, acaot::pickle::def::PickleInstruction};
 
 #[cfg(feature = "cranelift")]
 pub mod cranelift;
+
+pub use super::*;
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum CompilerId {
