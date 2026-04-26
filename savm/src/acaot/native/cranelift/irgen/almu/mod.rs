@@ -3,7 +3,10 @@
 use crate::acaot::{
   native::cranelift::{
     CompilerMeta,
-    irgen::reg::{TypeOrWidth, resolve_location_src_load, resolve_location_src_store, resolve_reg},
+    irgen::reg::{
+      TypeOrWidth, resolve_location_src_load, resolve_location_src_store, resolve_reg,
+      vector::{abstract_extractlane, abstract_insertlane},
+    },
   },
   pickle::def::PickleInstruction,
 };
@@ -162,6 +165,7 @@ pub fn hwnd_vadd(
     let r5 = resolve_reg(builder, meta, 4);
 
     let r5_val = builder.use_var(r5);
+
     let old = builder.ins().bitcast(
       clif.xreg,
       MemFlags::new().with_endianness(Endianness::Little),
@@ -169,7 +173,7 @@ pub fn hwnd_vadd(
     );
 
     let r5_carry_bit = if clif.width != 8 {
-      builder.ins().extractlane(old, 0)
+      abstract_extractlane(builder, meta, old, 0)
     } else {
       old
     };
@@ -186,7 +190,7 @@ pub fn hwnd_vadd(
     target.store(builder, 0, ans);
 
     if clif.width != 8 {
-      let extend = builder.ins().insertlane(r5_val, of, 0);
+      let extend = abstract_insertlane(builder, meta, r5_val, of, 0);
       builder.def_var(r5, extend);
     } else {
       builder.def_var(r5, of);
@@ -240,6 +244,7 @@ pub fn hwnd_vsub(
     let r5 = resolve_reg(builder, meta, 4);
 
     let r5_val = builder.use_var(r5);
+
     let old = builder.ins().bitcast(
       clif.xreg,
       MemFlags::new().with_endianness(Endianness::Little),
@@ -247,7 +252,7 @@ pub fn hwnd_vsub(
     );
 
     let r5_carry_bit = if clif.width != 8 {
-      builder.ins().extractlane(old, 0)
+      abstract_extractlane(builder, meta, old, 0)
     } else {
       old
     };
@@ -264,7 +269,7 @@ pub fn hwnd_vsub(
     target.store(builder, 0, ans);
 
     if clif.width != 8 {
-      let extend = builder.ins().insertlane(r5_val, of, 0);
+      let extend = abstract_insertlane(builder, meta, r5_val, of, 0);
       builder.def_var(r5, extend);
     } else {
       builder.def_var(r5, of);
@@ -344,8 +349,8 @@ pub fn hwnd_vmul(
         let mut out = vec![];
 
         (0..tp.lane_count()).for_each(|laneid| {
-          let hi = builder.ins().extractlane(hi, laneid as u8);
-          let lo = builder.ins().extractlane(lo, laneid as u8);
+          let hi = abstract_extractlane(builder, meta, hi, laneid as u8);
+          let lo = abstract_extractlane(builder, meta, lo, laneid as u8);
 
           out.push(lo);
           out.push(hi);
@@ -373,9 +378,7 @@ pub fn hwnd_vmul(
           let mut datavect = builder.ins().scalar_to_vector(ty, control);
 
           (0..lanes).for_each(|idx| {
-            datavect = builder
-              .ins()
-              .insertlane(datavect, mulresult[idxmul], idx as u8);
+            datavect = abstract_insertlane(builder, meta, datavect, mulresult[idxmul], idx as u8);
 
             idxmul += 1;
           });

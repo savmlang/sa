@@ -16,10 +16,13 @@ use crate::acaot::{
     PICKLE_OPCODE_VSUBF, PICKLE_OPCODE_WS_PUT, PickleInstruction,
   },
 };
-use cranelift::prelude::{
-  Block, FunctionBuilder, InstBuilder, MemFlags, TrapCode,
-  isa::TargetIsa,
-  types::{I64, I64X8},
+use cranelift::{
+  frontend::Switch,
+  prelude::{
+    Block, FunctionBuilder, InstBuilder, MemFlags, TrapCode,
+    isa::TargetIsa,
+    types::{I64, I64X8},
+  },
 };
 use sart::ctr::VMTaskState;
 
@@ -209,6 +212,26 @@ pub fn compile(
   // Since this is the last block, jump to epilogue
   builder.ins().jump(meta.epilogue, []);
 
+  // Write jumpmap
+  {
+    builder.switch_to_block(meta.jumpresolver);
+
+    let mut switch = Switch::new();
+
+    for (k, v) in &meta.blockmap {
+      switch.set_entry(*k as _, v.current);
+    }
+
+    let resume = builder.ins().load(
+      I64,
+      MemFlags::trusted(),
+      meta.vmtaskstate,
+      offset_of!(VMTaskState, curline_or_resume) as i32,
+    );
+
+    switch.emit(builder, resume, meta.trap);
+  }
+
   // Write trap
   {
     builder.switch_to_block(meta.trap);
@@ -220,7 +243,6 @@ pub fn compile(
   {
     builder.switch_to_block(meta.async_epilogue);
 
-    println!("SaVM Warn : ASYNC Epilogue is UNFINISHED");
     // if let Some(r8) = meta.r8 {
     //   let r8_val = builder.use_var(r8);
     //   builder.ins().store(
@@ -264,24 +286,31 @@ pub fn compile(
   {
     builder.switch_to_block(meta.epilogue);
 
-    if let Some(r7) = meta.r7 {
-      let r7_val = builder.use_var(r7);
-      builder.ins().store(
-        MemFlags::new().with_aligned(),
-        r7_val,
-        meta.vmtaskstate,
-        offset_of!(VMTaskState, r7) as i32,
-      );
-    }
+    let vars = [
+      (&meta.r7, offset_of!(VMTaskState, r7) as i32),
+      (&meta.r8, offset_of!(VMTaskState, r8) as i32),
+    ];
 
-    if let Some(r8) = meta.r8 {
-      let r8_val = builder.use_var(r8);
-      builder.ins().store(
-        MemFlags::new().with_aligned(),
-        r8_val,
-        meta.vmtaskstate,
-        offset_of!(VMTaskState, r8) as i32,
-      );
+    #[cfg(feature = "sendback")]
+    let vars = [
+      (&meta.r1, offset_of!(VMTaskState, r1) as i32),
+      (&meta.r2, offset_of!(VMTaskState, r2) as i32),
+      (&meta.r3, offset_of!(VMTaskState, r3) as i32),
+      (&meta.r4, offset_of!(VMTaskState, r4) as i32),
+      (&meta.r5, offset_of!(VMTaskState, r5) as i32),
+      (&meta.r6, offset_of!(VMTaskState, r6) as i32),
+      (&meta.r7, offset_of!(VMTaskState, r7) as i32),
+      (&meta.r8, offset_of!(VMTaskState, r8) as i32),
+    ];
+
+    for (var, offset) in vars {
+      if let Some(r) = var {
+        let r_val = builder.use_var(*r);
+
+        builder
+          .ins()
+          .store(MemFlags::trusted(), r_val, meta.vmtaskstate, offset);
+      }
     }
 
     builder.ins().return_(&[]);

@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 savm = { path = "../../savm", default-features = false, features = [
   "cranelift",
+  "sendback",
 ] }
 
 serde = { version = "^1", features = ["derive"] }

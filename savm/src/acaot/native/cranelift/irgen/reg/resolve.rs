@@ -1,4 +1,7 @@
-use crate::acaot::native::cranelift::irgen::reg::regmap::{RegMapOut, regmapper};
+use crate::acaot::native::cranelift::irgen::reg::{
+  regmap::{RegMapOut, regmapper},
+  vector::{abstract_extractlane, abstract_insertlane},
+};
 
 use super::*;
 use cranelift::{
@@ -61,7 +64,16 @@ pub fn resolve_location_src_load_assumedwdt(
         })
         .collect::<Box<[_]>>();
 
-      let ctrl = builder.ins().iconst(typedata.x1, 0);
+      let ctrl = if typedata.float {
+        match typedata.width {
+          8 => builder.ins().f64const(0.0),
+          4 => builder.ins().f32const(0.0),
+          _ => unreachable!(),
+        }
+      } else {
+        builder.ins().iconst(typedata.x1, 0)
+      };
+
       out
         .map
         .into_iter()
@@ -83,13 +95,13 @@ pub fn resolve_location_src_load_assumedwdt(
             let val = if typ.lane_count() == 1 {
               reg
             } else {
-              builder.ins().extractlane(reg, lane.laneid as u8)
+              abstract_extractlane(builder, meta, reg, lane.laneid as u8)
             };
 
             simdval = if singlelane {
               val
             } else {
-              builder.ins().insertlane(simdval, val, idx as u8)
+              abstract_insertlane(builder, meta, simdval, val, idx as u8)
             };
           }
 
@@ -324,8 +336,6 @@ impl StoreResolver {
           })
           .collect::<Box<[_]>>();
 
-        let ctrl = builder.ins().iconst(typedata.x1, 0);
-
         out
           .map
           .iter()
@@ -337,7 +347,7 @@ impl StoreResolver {
               let value_to_set = if singlelane {
                 valuetoset
               } else {
-                builder.ins().extractlane(valuetoset, idx as u8)
+                abstract_extractlane(builder, meta, valuetoset, idx as u8)
               };
 
               let (reg, _) = &mut regs[lane.regidx as usize];
@@ -348,9 +358,8 @@ impl StoreResolver {
               if typ.lane_count() == 1 {
                 *reg = value_to_set;
               } else {
-                let output = builder
-                  .ins()
-                  .insertlane(*reg, value_to_set, lane.laneid as u8);
+                let output =
+                  abstract_insertlane(builder, meta, *reg, value_to_set, lane.laneid as u8);
 
                 *reg = output;
               }
@@ -358,6 +367,18 @@ impl StoreResolver {
           });
 
         for (latest, reg) in regs {
+          let t = builder.func.dfg.value_type(latest);
+
+          let mut latest = latest;
+
+          if t != I64 {
+            latest = builder.ins().bitcast(
+              I64,
+              MemFlags::new().with_endianness(Endianness::Little),
+              latest,
+            );
+          }
+
           builder.def_var(reg, latest);
         }
       }
@@ -434,6 +455,7 @@ impl TypeOrWidth {
         0 | 4 => ClifTypeMapping {
           width: 8,
           x1: I64,
+          x1i: I64,
           xreg: I64,
           signed: *typ == 4,
           float: false,
@@ -441,6 +463,7 @@ impl TypeOrWidth {
         1 | 5 => ClifTypeMapping {
           width: 4,
           x1: I32,
+          x1i: I32,
           xreg: I32X2,
           signed: *typ == 5,
           float: false,
@@ -448,6 +471,7 @@ impl TypeOrWidth {
         2 | 6 => ClifTypeMapping {
           width: 2,
           x1: I16,
+          x1i: I16,
           xreg: I16X4,
           signed: *typ == 6,
           float: false,
@@ -455,6 +479,7 @@ impl TypeOrWidth {
         3 | 7 => ClifTypeMapping {
           width: 1,
           x1: I8,
+          x1i: I8,
           xreg: I8X8,
           signed: *typ == 7,
           float: false,
@@ -462,6 +487,7 @@ impl TypeOrWidth {
         8 => ClifTypeMapping {
           width: 8,
           x1: F64,
+          x1i: I64,
           xreg: F64,
           signed: false,
           float: true,
@@ -469,6 +495,7 @@ impl TypeOrWidth {
         9 => ClifTypeMapping {
           width: 4,
           x1: F32,
+          x1i: I32,
           xreg: F32X2,
           signed: false,
           float: true,
@@ -490,6 +517,7 @@ impl TypeOrWidth {
 pub struct ClifTypeMapping {
   pub width: i32,
   pub x1: Type,
+  pub x1i: Type,
   pub xreg: Type,
   pub signed: bool,
   pub float: bool,
@@ -545,12 +573,20 @@ impl ClifTypeMapping {
   pub fn simd_width_type(&self, simdbytes: u8) -> Type {
     let width = self.width();
 
-    let coretype = match width {
-      8 => I64,
-      4 => I32,
-      2 => I16,
-      1 => I8,
-      _ => return INVALID,
+    let coretype = if self.float {
+      match width {
+        8 => F64,
+        4 => F32,
+        _ => return INVALID,
+      }
+    } else {
+      match width {
+        8 => I64,
+        4 => I32,
+        2 => I16,
+        1 => I8,
+        _ => return INVALID,
+      }
     };
 
     if simdbytes as u32 == coretype.bytes() {

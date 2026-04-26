@@ -184,11 +184,11 @@ pub type SafeSwappableCodeStore = *mut SwappableCodeStore<(*const Executable)>;
 
 // This only and only stores JIT instructions
 #[cfg(feature = "native")]
-pub(crate) static JIT_CACHE: OnceLock<ThreadSafe<ReadHandle<u64, SafeSwappableCodeStore>>> =
+pub static JIT_CACHE: OnceLock<ThreadSafe<ReadHandle<u64, SafeSwappableCodeStore>>> =
   OnceLock::new();
 
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct ThreadSafe<T>(pub T);
+pub struct ThreadSafe<T>(pub T);
 
 unsafe impl<T> Send for ThreadSafe<T> {}
 unsafe impl<T> Sync for ThreadSafe<T> {}

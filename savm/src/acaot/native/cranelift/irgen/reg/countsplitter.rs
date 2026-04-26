@@ -34,6 +34,7 @@ pub fn break_simd_waterfall(
         signed: false,
         width: assumed.cast_signed(),
         x1: cheat_type,
+        x1i: cheat_type,
         xreg: cheat_type,
       },
       count,

@@ -21,7 +21,7 @@ pub struct JITMemoryManager {
 
   // Stores `epicenter` TEXT - our flagship
   // JIT + AoT tier
-  epicenter: Option<MemoryExecutable>,
+  epitier: Option<MemoryExecutable>,
 }
 
 impl JITMemoryManager {
@@ -31,7 +31,7 @@ impl JITMemoryManager {
 
     Self {
       quick: vec![Box::pin(a)],
-      epicenter: None,
+      epitier: None,
     }
   }
 
@@ -110,7 +110,7 @@ impl Drop for JITMemoryManager {
         panic!("Please ensure that SaVM is programmed correctly, the Drop method should not encounter stray Memory blobs!");
       });
 
-    if let Some(x) = self.epicenter.take() {
+    if let Some(x) = self.epitier.take() {
       // This should be leaked
       x.leak();
     }

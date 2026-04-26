@@ -20,11 +20,11 @@ use cranelift::{
   prelude::{
     isa::{Builder, CallConv, TargetIsa},
     settings::Flags,
-    types::I64,
+    types::{I32, I64},
     *,
   },
 };
-use sart::ctr::VMTaskState;
+use sart::ctr::{FLAGS::FLAG_JUMP_TO_RESUME, VMTaskState};
 use std::{
   mem::offset_of,
   process::abort,
@@ -198,6 +198,7 @@ impl NativeCompiler for SaVMCranelift {
       builder.append_block_params_for_function_params(prologue);
 
       let blockv0 = builder.create_block();
+      let jumpresolver = builder.create_block();
 
       let (vmtaskstate, largepad) = {
         builder.switch_to_block(prologue);
@@ -215,7 +216,19 @@ impl NativeCompiler for SaVMCranelift {
         );
         builder.def_var(largepad, largepad_imm);
 
-        builder.ins().jump(blockv0, []);
+        let flags = builder.ins().load(
+          isa.pointer_type(),
+          MemFlags::trusted(),
+          glob,
+          offset_of!(VMTaskState, flags) as i32,
+        );
+        let flag_jmp = builder
+          .ins()
+          .iconst(isa.pointer_type(), FLAG_JUMP_TO_RESUME as u64 as i64);
+
+        let out = builder.ins().band(flags, flag_jmp);
+
+        builder.ins().brif(out, jumpresolver, [], blockv0, []);
 
         (glob, largepad)
       };
@@ -264,6 +277,7 @@ impl NativeCompiler for SaVMCranelift {
         )),
         blockmap: h,
         largepad,
+        jumpresolver,
         prologue,
         blockv0,
         epilogue,
@@ -293,19 +307,28 @@ impl NativeCompiler for SaVMCranelift {
 
     // Compile
     builder.finalize();
+
     println!("Built this : {f:?}");
+
     let (bin, relocs) = {
       let mut ctx = Context::for_function(f);
 
       let compiled = ctx.compile(isa, &mut Default::default());
 
       let compiled = (|| {
-        #[cfg(debug_assertions)]
-        return compiled.unwrap();
+        return compiled.map_or_else(
+          |_err| {
+            println!("Error\n{_err:#?}");
 
-        #[cfg(not(debug_assertions))]
-        return compiled.unwrap_or_else(|_| abort());
+            None
+          },
+          |x| Some(x),
+        );
       })();
+
+      let Some(compiled) = compiled else {
+        return CacheData::None;
+      };
 
       let code: Arc<[u8]> = compiled.buffer.data().into();
       let relocs = compiled
@@ -362,6 +385,7 @@ pub struct CompilerMeta<'a> {
   pub async_epilogue: Block,
   pub epilogue: Block,
   pub blockv0: Block,
+  pub jumpresolver: Block,
 
   // PTR
   pub vmtaskstate: Value,

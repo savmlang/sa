@@ -23,7 +23,7 @@ pastey = "^0.2"
 tokio = { version = "^1", features = ["rt", "rt-multi-thread", "sync", "time"] }
 
 # Sets of compiler
-cranelift = { version = "^0.130", features = [
+cranelift = { version = "^0.131", features = [
   "std",
   "native",
   "frontend",
@@ -38,13 +38,18 @@ sart = { path = "../sart" }
 
 # SaVM Native Linker and CodeAllocator
 sajit = { version = "0.0.1", path = "../sajit", optional = true }
-serde = { version = "1.0.228", features = ["derive"] }
+serde = { version = "^1", features = ["derive"] }
 
 [features]
 default = []
 
-dev = ["cranelift", "llvm"]
+# Development mode (rust-analyzer)
+dev = ["cranelift", "llvm", "sendback"]
 
 llvm = ["dep:llvm-sys", "native"]
 cranelift = ["dep:cranelift", "native"]
 native = ["dep:sajit", "dep:evmap", "dep:crossbeam-channel"]
+
+# Send JIT Generated Outputs back
+# for satest mainly
+sendback = ["native"]

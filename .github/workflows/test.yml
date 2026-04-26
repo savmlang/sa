@@ -32,10 +32,11 @@ jobs:
         with:
           shell: bash
           run: |
+            cd jitemission
+
             mkdir target/release
             cp ${{ github.workspace }}/target/release/libsalloc.so ${{ github.workspace }}/jitemission/target/release/libsalloc.so
 
-            cd jitemission
             cargo run --release
 
   init:

@@ -44,7 +44,7 @@ pub fn regmapper(
 
       RegMapped {
         lanes,
-        cliftype: dtype,
+        cliftype: typedata.x1.by(total_lanes).unwrap(),
       }
     })
     .collect();

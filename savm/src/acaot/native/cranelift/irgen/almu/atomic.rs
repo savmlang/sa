@@ -6,7 +6,10 @@ use cranelift::{
 use crate::acaot::{
   native::cranelift::{
     CompilerMeta,
-    irgen::reg::{TypeOrWidth, resolve_location_src_load, resolve_location_src_store},
+    irgen::reg::{
+      TypeOrWidth, resolve_location_src_load, resolve_location_src_store,
+      vector::abstract_insertlane,
+    },
   },
   pickle::{
     def::PickleInstruction,
@@ -149,8 +152,8 @@ pub fn hwnd_atomic(
           .ins()
           .vconst(ty.clif_mapping().x1.by(2).unwrap(), cnst);
 
-        let val = builder.ins().insertlane(val, valload, 0);
-        let val = builder.ins().insertlane(val, succ, 1);
+        let val = abstract_insertlane(builder, meta, val, valload, 0);
+        let val = abstract_insertlane(builder, meta, val, succ, 1);
 
         out.store(builder, 0, val);
       } else {

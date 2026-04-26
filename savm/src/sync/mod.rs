@@ -89,6 +89,8 @@ impl VM {
     let leng = data.len();
 
     #[allow(unused)]
+    let mut jumptomark = None;
+    #[allow(unused)]
     let mut run_jit = false;
 
     VMSTAT.with(|x| unsafe {
@@ -105,15 +107,25 @@ impl VM {
       let mut atmark = false;
 
       'jcheck: loop {
+        let dt = data.as_ref();
+
         #[cfg(feature = "native")]
         if JMPTOJIT {
           if let Some(_) = &crate::JIT_CACHE.get().unwrap_unchecked().0.get(&sectionid) {
+            if let Some(marker) = jumptomark {
+              use sart::ctr::FLAGS::FLAG_JUMP_TO_RESUME;
+
+              (*ts).flags = FLAG_JUMP_TO_RESUME;
+              (*ts).curline_or_resume.unsigned = marker;
+            }
+
+            // Jump to JIT
             run_jit = true;
+
             break 'jcheck;
           };
         }
 
-        let dt = data.as_ref();
         // We use loop-in-a-loop to correctly manage state!
         // eg, yield that makes it re-check for JIT
         loop {
@@ -124,9 +136,26 @@ impl VM {
           let pickle = dt.get_unchecked((*ts).curline_or_resume.usi);
 
           // USE A NO-OP to our benefit
-          if pickle.opcode == PICKLE_OPCODE_HINT
-            && [PICKLE_OPCODE_MARK].iter().any(|x| *x == pickle.u1)
-          {
+          if pickle.opcode == PICKLE_OPCODE_HINT && PICKLE_OPCODE_MARK == pickle.u1 {
+            let data: [PickleInstruction; 2] = {
+              dt[((*ts).curline_or_resume.usi + 1)..(*ts).curline_or_resume.usi + 3]
+                .try_into()
+                .unwrap()
+            };
+
+            let out = u64::from_le_bytes([
+              data[0].opcode,
+              data[0].u1,
+              data[0].u2,
+              data[0].u3,
+              data[1].opcode,
+              data[1].u1,
+              data[1].u2,
+              data[1].u3,
+            ]);
+
+            jumptomark = Some(out);
+
             (*ts).curline_or_resume.usi += 3;
             atmark = true;
             continue 'jcheck;
@@ -161,6 +190,7 @@ impl VM {
     return self.ame_free(sectionid);
   }
 
+  #[inline(always)]
   #[cfg(feature = "native")]
   pub fn dispatch_jit(&self, sectionid: u64) {
     use std::ops::Deref;

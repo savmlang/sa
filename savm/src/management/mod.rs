@@ -1,9 +1,18 @@
 use crate::{
   BytecodeResolver, CODE_CACHE, CacheData, SymbolMapTable,
-  acaot::pickle::{PickleWorker, def::PickleInstruction},
+  acaot::{
+    native::NativeCompilerBuilder,
+    pickle::{PickleWorker, def::PickleInstruction},
+  },
 };
+use core::range::RangeInclusive;
+use crossbeam_channel::Sender;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
-use std::sync::Arc;
+use std::{
+  iter::{Filter, Peekable},
+  slice::Iter,
+  sync::Arc,
+};
 
 #[cfg(feature = "native")]
 use crate::{
@@ -43,75 +52,87 @@ enum ProcessResult {
   None,
 }
 
-#[allow(unused_macros)]
-macro_rules! schedule {
-  ($tx_critical:ident, $tx_fastlane:ident, $tx_public:ident, $critical:ident, $important:ident, $others:ident, $compiler_fastlane:ident, $compiler_public:ident, $compilers:ident, $important_s:ident, $others_iter:ident) => {
-    /*
-      Schedule more work thu each sector
-    */
-    'a: while let Some(x) = $critical.peek() {
-      if $tx_critical
-        .try_send((**x, $compilers.len() - 1, false))
-        .is_ok()
-      {
-        _ = $critical.next();
-      } else {
-        break 'a;
-      }
-    }
+pub fn schedule<
+  'a,
+  'b,
+  F: Fn() -> Peekable<I2>,
+  E: Fn() -> Peekable<I3>,
+  I1: Iterator<Item = &'a u64>,
+  I2: Iterator<Item = &'b u64>,
+  I3: Iterator<Item = u64>,
+>(
+  tx_critical: &Sender<(u64, usize, bool)>,
+  tx_fastlane: &Sender<(u64, usize, bool)>,
+  tx_public: &Sender<(u64, usize, bool)>,
+  critical: &mut Peekable<I1>,
+  important: &mut Peekable<I2>,
+  others: &mut Peekable<I3>,
+  compiler_fastlane: &mut usize,
+  compiler_public: &mut usize,
+  compilers: &[&dyn NativeCompilerBuilder],
+  important_s: F,
+  others_iter: E,
+) {
+  /*
+    Schedule more work through each sector
+  */
 
-    'a: while let Some(x) = $important.peek() {
-      if $tx_fastlane
-        .try_send((**x, $compiler_fastlane, false))
-        .is_ok()
-      {
-        _ = $important.next();
-      } else {
-        break 'a;
-      }
+  'critical_loop: while let Some(x) = critical.peek() {
+    // Note: **x implies x is a reference to a reference/pointer
+    if tx_critical
+      .try_send((**x, compilers.len() - 1, false))
+      .is_ok()
+    {
+      _ = critical.next();
+    } else {
+      break 'critical_loop;
     }
+  }
 
-    'a: while let Some(x) = $others.peek() {
-      if $tx_public.try_send((*x, $compiler_public, false)).is_ok() {
-        _ = $others.next();
-      } else {
-        break 'a;
-      }
+  'important_loop: while let Some(x) = important.peek() {
+    if tx_fastlane
+      .try_send((**x, *compiler_fastlane, false))
+      .is_ok()
+    {
+      _ = important.next();
+    } else {
+      break 'important_loop;
     }
+  }
 
-    /*
-      Sanity Checking
-    */
-
-    // If the list is empty
-    // Else - end
-    if $critical.peek().is_none() {
-      // Send shutdown signal to the thread
-      _ = $tx_critical.try_send((0, 0, true));
+  'others_loop: while let Some(x) = others.peek() {
+    if tx_public.try_send((*x, *compiler_public, false)).is_ok() {
+      _ = others.next();
+    } else {
+      break 'others_loop;
     }
+  }
 
-    // If the list is empty & compiler can be increased, increment
-    // Else - end fastlane
-    if $important.peek().is_none() {
-      if $compiler_fastlane + 1 == $compilers.len() {
-        $compiler_fastlane += 1;
-        $important = $important_s.into_iter().peekable();
-      } else {
-        // Send shutdown signal to the fastlane thread
-        _ = $tx_fastlane.try_send((0, 0, true));
-      }
-    }
+  /*
+    Sanity Checking
+  */
 
-    if $others.peek().is_none() {
-      if $compiler_public + 1 == $compilers.len() {
-        $compiler_public += 1;
-        $others = $others_iter();
-      } else {
-        // Send shutdown signal
-        _ = $tx_public.try_send((0, 0, true));
-      }
+  if critical.peek().is_none() {
+    _ = tx_critical.try_send((0, 0, true));
+  }
+
+  if important.peek().is_none() {
+    if *compiler_fastlane + 1 == compilers.len() {
+      _ = tx_fastlane.try_send((0, 0, true));
+    } else {
+      *compiler_fastlane += 1;
+      *important = important_s();
     }
-  };
+  }
+
+  if others.peek().is_none() {
+    if *compiler_public + 1 == compilers.len() {
+      _ = tx_public.try_send((0, 0, true));
+    } else {
+      *compiler_fastlane += 1;
+      *important = important_s();
+    }
+  }
 }
 
 pub fn management_main(
@@ -306,13 +327,13 @@ pub fn management_main(
               }
             }
 
-            schedule!(tx_critical, tx_fastlane, tx_public, critical, important, others, compiler_fastlane, compiler_public, compilers, important_s, others_iter);
+            schedule(&tx_critical, &tx_fastlane, &tx_public, &mut critical, &mut important, &mut others, &mut compiler_fastlane, &mut compiler_public, compilers, || important_s.into_iter().peekable(), others_iter);
           }
 
 
           recv(timer) -> _ => {
             // Redundant, but JustInCase
-            schedule!(tx_critical, tx_fastlane, tx_public, critical, important, others, compiler_fastlane, compiler_public, compilers, important_s, others_iter);
+            schedule(&tx_critical, &tx_fastlane, &tx_public, &mut critical, &mut important, &mut others, &mut compiler_fastlane, &mut compiler_public, compilers, || important_s.into_iter().peekable(), others_iter);
 
             // Break JIT if all modules are processes
             // Now we get into well - nicely linking all of them
@@ -325,6 +346,12 @@ pub fn management_main(
           }
         }
       }
+    }
+
+    loop {
+      use std::thread::sleep;
+
+      sleep(Duration::MAX);
     }
   }
 }

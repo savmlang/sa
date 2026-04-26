@@ -1,11 +1,12 @@
 use savm::{
-  BytecodeResolver, CacheData, CacheLevel, ResolvedData, SymbolMapTable, SymbolMapTableInfo, VM,
-  sync::VMSTAT,
+  BytecodeResolver, CacheData, CacheLevel, JIT_CACHE, ResolvedData, SymbolMapTable,
+  SymbolMapTableInfo, VM, sync::VMSTAT,
 };
 use serde::{Deserialize, Serialize};
 use std::{
   fs::{self, File},
   mem::zeroed,
+  thread::sleep,
   time::{Duration, Instant},
 };
 
@@ -59,20 +60,34 @@ fn main() {
   let total = fs::read_dir("./dist").unwrap().count();
   let vm = VM::new(Resolver(total));
 
+  sleep(Duration::from_secs(30));
+
   for sectionid in 0..total {
     println!("[TESTING] #{sectionid}");
 
     let out = fs::read(format!("./expected/{sectionid}.toml")).unwrap();
     let out: ExpectedOutput = toml::from_slice(&out).unwrap();
 
-    let mut durs = vec![];
+    let mut durs_intl = vec![];
+    let mut durs_clif = vec![];
 
     for _ in 0..100 {
       let t0 = Instant::now();
-      vm.call_section(sectionid as _);
+      vm.dispatch_chocolate::<false>(sectionid as _);
       let tf = t0.elapsed();
 
-      durs.push(tf);
+      durs_intl.push(tf);
+
+      if let Some(true) = JIT_CACHE
+        .get()
+        .and_then(|x| Some(x.0.contains_key(&(sectionid as u64))))
+      {
+        let t0 = Instant::now();
+        vm.dispatch_jit(sectionid as _);
+        let tf = t0.elapsed();
+
+        durs_clif.push(tf);
+      }
 
       VMSTAT.with(|x| unsafe {
         let mt = &mut *x.get();
@@ -102,9 +117,10 @@ fn main() {
       });
     }
 
-    durs.sort();
+    durs_intl.sort();
+    durs_clif.sort();
 
-    let d = (|| {
+    let d = |durs: &[Duration]| {
       let len = durs.len();
       if len == 0 {
         return Duration::new(0, 0);
@@ -119,9 +135,17 @@ fn main() {
         let mid2 = durs[len / 2];
         (mid1 + mid2) / 2
       }
-    })();
+    };
 
-    println!("[PASS]    #{sectionid} in {d:?} (Intl-Mode)");
+    let interpreter = d(&durs_intl);
+    let cranelift = d(&durs_clif);
+    println!("[PASS]    #{sectionid} in {interpreter:?} (Chocolate - Interpreter)");
+
+    if cranelift.is_zero() {
+      println!("[PASS]    #{sectionid} could not compile for (Crafter JIT - Compiler)");
+    } else {
+      println!("[PASS]    #{sectionid} in {cranelift:?} (Crafter JIT - Compiler)");
+    }
     println!();
   }
 }

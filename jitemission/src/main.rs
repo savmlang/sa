@@ -32,7 +32,7 @@ impl BytecodeResolver for Modules {
 }
 
 fn main() {
-  let f = std::fs::File::open("./2").unwrap();
+  let f = std::fs::File::open("./3").unwrap();
 
   let mut worker = PickleWorker {
     bytecode: f,
