@@ -1,7 +1,7 @@
 name: Test SaVM
 
 on:
-  workflow_dispatch: 
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -28,10 +28,13 @@ jobs:
       - name: Run
         uses: ./.github/actions/sashell
         env:
-          LIBRARY_PATH: ${{ github.workspace }}/target/release
+          LIBRARY_PATH: ${{ github.workspace }}/jitemission/target/release
         with:
           shell: bash
           run: |
+            mkdir target/release
+            cp ${{ github.workspace }}/target/release/libsalloc.so ${{ github.workspace }}/jitemission/target/release/libsalloc.so
+
             cd jitemission
             cargo run --release
 
