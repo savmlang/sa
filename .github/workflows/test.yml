@@ -1,9 +1,7 @@
 name: Test SaVM
 
 on:
-  push:
-    paths:
-      - ./savm/**/*
+  workflow_dispatch: 
 
 permissions:
   contents: read
