@@ -1,11 +1,20 @@
 use std::{num::NonZeroU8, pin::Pin, ptr::null, sync::Arc};
 
+use sajit::relocations::RelocKind;
 use sajit::{
   Executable, MemoryExecutableApi, WriteFnResult, advanced::MemoryExecutable,
   relocations::Relocation,
 };
 
-use crate::acaot::JITReloc;
+use crate::{
+  acaot::{
+    JITReloc, LocSrc,
+    pickle::reader::corevm::{
+      jitcall_scratch_ffi, jitcall_vcopy_noalias, jitcall_vcopy_overlapping,
+    },
+  },
+  executor::corevm_libcall,
+};
 
 pub struct JITMemoryManager {
   quick: Vec<Pin<Box<MemoryExecutable>>>,
@@ -108,6 +117,31 @@ impl Drop for JITMemoryManager {
   }
 }
 
-pub fn calculate_relocation(rl: &[JITReloc]) -> Box<[Relocation]> {
-  todo!()
+pub fn calculate_relocation_abs(reloc: &[JITReloc]) -> Box<[Relocation]> {
+  reloc
+    .iter()
+    .map(|reloc| {
+      let mut relocdata = Relocation {
+        addend: reloc.addend,
+        kind: (|| {
+          #[cfg(target_pointer_width = "64")]
+          return RelocKind::Abs8;
+
+          #[cfg(target_pointer_width = "32")]
+          return RelocKind::Abs4;
+        })(),
+        offset: reloc.offset,
+        symbol_addr: (corevm_libcall as *const ()).addr() as _,
+      };
+
+      relocdata.symbol_addr = match &reloc.loc {
+        LocSrc::VCopyNoAlias => (jitcall_vcopy_noalias as *const ()).addr() as _,
+        LocSrc::VCopyOverlapping => (jitcall_vcopy_overlapping as *const ()).addr() as _,
+        LocSrc::VMScratchAction => (jitcall_scratch_ffi as *const ()).addr() as _,
+        _ => relocdata.symbol_addr,
+      };
+
+      relocdata
+    })
+    .collect::<Box<_>>()
 }

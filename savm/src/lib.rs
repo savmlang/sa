@@ -33,7 +33,7 @@ use crate::{
 };
 
 pub mod executor;
-pub(crate) mod management;
+pub mod management;
 pub mod sync;
 
 pub static TOTAL_THREADS: LazyLock<usize> =
@@ -250,15 +250,23 @@ pub fn unpack_u64(packed: u64) -> (u32, u32) {
 }
 
 impl VM {
-  /// Please note that module id `0` represents the main module
   pub fn new<T: BytecodeResolver + Send + Sync + 'static>(data: T) -> Self {
+    unsafe { Self::new_unsafe::<T, true>(data) }
+  }
+  /// Please note that module id `0` represents the main module
+  ///
+  /// This is not really `unsafe`
+  /// This is **unsafe** by intent
+  pub unsafe fn new_unsafe<T: BytecodeResolver + Send + Sync + 'static, const MGNTHTREAD: bool>(
+    data: T,
+  ) -> Self {
     CODE_CACHE.run_pending_tasks();
     VMMADE.set(()).expect("Each process can only have 1 VM");
 
     let resolver = Arc::new(data);
 
     // Start Management Thread
-    {
+    if MGNTHTREAD {
       let resolve = resolver.clone();
 
       #[cfg(feature = "native")]

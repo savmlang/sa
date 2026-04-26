@@ -3,8 +3,6 @@ use crate::{
   acaot::pickle::{PickleWorker, def::PickleInstruction},
 };
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
-#[cfg(feature = "native")]
-use sajit::relocations::{RelocKind, Relocation};
 use std::sync::Arc;
 
 #[cfg(feature = "native")]
@@ -17,6 +15,7 @@ use crate::{
     },
   },
   executor::corevm_libcall,
+  management::jitmem::calculate_relocation_abs,
 };
 #[cfg(feature = "native")]
 use evmap::handles::WriteHandle;
@@ -350,32 +349,7 @@ fn process_jit(
           abort();
         }
         CacheData::CraneliftAbs8 { binary, reloc } | CacheData::LLVMAbs8 { binary, reloc } => {
-          let relocs = reloc
-            .iter()
-            .map(|reloc| {
-              let mut relocdata = Relocation {
-                addend: reloc.addend,
-                kind: (|| {
-                  #[cfg(target_pointer_width = "64")]
-                  return RelocKind::Abs8;
-
-                  #[cfg(target_pointer_width = "32")]
-                  return RelocKind::Abs4;
-                })(),
-                offset: reloc.offset,
-                symbol_addr: (corevm_libcall as *const ()).addr() as _,
-              };
-
-              relocdata.symbol_addr = match &reloc.loc {
-                LocSrc::VCopyNoAlias => (jitcall_vcopy_noalias as *const ()).addr() as _,
-                LocSrc::VCopyOverlapping => (jitcall_vcopy_overlapping as *const ()).addr() as _,
-                LocSrc::VMScratchAction => (jitcall_scratch_ffi as *const ()).addr() as _,
-                _ => relocdata.symbol_addr,
-              };
-
-              relocdata
-            })
-            .collect::<Box<_>>();
+          let relocs = calculate_relocation_abs(&reloc);
 
           let bin = sajit.write_quick(&binary, &relocs);
 

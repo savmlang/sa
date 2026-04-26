@@ -9,6 +9,8 @@ use std::{
   },
 };
 
+#[cfg(feature = "native")]
+use sajit::Executable;
 use sart::{ctr::VMTaskState, salloc, structures::QuadPackedData};
 
 use crate::{
@@ -75,13 +77,18 @@ thread_local! {
 
 impl VM {
   pub fn call_section(&self, sectionid: u64) {
+    return self.dispatch_chocolate::<true>(sectionid);
+  }
+
+  #[inline(always)]
+  pub fn dispatch_chocolate<const JMPTOJIT: bool>(&self, sectionid: u64) {
     let Some((mut data, jumps)) = CODE_CACHE.get(&sectionid) else {
-      // TODO: Replace with `become`
-      return self.pickle_section(sectionid);
+      return self.pickle_section(sectionid, Self::dispatch_chocolate::<JMPTOJIT>);
     };
 
     let leng = data.len();
 
+    #[allow(unused)]
     let mut run_jit = false;
 
     VMSTAT.with(|x| unsafe {
@@ -99,22 +106,12 @@ impl VM {
 
       'jcheck: loop {
         #[cfg(feature = "native")]
-        if let Some(_) = &crate::JIT_CACHE.get().unwrap_unchecked().0.get(&sectionid) {
-          run_jit = true;
-          break 'jcheck;
-        };
-
-        // Try to get a newer Pickle to run chocolate faster
-        // If not there - keep the old arc
-        // if let Some((inst, jumps)) = CODE_CACHE.get(&sectionid) {
-        //   let marker = data = inst;
-        //   t.ws.jmp = (0, jumps.get(&0).map(|x| *x).unwrap_or_default());
-
-        //   ts.curline_or_resume.usi = *jumps
-        //     .get(&ptr::read_unaligned(t.ws.arr as *const u8 as *const u64))
-        //     .unwrap();
-        //   t.ws.relocmap = jumps;
-        // };
+        if JMPTOJIT {
+          if let Some(_) = &crate::JIT_CACHE.get().unwrap_unchecked().0.get(&sectionid) {
+            run_jit = true;
+            break 'jcheck;
+          };
+        }
 
         let dt = data.as_ref();
         // We use loop-in-a-loop to correctly manage state!
@@ -165,11 +162,54 @@ impl VM {
   }
 
   #[cfg(feature = "native")]
-  pub(crate) fn dispatch_jit(&self, _sectionid: u64) {
-    return self.ame_free(_sectionid);
+  pub fn dispatch_jit(&self, sectionid: u64) {
+    use std::ops::Deref;
+
+    use crate::JIT_CACHE;
+
+    let Some(jitcache) = JIT_CACHE.get() else {
+      return unreachable!();
+    };
+
+    let Some(jit) = jitcache.0.get_one(&sectionid) else {
+      return self.dispatch_chocolate::<true>(sectionid);
+    };
+
+    let (_, exec) = unsafe { &**jit }.get();
+
+    self.exec_jit(*exec.deref());
+
+    drop(exec);
+
+    return self.ame_free(sectionid);
   }
 
-  fn pickle_section(&self, sectionid: u64) {
+  #[inline(always)]
+  #[cfg(feature = "native")]
+  pub fn exec_jit(&self, exec: *const Executable) {
+    VMSTAT.with(|x| unsafe {
+      use std::mem::transmute;
+
+      let vmstate = x.get();
+
+      let curr_taskstate = (*vmstate).ts.as_mut_ptr().add((*vmstate).cindex);
+
+      // Setup Pointers
+      // todo!() figure out jumping
+      {
+        let task = &mut *curr_taskstate;
+
+        task.engine_or_pt.pt = self as *const _ as *mut VM as _;
+        task.ws_or_pt2.pt = &mut (*vmstate).ws as *mut _ as _;
+      }
+
+      // Execute
+      let exec: extern "C" fn(vmtskstate: *mut VMTaskState) = transmute(exec);
+      exec(curr_taskstate);
+    });
+  }
+
+  fn pickle_section(&self, sectionid: u64, dispatch: fn(vm: &VM, sectionid: u64) -> ()) {
     // Compile
     let SymbolMapTable::MixedSizedBytecode { bytecode } = self.resolve.resolve_data(sectionid)
     else {
@@ -189,7 +229,7 @@ impl VM {
     CODE_CACHE.run_pending_tasks();
 
     // TODO: Replace with `become`
-    return self.call_section(sectionid);
+    return dispatch(self, sectionid);
   }
 
   fn ame_free(&self, _sectionid: u64) {

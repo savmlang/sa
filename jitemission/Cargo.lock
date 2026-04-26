@@ -758,6 +758,7 @@ dependencies = [
  "rayon",
  "sajit",
  "sart",
+ "serde",
  "tokio",
 ]
 
