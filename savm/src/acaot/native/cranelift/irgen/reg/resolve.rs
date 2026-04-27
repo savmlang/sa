@@ -1,6 +1,6 @@
 use crate::acaot::native::cranelift::irgen::reg::{
   regmap::{RegMapOut, regmapper},
-  vector::{abstract_extractlane, abstract_insertlane},
+  vector::{abstract_extractlane, abstract_insertlane, reglane_extract, reglane_insert},
 };
 
 use super::*;
@@ -56,11 +56,12 @@ pub fn resolve_location_src_load_assumedwdt(
           let v = resolve_reg(builder, meta, x);
           let r = builder.use_var(v);
 
-          builder.ins().bitcast(
-            typedata.xreg,
-            MemFlags::new().with_endianness(Endianness::Little),
-            r,
-          )
+          // builder.ins().bitcast(
+          //   typedata.xreg,
+          //   MemFlags::new().with_endianness(Endianness::Little),
+          //   r,
+          // )
+          r
         })
         .collect::<Box<[_]>>();
 
@@ -90,12 +91,19 @@ pub fn resolve_location_src_load_assumedwdt(
             let reg = regs[lane.regidx as usize];
 
             let typ = builder.func.dfg.value_type(reg);
+
             // The register only has one lane
             // i.e. its guaranteed to be u64
-            let val = if typ.lane_count() == 1 {
+            let val = if typ == typedata.x1 {
               reg
+            } else if typ == typedata.x1i {
+              builder.ins().bitcast(
+                typedata.x1,
+                MemFlags::new().with_endianness(Endianness::Little),
+                reg,
+              )
             } else {
-              abstract_extractlane(builder, meta, reg, lane.laneid as u8)
+              reglane_extract(builder, reg, typedata.x1, lane.laneid as u8)
             };
 
             simdval = if singlelane {
@@ -326,12 +334,12 @@ impl StoreResolver {
             let r = builder.use_var(v);
 
             (
-              builder.ins().bitcast(
-                typedata.xreg,
-                MemFlags::new().with_endianness(Endianness::Little),
-                r,
-              ),
-              v,
+              // builder.ins().bitcast(
+              //   typedata.xreg,
+              //   MemFlags::new().with_endianness(Endianness::Little),
+              //   r,
+              // ),
+              r, v,
             )
           })
           .collect::<Box<[_]>>();
@@ -353,13 +361,12 @@ impl StoreResolver {
               let (reg, _) = &mut regs[lane.regidx as usize];
 
               let typ = builder.func.dfg.value_type(*reg);
-              // The register only has one lane
-              // i.e. its guaranteed to be u64
-              if typ.lane_count() == 1 {
+
+              // No reglane dance if its already I64
+              if typ.bytes() == typedata.x1.bytes() {
                 *reg = value_to_set;
               } else {
-                let output =
-                  abstract_insertlane(builder, meta, *reg, value_to_set, lane.laneid as u8);
+                let output = reglane_insert(builder, *reg, value_to_set, lane.laneid as u8);
 
                 *reg = output;
               }

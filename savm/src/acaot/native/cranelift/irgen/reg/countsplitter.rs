@@ -85,10 +85,10 @@ pub fn break_simd_waterfall_inner(
   let b512_threshold = 64 / width;
   let b256_threshold = 32 / width;
   let b128_threshold = 16 / width;
-  let b64_threshold = 8 / width;
-  let b32_threshold = 4 / width;
-  let b16_threshold = 2 / width;
-  let b8_threshold = 1 / width;
+  // let b64_threshold = 8 / width;
+  // let b32_threshold = 4 / width;
+  // let b16_threshold = 2 / width;
+  // let b8_threshold = 1 / width;
 
   // MemFlags (Vector)
   let b512_flags = memflags(alignment, 64);
@@ -96,10 +96,10 @@ pub fn break_simd_waterfall_inner(
   let b128_flags = memflags(alignment, 16);
 
   // MemFlags (Scalar)
-  let b64_flags = memflags(alignment, 8);
-  let b32_flags = memflags(alignment, 4);
-  let b16_flags = memflags(alignment, 2);
-  let b8_flags = memflags(alignment, 1);
+  // let b64_flags = memflags(alignment, 8);
+  // let b32_flags = memflags(alignment, 4);
+  // let b16_flags = memflags(alignment, 2);
+  let memflags = memflags(alignment, map.width() as u8);
 
   let mut offset: u32 = 0;
 
@@ -169,40 +169,47 @@ pub fn break_simd_waterfall_inner(
       }
     }
 
-    if b64_threshold > 0 {
-      while count >= b64_threshold {
-        loadinst.push((offset, map.simd_width_type(8), b64_flags));
-        offset += 8;
+    // if b64_threshold > 0 {
+    //   while count >= b64_threshold {
+    //     loadinst.push((offset, map.simd_width_type(8), b64_flags));
+    //     offset += 8;
 
-        count -= b64_threshold;
-      }
-    }
+    //     count -= b64_threshold;
+    //   }
+    // }
 
-    if b32_threshold > 0 {
-      while count >= b32_threshold {
-        loadinst.push((offset, map.simd_width_type(4), b32_flags));
-        offset += 4;
+    // if b32_threshold > 0 {
+    //   while count >= b32_threshold {
+    //     loadinst.push((offset, map.simd_width_type(4), b32_flags));
+    //     offset += 4;
 
-        count -= b32_threshold;
-      }
-    }
+    //     count -= b32_threshold;
+    //   }
+    // }
 
-    if b16_threshold > 0 {
-      while count >= b16_threshold {
-        loadinst.push((offset, map.simd_width_type(2), b16_flags));
-        offset += 2;
+    // if b16_threshold > 0 {
+    //   while count >= b16_threshold {
+    //     loadinst.push((offset, map.simd_width_type(2), b16_flags));
+    //     offset += 2;
 
-        count -= b16_threshold;
-      }
-    }
+    //     count -= b16_threshold;
+    //   }
+    // }
 
-    if b8_threshold > 0 {
-      while count >= b8_threshold {
-        loadinst.push((offset, map.simd_width_type(1), b8_flags));
-        offset += 1;
+    // if b8_threshold > 0 {
+    //   while count >= b8_threshold {
+    //     loadinst.push((offset, map.simd_width_type(1), b8_flags));
+    //     offset += 1;
+    //
+    //     count -= b8_threshold;
+    //   }
+    // }
 
-        count -= b8_threshold;
-      }
+    while count > 0 {
+      loadinst.push((offset, map.x1, memflags));
+      offset += 1;
+
+      count -= 1;
     }
   }
 
