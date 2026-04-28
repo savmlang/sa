@@ -3,13 +3,15 @@ use crate::{
   acaot::pickle::{PickleWorker, def::PickleInstruction},
 };
 use core::range::RangeInclusive;
-use crossbeam_channel::Sender;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use std::{
   iter::{Filter, Peekable},
   slice::Iter,
   sync::Arc,
 };
+
+#[cfg(feature = "native")]
+use crossbeam_channel::Sender;
 
 #[cfg(feature = "native")]
 use crate::{
