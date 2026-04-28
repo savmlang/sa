@@ -1,9 +1,6 @@
 use crate::{
   BytecodeResolver, CODE_CACHE, CacheData, SymbolMapTable,
-  acaot::{
-    native::NativeCompilerBuilder,
-    pickle::{PickleWorker, def::PickleInstruction},
-  },
+  acaot::pickle::{PickleWorker, def::PickleInstruction},
 };
 use core::range::RangeInclusive;
 use crossbeam_channel::Sender;
@@ -18,6 +15,7 @@ use std::{
 use crate::{
   SafeSwappableCodeStore,
   acaot::{
+    native::NativeCompilerBuilder,
     LocSrc,
     pickle::reader::corevm::{
       jitcall_scratch_ffi, jitcall_vcopy_noalias, jitcall_vcopy_overlapping,
@@ -52,6 +50,7 @@ enum ProcessResult {
   None,
 }
 
+#[cfg(feature = "native")]
 pub fn schedule<
   'a,
   'b,
