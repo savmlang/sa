@@ -207,7 +207,7 @@ pub fn break_simd_waterfall_inner(
 
     while count > 0 {
       loadinst.push((offset, map.x1, memflags));
-      offset += 1;
+      offset += map.width();
 
       count -= 1;
     }

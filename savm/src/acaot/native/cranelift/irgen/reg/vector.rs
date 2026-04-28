@@ -24,7 +24,7 @@ pub fn reglane_insert(builder: &mut FunctionBuilder, reg: Value, valadd: Value, 
   };
 
   let reg = {
-    let mask = ((1u64 << single_elem_width * 8) - 1) << (single_elem_width * 8 * idx as u32);
+    let mask = ((1u64 << (single_elem_width * 8)) - 1) << (single_elem_width * 8 * idx as u32);
 
     builder.ins().band_imm(reg, !mask.cast_signed())
   };
@@ -37,7 +37,7 @@ pub fn reglane_extract(builder: &mut FunctionBuilder, reg: Value, shrink: Type, 
   let single_elem_width = cliftype.lane_type().bytes();
 
   let reg = {
-    let mask = ((1u64 << single_elem_width * 8) - 1) << (single_elem_width * 8 * idx as u32);
+    let mask = ((1u64 << (single_elem_width * 8)) - 1) << (single_elem_width * 8 * idx as u32);
 
     let masked = builder.ins().band_imm(reg, mask.cast_signed());
 

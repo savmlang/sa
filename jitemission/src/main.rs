@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 
 use savm::acaot::{native::compiler_infra, pickle::PickleWorker};
 use savm::management::jitmem::JITMemoryManager;
-use savm::{BytecodeResolver, VM};
+use savm::{sync::VMSTAT, BytecodeResolver, VM};
 
 struct Modules {}
 
@@ -86,6 +86,18 @@ fn main() {
 
   println!("[PASS] {d:?}");
   println!();
+
+  VMSTAT.with(|x| unsafe {
+    let mt = &mut *x.get();
+
+    let ts = &mt.ts[0];
+
+    let actual = [
+      ts.r1.u64, ts.r2.u64, ts.r3.u64, ts.r4.u64, ts.r5.u64, ts.r6.u64, ts.r7.u64, ts.r8.u64,
+    ];
+
+    println!("{actual:?}");
+  });
 
   forget(jmem);
 }

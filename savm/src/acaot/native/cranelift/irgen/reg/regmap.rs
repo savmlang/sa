@@ -11,32 +11,39 @@ pub fn regmapper(
   count: u32,
   assumedwdt: Option<u32>,
 ) -> RegMapOut {
-  let wdt = typedata.width();
+  let width = typedata.width();
 
-  let cnts_in_1_reg = typedata.xreg.lane_count();
+  let counts_in_1_reg = typedata.xreg.lane_count();
 
-  let offset_count = offset_bytes as u32 / wdt;
+  let offset_knot_in_count = offset_bytes as u32 / width;
 
-  let bytes_touched = wdt * count + offset_bytes as u32;
-  let totalregstouched = bytes_touched.div_ceil(8) as u8;
+  let regs = {
+    let bytes_touched = width * count + offset_bytes as u32;
+    let totalregstouched = bytes_touched.div_ceil(8) as u8;
 
-  let regs = (reg0..(reg0 + totalregstouched));
+    (reg0..(reg0 + totalregstouched))
+  };
 
-  let waterfall = break_simd_waterfall(8, typedata, count, assumedwdt);
+  let waterfall = break_simd_waterfall(
+    if offset_knot_in_count == 0 { 8 } else { 1 },
+    typedata,
+    count,
+    assumedwdt,
+  );
 
   let map = waterfall
     .iter()
     .map(|&(additive_offset, dtype, _)| {
-      let offset_cnt_additive = additive_offset / wdt;
+      let offset_cnt_additive = additive_offset / width;
 
       let total_lanes = dtype.lane_count();
 
       let lanes = (0..total_lanes)
         .map(|add| {
-          let parity = (offset_count + offset_cnt_additive + add);
+          let full_offset = (offset_knot_in_count + offset_cnt_additive + add);
 
-          let regidx = parity / cnts_in_1_reg;
-          let laneid = parity.rem(cnts_in_1_reg);
+          let regidx = full_offset / counts_in_1_reg;
+          let laneid = full_offset.rem(counts_in_1_reg);
 
           LaneData { regidx, laneid }
         })
