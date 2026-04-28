@@ -123,9 +123,9 @@ runs:
         ${{ inputs.builder }} build ${{ inputs.argv }} --release -p salloc
 
         if ("${{ inputs.feature }}" -contains "standard") {
-          ${{ inputs.builder }} build ${{ inputs.argv }} --release --no-default-features --features savmrun/${{ inputs.feature }} --exclude satest
+          ${{ inputs.builder }} build ${{ inputs.argv }} --release --workspace --no-default-features --features savmrun/${{ inputs.feature }}
         } else {
-          ${{ inputs.builder }} build ${{ inputs.argv }} --release --no-default-features --features savmrun/${{ inputs.feature }}
+          ${{ inputs.builder }} build ${{ inputs.argv }} --release --workspace --no-default-features --features savmrun/${{ inputs.feature }} --exclude satest
         }
 
     - name: Package
