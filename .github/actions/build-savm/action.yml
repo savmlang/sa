@@ -121,7 +121,12 @@ runs:
         }
 
         ${{ inputs.builder }} build ${{ inputs.argv }} --release -p salloc
-        ${{ inputs.builder }} build ${{ inputs.argv }} --release --no-default-features --features savmrun/${{ inputs.feature }}
+
+        if ("${{ inputs.feature }}" -contains "standard") {
+          ${{ inputs.builder }} build ${{ inputs.argv }} --release --no-default-features --features savmrun/${{ inputs.feature }} --exclude satest
+        } else {
+          ${{ inputs.builder }} build ${{ inputs.argv }} --release --no-default-features --features savmrun/${{ inputs.feature }}
+        }
 
     - name: Package
       shell: pwsh
