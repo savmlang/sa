@@ -78,6 +78,8 @@ fn main() {
 
       durs_intl.push(tf);
 
+      assertchecks(&out, sectionid);
+
       if let Some(true) = JIT_CACHE
         .get()
         .and_then(|x| Some(x.0.contains_key(&(sectionid as u64))))
@@ -89,32 +91,7 @@ fn main() {
         durs_clif.push(tf);
       }
 
-      VMSTAT.with(|x| unsafe {
-        let mt = &mut *x.get();
-
-        let ts = &mt.ts[0];
-
-        let actual = [
-          ts.r1.u64, ts.r2.u64, ts.r3.u64, ts.r4.u64, ts.r5.u64, ts.r6.u64, ts.r7.u64, ts.r8.u64,
-        ];
-        let expected = [
-          out.r1, out.r2, out.r3, out.r4, out.r5, out.r6, out.r7, out.r8,
-        ];
-
-        assert_eq!(actual, expected);
-
-        for i in 0..8 {
-          assert_eq!(
-            actual[i],
-            expected[i],
-            "Logic Error in Section {} at Register r{}",
-            sectionid,
-            i + 1
-          );
-        }
-
-        mt.ts = zeroed();
-      });
+      assertchecks(&out, sectionid);
     }
 
     durs_intl.sort();
@@ -148,4 +125,33 @@ fn main() {
     }
     println!();
   }
+}
+
+fn assertchecks<T: std::fmt::Display>(out: &ExpectedOutput, sectionid: T) {
+  VMSTAT.with(|x| unsafe {
+    let mt = &mut *x.get();
+
+    let ts = &mt.ts[0];
+
+    let actual = [
+      ts.r1.u64, ts.r2.u64, ts.r3.u64, ts.r4.u64, ts.r5.u64, ts.r6.u64, ts.r7.u64, ts.r8.u64,
+    ];
+    let expected = [
+      out.r1, out.r2, out.r3, out.r4, out.r5, out.r6, out.r7, out.r8,
+    ];
+
+    assert_eq!(actual, expected);
+
+    for i in 0..8 {
+      assert_eq!(
+        actual[i],
+        expected[i],
+        "Logic Error in Section {} at Register r{}",
+        sectionid,
+        i + 1
+      );
+    }
+
+    mt.ts = zeroed();
+  });
 }

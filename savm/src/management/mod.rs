@@ -1,9 +1,12 @@
 use crate::{
-  BytecodeResolver, CODE_CACHE, CacheData, SymbolMapTable,
+  BytecodeResolver, CODE_CACHE, CacheData, FNCALL_DISPATCH, SymbolMapTable, ThreadSafe,
   acaot::pickle::{PickleWorker, def::PickleInstruction},
+  sync::UnSafePtr,
 };
+use ahash::{HashMap, HashMapExt};
 use core::range::RangeInclusive;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use sart::{ctr::CVMTaskState, structures::ffi::CallSig};
 use std::{
   iter::{Filter, Peekable},
   slice::Iter,
@@ -15,10 +18,10 @@ use crossbeam_channel::Sender;
 
 #[cfg(feature = "native")]
 use crate::{
-  SafeSwappableCodeStore,
+  CacheLevel, SafeSwappableCodeStore,
   acaot::{
-    native::NativeCompilerBuilder,
     LocSrc,
+    native::NativeCompilerBuilder,
     pickle::reader::corevm::{
       jitcall_scratch_ffi, jitcall_vcopy_noalias, jitcall_vcopy_overlapping,
     },
@@ -48,7 +51,7 @@ enum ProcessResult {
     Arc<[PickleInstruction]>,
     Arc<ahash::HashMap<u64, usize>>,
   ),
-  Native(u64),
+  Native(u64, ThreadSafe<*const ()>, CallSig),
   None,
 }
 
@@ -142,7 +145,7 @@ pub fn management_main(
 ) {
   let last = resolve.as_ref().last_section_id();
 
-  let mut _nativeptr = vec![];
+  let mut nativeptr = HashMap::new();
   (0..=last)
     .into_par_iter()
     .map(|id| match resolve.as_ref().resolve_data(id) {
@@ -166,7 +169,9 @@ pub fn management_main(
           _ => ProcessResult::None,
         }
       }
-      SymbolMapTable::NativePointer { .. } => ProcessResult::Native(id),
+      SymbolMapTable::NativePointer { fnptr, cdecl } => {
+        ProcessResult::Native(id, ThreadSafe(fnptr), cdecl)
+      }
     })
     .filter_map(|x| match x {
       ProcessResult::None => None,
@@ -180,35 +185,31 @@ pub fn management_main(
           .as_ref()
           .update_cache(section, CacheData::Pickle { out: cache, jumps });
       }
-      ProcessResult::Native(m) => _nativeptr.push(m),
+      ProcessResult::Native(module, fnptr, csig) => {
+        _ = nativeptr.insert(module, (fnptr, csig));
+      }
       _ => {}
     });
 
+  let _nptr = FNCALL_DISPATCH.get_or_init(|| nativeptr);
+
   #[cfg(feature = "native")]
   {
-    let nativeptr = _nativeptr.into_boxed_slice();
-
     use std::{collections::HashMap, time::Duration};
 
     use crossbeam_channel::{bounded, select, tick};
 
     use crate::{
-      acaot::native::{CompilerId, compiler_infra},
+      acaot::native::compiler_infra,
       management::{compiler_thread::JITOut, jitmem::JITMemoryManager},
     };
 
     let mut samgr = JITMemoryManager::new();
 
-    let mut compiler_trampoline = HashMap::<CompilerId, Box<[u8]>>::new();
-    for b in compiler_infra() {
-      let mut c = b.get();
-
-      let id = c.compiler_id();
-      compiler_trampoline.insert(id, c.codegen_internal_trampoline());
-    }
-
     // Compiler
     {
+      use std::collections::HashSet;
+
       let rs = resolve.as_ref();
       let compilers = compiler_infra();
 
@@ -217,12 +218,20 @@ pub fn management_main(
       }
 
       let [critical_s, important_s] = rs.heuristic_pgo();
+
+      let important_critical_nptr_hset = critical_s
+        .iter()
+        .copied()
+        .chain(important_s.iter().copied())
+        .chain(_nptr.iter().map(|x| *x.0))
+        .collect::<HashSet<u64, ahash::RandomState>>();
+
       let mut critical = critical_s.into_iter().peekable();
       let mut important = important_s.into_iter().peekable();
 
       let others_iter = || {
         (0..=last)
-          .filter(|x| !(critical_s.contains(x) || important_s.contains(x) || nativeptr.contains(x)))
+          .filter(|x| !important_critical_nptr_hset.contains(x))
           .peekable()
       };
       let mut others = others_iter();
@@ -373,28 +382,37 @@ fn process_jit(
 
       match cache {
         CacheData::None | CacheData::Pickle { .. } => {}
-        CacheData::CraneliftRel { .. } | CacheData::LLVMRel { .. } => {
-          abort();
-        }
-        CacheData::CraneliftAbs8 { binary, reloc } | CacheData::LLVMAbs8 { binary, reloc } => {
-          let relocs = calculate_relocation_abs(&reloc);
-
-          let bin = sajit.write_quick(&binary, &relocs);
-
-          if let Some(jitblob) = evmap.get_one(&moduleid) {
-            // Case `usize` back into the `*mut JIT`
-            let mgr = unsafe { &**jitblob };
-
-            _ = unsafe { mgr.set(0, bin, None) };
-          } else {
-            let mgr = Box::new(SwappableCodeStore::new(bin));
-
-            _ = unsafe { mgr.set(0, bin, None) };
-
-            evmap.insert(moduleid, Box::into_raw(mgr));
-            evmap.publish();
+        CacheData::JITCache {
+          level,
+          binary,
+          reloc,
+        } => match level {
+          CacheLevel::Pickle => {
+            abort();
           }
-        }
+          CacheLevel::CraneliftEpicenter | CacheLevel::LLVMEpitome => {
+            todo!("Soon")
+          }
+          CacheLevel::LLVMCinder | CacheLevel::LLVMCrater | CacheLevel::CraneliftCrafter => {
+            let relocs = calculate_relocation_abs(&reloc);
+
+            let bin = sajit.write_quick(&binary, &relocs);
+
+            if let Some(jitblob) = evmap.get_one(&moduleid) {
+              // Case `usize` back into the `*mut JIT`
+              let mgr = unsafe { &**jitblob };
+
+              _ = unsafe { mgr.set(0, bin, None) };
+            } else {
+              let mgr = Box::new(SwappableCodeStore::new(bin));
+
+              _ = unsafe { mgr.set(0, bin, None) };
+
+              evmap.insert(moduleid, Box::into_raw(mgr));
+              evmap.publish();
+            }
+          }
+        },
       }
     }
   }

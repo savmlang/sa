@@ -18,14 +18,14 @@ pub fn emit(path: &mut PathBuf, conn: &Connection) {
       let rsv = from_bytes::<LibraryResolverStructure>(&meta).unwrap();
 
       for (fid, data) in rsv.into_iter() {
-        let sb = &data.symbol as &[u8];
+        let symbol_name = &data.symbol as &[u8];
 
         let callsig = to_allocvec(&data.sig).unwrap();
 
         conn
           .execute(
             "INSERT INTO LibFnMap (library_id, function_id, symbol_name, callsig) VALUES (?1, ?2, ?3, ?4)",
-            params![libid as i64, fid as i64, sb, &callsig as &[u8]],
+            params![libid as i64, fid as i64, symbol_name, &callsig as &[u8]],
           )
           .unwrap();
       }

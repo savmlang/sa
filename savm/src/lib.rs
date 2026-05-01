@@ -22,7 +22,7 @@ use std::{
 
 use ahash::HashMap;
 use moka::sync::{CacheBuilder, SegmentedCache};
-use sart::{code::SwappableCodeStore, ctr::CVMTaskState};
+use sart::{code::SwappableCodeStore, ctr::CVMTaskState, structures::ffi::CallSig};
 
 pub use sart;
 use tokio::runtime::{Builder, Runtime};
@@ -41,12 +41,8 @@ pub static TOTAL_THREADS: LazyLock<usize> =
 static VMMADE: OnceLock<()> = OnceLock::new();
 
 pub enum SymbolMapTable<T> {
-  NativePointer {
-    fnptr: extern "C" fn(vm: *mut CVMTaskState),
-  },
-  MixedSizedBytecode {
-    bytecode: T,
-  },
+  NativePointer { fnptr: *const (), cdecl: CallSig },
+  MixedSizedBytecode { bytecode: T },
 }
 
 pub enum SymbolMapTableInfo {
@@ -63,30 +59,46 @@ pub enum CacheData {
     out: Arc<[PickleInstruction]>,
     jumps: Arc<HashMap<u64, usize>>,
   },
-  CraneliftAbs8 {
-    binary: Arc<[u8]>,
-    reloc: JITRelocs,
-  },
-  CraneliftRel {
-    binary: Arc<[u8]>,
-    reloc: JITRelocs,
-  },
-  LLVMAbs8 {
-    binary: Arc<[u8]>,
-    reloc: JITRelocs,
-  },
-  LLVMRel {
+  JITCache {
+    level: CacheLevel,
     binary: Arc<[u8]>,
     reloc: JITRelocs,
   },
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum CacheLevel {
   Pickle,
-  CraneliftAbs8,
-  CraneliftRel,
-  LLVMAbs8,
-  LLVMRel,
+  CraneliftCrafter,
+  CraneliftEpicenter,
+  LLVMCinder,
+  LLVMCrater,
+  LLVMEpitome,
+}
+
+impl CacheLevel {
+  pub fn to_int(&self) -> u8 {
+    match self {
+      Self::Pickle => 0,
+      Self::LLVMCinder => 1,
+      Self::CraneliftCrafter => 2,
+      Self::CraneliftEpicenter => 3,
+      Self::LLVMCrater => 4,
+      Self::LLVMEpitome => 5,
+    }
+  }
+
+  pub fn from_int(cachelevel: i64) -> Option<Self> {
+    Some(match cachelevel {
+      0 => Self::Pickle,
+      1 => Self::LLVMCinder,
+      2 => Self::CraneliftCrafter,
+      3 => Self::CraneliftEpicenter,
+      4 => Self::LLVMCrater,
+      5 => Self::LLVMEpitome,
+      _ => return None,
+    })
+  }
 }
 
 pub trait ResolvedData: Read + Seek {}
@@ -161,6 +173,9 @@ pub static GLOBAL_RUNTIME: LazyLock<Runtime> =
   LazyLock::new(|| Builder::new_multi_thread().enable_all().build().unwrap());
 
 pub static VMCONF: RwLock<VmConfig> = RwLock::new(unsafe { zeroed() });
+
+pub(crate) static FNCALL_DISPATCH: OnceLock<HashMap<u64, (ThreadSafe<*const ()>, CallSig)>> =
+  OnceLock::new();
 
 // This only and only stores Subroutine-Threaded instructions
 pub(crate) static CODE_CACHE: LazyLock<

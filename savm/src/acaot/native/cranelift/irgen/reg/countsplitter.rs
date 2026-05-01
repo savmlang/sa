@@ -96,9 +96,6 @@ pub fn break_simd_waterfall_inner(
   let b128_flags = memflags(alignment, 16);
 
   // MemFlags (Scalar)
-  // let b64_flags = memflags(alignment, 8);
-  // let b32_flags = memflags(alignment, 4);
-  // let b16_flags = memflags(alignment, 2);
   let memflags = memflags(alignment, map.width() as u8);
 
   let mut offset: u32 = 0;
@@ -168,42 +165,6 @@ pub fn break_simd_waterfall_inner(
         }
       }
     }
-
-    // if b64_threshold > 0 {
-    //   while count >= b64_threshold {
-    //     loadinst.push((offset, map.simd_width_type(8), b64_flags));
-    //     offset += 8;
-
-    //     count -= b64_threshold;
-    //   }
-    // }
-
-    // if b32_threshold > 0 {
-    //   while count >= b32_threshold {
-    //     loadinst.push((offset, map.simd_width_type(4), b32_flags));
-    //     offset += 4;
-
-    //     count -= b32_threshold;
-    //   }
-    // }
-
-    // if b16_threshold > 0 {
-    //   while count >= b16_threshold {
-    //     loadinst.push((offset, map.simd_width_type(2), b16_flags));
-    //     offset += 2;
-
-    //     count -= b16_threshold;
-    //   }
-    // }
-
-    // if b8_threshold > 0 {
-    //   while count >= b8_threshold {
-    //     loadinst.push((offset, map.simd_width_type(1), b8_flags));
-    //     offset += 1;
-    //
-    //     count -= b8_threshold;
-    //   }
-    // }
 
     while count > 0 {
       loadinst.push((offset, map.x1, memflags));

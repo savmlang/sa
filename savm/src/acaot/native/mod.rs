@@ -12,18 +12,7 @@ pub mod cranelift;
 
 pub use super::*;
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-pub enum CompilerId {
-  /// It means the compiler used was [cranelift-codegen]
-  ///
-  /// It is SaVM ``
-  Cranelift,
-  LLVM,
-}
-
 pub trait NativeCompiler {
-  fn compiler_id(&self) -> CompilerId;
-
   fn prime(
     &mut self,
     pickle: Arc<[PickleInstruction]>,
@@ -42,35 +31,35 @@ pub trait NativeCompiler {
 }
 
 pub trait NativeCompilerBuilder: Send + Sync {
-  fn get(&self) -> Box<dyn NativeCompiler>;
+  fn cache(&self) -> CacheLevel;
 
-  fn abs_cache(&self) -> CacheLevel;
-  fn rel_cache(&self) -> CacheLevel;
+  fn get(&self) -> Box<dyn NativeCompiler>;
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct CompilerBuilder<T: NativeCompiler + Sized + Send + Sync>(
   PhantomData<T>,
   fn() -> Box<dyn NativeCompiler>,
+  CacheLevel,
 );
 
 impl<T: NativeCompiler + Sized + Sync + Send> NativeCompilerBuilder for CompilerBuilder<T> {
+  fn cache(&self) -> CacheLevel {
+    self.2
+  }
+
   fn get(&self) -> Box<dyn NativeCompiler> {
     (self.1)()
-  }
-
-  fn abs_cache(&self) -> CacheLevel {
-    CacheLevel::CraneliftAbs8
-  }
-
-  fn rel_cache(&self) -> CacheLevel {
-    CacheLevel::CraneliftRel
   }
 }
 
 pub fn compiler_infra() -> &'static [&'static dyn NativeCompilerBuilder] {
   &[
     #[cfg(feature = "cranelift")]
-    &CompilerBuilder(PhantomData::<SaVMCranelift>, SaVMCranelift::create_abs8),
+    &CompilerBuilder(
+      PhantomData::<SaVMCranelift>,
+      SaVMCranelift::create_abs8,
+      CacheLevel::CraneliftCrafter,
+    ),
   ]
 }

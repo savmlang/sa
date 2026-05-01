@@ -165,13 +165,15 @@ impl<T: Seek + Read> PickleWorker<T> {
 
   fn handle_synccall(&mut self) {
     let opcode = PICKLE_OPCODE_SYNCCALL;
+
+    let [regignore] = self.bytecode.extract::<1>();
     let sectionid = self.bytecode.extract::<8>().swap_if_be();
 
     self.emit_copy_bytes(opcode, sectionid);
 
     self.out.push(PickleInstruction {
       opcode: opcode,
-      u1: 0,
+      u1: regignore,
       u2: 0,
       u3: 0,
     });

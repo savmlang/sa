@@ -76,6 +76,31 @@ thread_local! {
 }
 
 impl VM {
+  pub fn fncall(&self, sectionid: u64, oldtsk: *mut VMTaskState) -> [QuadPackedData; 2] {
+    VMSTAT.with(|p| {
+      let p = p.get();
+
+      unsafe {
+        (*p).cindex += 1;
+        ptr::write((*p).ts.as_mut_ptr().add((*p).cindex), *oldtsk)
+      };
+    });
+
+    self.dispatch_chocolate::<true>(sectionid);
+
+    VMSTAT.with(|p| {
+      let p = p.get();
+
+      unsafe {
+        let resp = (*p).ts.get_unchecked((*p).cindex);
+
+        (*p).cindex -= 1;
+
+        [resp.r7, resp.r8]
+      }
+    })
+  }
+
   pub fn call_section(&self, sectionid: u64) {
     return self.dispatch_chocolate::<true>(sectionid);
   }

@@ -53,7 +53,7 @@ pub fn compiler(
     let jitdata;
     let (inst, jmp) = bytecode;
     {
-      match resolve.as_ref().get_cache(moduleid, builder.abs_cache()) {
+      match resolve.as_ref().get_cache(moduleid, builder.cache()) {
         CacheData::None => {
           let mut compiler = builder.get();
 

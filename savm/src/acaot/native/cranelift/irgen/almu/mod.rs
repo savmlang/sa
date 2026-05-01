@@ -14,6 +14,7 @@ use cranelift::{codegen::ir::Endianness, prelude::*};
 
 mod atomic;
 mod fp;
+mod libcall;
 mod vbit;
 mod vcmp;
 mod vdataop;
@@ -22,6 +23,7 @@ mod vscncop;
 
 pub use atomic::*;
 pub use fp::*;
+pub use libcall::*;
 pub use vbit::*;
 pub use vcmp::*;
 pub use vdataop::*;

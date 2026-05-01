@@ -1,6 +1,6 @@
 use super::{JITReloc, LocSrc, SigStore};
 use crate::{
-  CacheData,
+  CacheData, CacheLevel,
   acaot::{
     native::{NativeCompiler, cranelift::irgen::compile},
     pickle::def::PickleInstruction,
@@ -102,10 +102,6 @@ impl SaVMCranelift {
 }
 
 impl NativeCompiler for SaVMCranelift {
-  fn compiler_id(&self) -> super::CompilerId {
-    super::CompilerId::Cranelift
-  }
-
   fn codegen_internal_trampoline(&mut self) -> Box<[u8]> {
     let mut mainsig = Signature::new(self.isa.default_call_conv());
     // Pointer to launch
@@ -359,17 +355,16 @@ impl NativeCompiler for SaVMCranelift {
       (code, relocs)
     };
 
-    if ws.rel {
-      CacheData::CraneliftAbs8 {
-        binary: bin,
-        reloc: relocs,
-      }
-    } else {
-      CacheData::CraneliftAbs8 {
-        binary: bin,
-        reloc: relocs,
-      }
+    CacheData::JITCache {
+      level: if ws.rel {
+        CacheLevel::CraneliftCrafter
+      } else {
+        CacheLevel::CraneliftCrafter
+      },
+      binary: bin,
+      reloc: relocs,
     }
+
     // crate::CacheData::None
   }
 }
@@ -453,7 +448,7 @@ impl<'a> CompilerMeta<'a> {
       let fref = builder.import_function(ExtFuncData {
         name: ExternalName::User(user_ref),
         signature: sig,
-        colocated: matches!(loc, LocSrc::LibCall(_)) && rel,
+        colocated: matches!(loc, LocSrc::SaLibCall(_)) && rel,
         patchable: false,
       });
 

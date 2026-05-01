@@ -35,14 +35,23 @@ pub mod native;
 pub enum LocSrc {
   VCopyNoAlias,
   VCopyOverlapping,
+
   VMScratchAction,
-  LibCall(u64),
+
+  VMSectionDispatch,
+  VMLibcallSection,
+
+  NativeLibCall(u64),
+  SaLibCall(u64),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum SigStore {
   VCopyCommon,
   VMScratch,
+
+  SaVMLibcallDispatch,
+  JITCall,
 
   SaFFICall,
   SaFFICallAsyncQ,

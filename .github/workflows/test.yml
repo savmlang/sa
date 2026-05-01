@@ -34,7 +34,7 @@ jobs:
           run: |
             cd jitemission
 
-            mkdir target/release
+            mkdir ./target/release || true
             cp ${{ github.workspace }}/target/release/libsalloc.so ${{ github.workspace }}/jitemission/target/release/libsalloc.so
 
             cargo run --release
