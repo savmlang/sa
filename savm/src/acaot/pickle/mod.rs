@@ -120,28 +120,21 @@ impl<T: Seek + Read> PickleWorker<T> {
     });
   }
 
-  // `spawn <flags as u8> <section id as u64> <scratchpad copy idx as u32> <scratch copy end idx as u32 (exclusive)>`
+  // `spawn <section id as u64> u16%[<flags (6-bits)> <scratchpad start index (5-bits)> <total to copy (5-bits)>]`
   fn handle_spawn(&mut self) {
     let opcode = PICKLE_OPCODE_SPAWN;
 
-    let [flags] = self.bytecode.extract::<1>();
-
     let sectionid = self.bytecode.extract::<8>().swap_if_be();
 
-    let scratchpad_begin = self.bytecode.extract::<4>().swap_if_be();
-    let scratchpad_end = self.bytecode.extract::<4>().swap_if_be();
+    let [o0, o1] = self.bytecode.extract::<2>().swap_if_be();
 
-    let mut copy = [0u8; 14];
-    copy[0..4].copy_from_slice(&scratchpad_begin);
-    copy[4..8].copy_from_slice(&scratchpad_end);
-    copy[8..14].copy_from_slice(&sectionid[0..6]);
-    self.emit_copy_bytes(opcode, copy);
+    self.emit_copy_bytes(opcode, sectionid);
 
     self.out.push(PickleInstruction {
       opcode: opcode,
-      u1: sectionid[6],
-      u2: sectionid[7],
-      u3: flags,
+      u1: o0,
+      u2: o1,
+      u3: 0,
     });
   }
 
