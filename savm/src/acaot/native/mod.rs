@@ -6,14 +6,14 @@ use sart::structures::serde::{Deserialize, Serialize};
 #[cfg(feature = "cranelift")]
 use crate::acaot::native::cranelift::SaVMCranelift;
 #[cfg(feature = "llvm")]
-use crate::acaot::native::llvm::SaVMLLVM;
+use crate::acaot::native::llvm_compiler::SaVMLLVM;
 use crate::{CacheData, CacheLevel, acaot::pickle::def::PickleInstruction};
 
 #[cfg(feature = "cranelift")]
 pub mod cranelift;
 
 #[cfg(feature = "llvm")]
-pub mod llvm;
+pub mod llvm_compiler;
 
 pub use super::*;
 

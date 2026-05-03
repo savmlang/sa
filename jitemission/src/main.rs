@@ -42,14 +42,15 @@ fn main() {
 
   worker.pass1();
 
-  let mut cranelift = compiler_infra()[0].get();
-  let code = cranelift.compile(&worker.out, &worker.jump);
+  // Get Crater
+  let mut compiler = compiler_infra()[1].get();
+  let code = compiler.compile(&worker.out, &worker.jump);
 
   let vm = unsafe { VM::new_unsafe::<Modules, false>(Modules {}) };
 
   let mut jmem = JITMemoryManager::new();
   let ptr = match code {
-    savm::CacheData::CraneliftAbs8 { binary, .. } => jmem.write_quick(&binary, &[]),
+    savm::CacheData::JITCache { binary, .. } => jmem.write_quick(&binary, &[]),
     _ => panic!(),
   };
 

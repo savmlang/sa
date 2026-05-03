@@ -6,5 +6,6 @@ edition = "2024"
 [dependencies]
 savm = { version = "0.1.0", path = "../savm", features = [
   "cranelift",
+  "llvm",
   "sendback",
 ] }
