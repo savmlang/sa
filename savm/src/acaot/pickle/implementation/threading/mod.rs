@@ -23,6 +23,9 @@ use crate::{
   arrcastint, resolve_location_src,
 };
 
+mod spawn;
+pub use spawn::*;
+
 struct NativeAsyncExecutor;
 
 // impl NativeAsyncExecutor {
@@ -220,10 +223,6 @@ pub fn call_asynccall(
   _taskstate: &mut VMTaskState,
 ) {
   unimplemented!("Synccall-asyncall will be implemented later!")
-}
-
-pub fn call_spawn(_pickle: &PickleInstruction, _ws: &mut WorkingSet, _taskstate: &mut VMTaskState) {
-  unimplemented!("Spawn will be implemented later!")
 }
 
 pub fn call_task(_pickle: &PickleInstruction, _ws: &mut WorkingSet, _taskstate: &mut VMTaskState) {

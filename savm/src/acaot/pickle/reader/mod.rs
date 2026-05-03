@@ -4,6 +4,7 @@ use crate::acaot::pickle::def::PickleInstruction;
 
 pub mod cast;
 pub mod corevm;
+pub mod spawn;
 pub mod vfop;
 pub mod vminimax;
 pub mod vsh;

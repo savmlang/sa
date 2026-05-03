@@ -102,55 +102,6 @@ impl SaVMCranelift {
 }
 
 impl NativeCompiler for SaVMCranelift {
-  fn codegen_internal_trampoline(&mut self) -> Box<[u8]> {
-    let mut mainsig = Signature::new(self.isa.default_call_conv());
-    // Pointer to launch
-    mainsig.params.push(AbiParam::new(self.isa.pointer_type()));
-    // VMTaskState pointer
-    mainsig.params.push(AbiParam::new(self.isa.pointer_type()));
-
-    let mut f = Function::new();
-    f.signature = mainsig;
-
-    let mut ctx = FunctionBuilderContext::new();
-
-    {
-      let mut builder = FunctionBuilder::new(&mut f, &mut ctx);
-
-      let sig = {
-        let mut s = Signature::new(CallConv::Fast);
-
-        s.params.push(AbiParam::new(self.isa.pointer_type()));
-
-        s
-      };
-
-      let entry = builder.create_block();
-      builder.append_block_params_for_function_params(entry);
-      builder.switch_to_block(entry);
-
-      let [callee, argv0] = *builder.block_params(entry) else {
-        abort();
-      };
-
-      let sig_ref = builder.import_signature(sig);
-
-      builder.ins().call_indirect(sig_ref, callee, &[argv0]);
-      builder.ins().return_(&[]);
-
-      builder.seal_all_blocks();
-      builder.finalize();
-    }
-
-    let mut ctx = Context::for_function(f);
-
-    let comp = ctx
-      .compile(self.isa.as_ref(), &mut Default::default())
-      .unwrap_or_else(|_| abort());
-
-    comp.code_buffer().into()
-  }
-
   fn compile(
     &mut self,
     pickle: &[PickleInstruction],
@@ -161,12 +112,7 @@ impl NativeCompiler for SaVMCranelift {
     let mainsig = {
       let mut sig = Signature::new(if self.abs8 {
         isa.default_call_conv()
-      }
-      // Use cranelift fast for PCRel callconv
-      //
-      // NOTE
-      // Trampoline required!
-      else {
+      } else {
         CallConv::Fast
       });
 
@@ -303,8 +249,6 @@ impl NativeCompiler for SaVMCranelift {
 
     // Compile
     builder.finalize();
-
-    println!("Built this : {f:?}");
 
     let (bin, relocs) = {
       let mut ctx = Context::for_function(f);

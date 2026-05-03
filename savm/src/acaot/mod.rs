@@ -41,6 +41,8 @@ pub enum LocSrc {
   VMSectionDispatch,
   VMLibcallSection,
 
+  VMSpawn,
+
   NativeLibCall(u64),
   SaLibCall(u64),
 }
@@ -56,6 +58,8 @@ pub enum SigStore {
   SaFFICall,
   SaFFICallAsyncQ,
   SaFFICallAsyncO,
+
+  VMSpawn,
 
   LibDefined(u64),
 }
