@@ -1,13 +1,28 @@
 use std::{
-  borrow::Cow, ffi::CStr, hint::black_box, mem::zeroed, ops::Deref, ptr::null_mut, sync::LazyLock,
+  borrow::Cow,
+  cell::LazyCell,
+  ffi::CStr,
+  hint::black_box,
+  marker::PhantomData,
+  mem::zeroed,
+  ops::Deref,
+  ptr::{null, null_mut},
+  sync::LazyLock,
 };
 
 use llvm_sys::{
   LLVMContext, LLVMModule,
-  core::{LLVMContextCreate, LLVMModuleCreateWithNameInContext, LLVMSetDataLayout, LLVMSetTarget},
+  core::{
+    LLVMAddFunction, LLVMAppendBasicBlockInContext, LLVMContextCreate,
+    LLVMCreateBasicBlockInContext, LLVMFunctionType, LLVMInt32TypeInContext,
+    LLVMModuleCreateWithNameInContext, LLVMPrintModuleToString, LLVMSetDataLayout, LLVMSetTarget,
+    LLVMVoidTypeInContext,
+  },
+  prelude::LLVMContextRef,
   target::{
     LLVM_InitializeNativeAsmParser, LLVM_InitializeNativeAsmPrinter,
     LLVM_InitializeNativeDisassembler, LLVM_InitializeNativeTarget, LLVMCopyStringRepOfTargetData,
+    LLVMIntPtrTypeInContext,
   },
   target_machine::{
     LLVMCodeGenOptLevel, LLVMCodeModel, LLVMCreateTargetDataLayout, LLVMCreateTargetMachine,
@@ -16,9 +31,12 @@ use llvm_sys::{
   },
 };
 
-use crate::acaot::native::{
-  NativeCompiler,
-  llvm_compiler::dispose::{LLVMCtx, LLVMMsg, Module, OpaqueMachine, OpaqueTargetData},
+use crate::{
+  CacheData, ThreadSafe,
+  acaot::native::{
+    NativeCompiler,
+    llvm_compiler::dispose::{LLVMCtx, LLVMMsg, Module, OpaqueMachine, OpaqueTargetData},
+  },
 };
 
 pub mod dispose;
@@ -109,20 +127,34 @@ static LLVMINIT: LazyLock<()> = LazyLock::new(|| unsafe {
   }
 });
 
+static LLVM_CPU: LazyLock<ThreadSafe<LLVMMsg>> =
+  LazyLock::new(|| unsafe { ThreadSafe(LLVMMsg(LLVMGetHostCPUName())) });
+
+static LLVM_CPU_FEAT: LazyLock<ThreadSafe<LLVMMsg>> =
+  LazyLock::new(|| unsafe { ThreadSafe(LLVMMsg(LLVMGetHostCPUFeatures())) });
+
+thread_local! {
+  static LLVM_CTX: LLVMCtx = unsafe {
+    LLVMCtx(LLVMContextCreate())
+  };
+}
+
 pub struct SaVMLLVM {
   machine: OpaqueMachine,
   module: Module,
-  ctx: LLVMCtx,
+  layout: OpaqueTargetData,
+  ctx: LLVMContextRef,
+  _dep: PhantomData<LLVMCtx>,
 }
 
-unsafe impl Send for SaVMLLVM {}
+pub struct SaVMLLVMBuilder {}
 
-impl SaVMLLVM {
+impl SaVMLLVMBuilder {
   fn create(
     level: LLVMCodeGenOptLevel,
     reloc: LLVMRelocMode,
     codemodel: LLVMCodeModel,
-  ) -> Result<Self, Cow<'static, str>> {
+  ) -> Result<SaVMLLVM, Cow<'static, str>> {
     unsafe {
       black_box({
         LLVMINIT.deref();
@@ -130,11 +162,8 @@ impl SaVMLLVM {
 
       let mut error = LLVMMsg(null_mut());
 
-      let ctx = LLVMCtx(LLVMContextCreate());
-      let module = Module(LLVMModuleCreateWithNameInContext(
-        c"SaVMJIT".as_ptr(),
-        ctx.0,
-      ));
+      let ctx = LLVM_CTX.with(|x| x.0);
+      let module = Module(LLVMModuleCreateWithNameInContext(c"SaVMJIT".as_ptr(), ctx));
 
       let triple = LLVMMsg(LLVMGetDefaultTargetTriple());
 
@@ -147,15 +176,14 @@ impl SaVMLLVM {
         return out;
       }
 
-      let cpu = LLVMMsg(LLVMGetHostCPUName());
-      let features = LLVMMsg(LLVMGetHostCPUFeatures());
-
-      if cpu.0.is_null() || features.0.is_null() {
-        return Err(Cow::Borrowed("CPU and Features could not be detected"));
-      }
-
       let machine = OpaqueMachine(LLVMCreateTargetMachine(
-        target, triple.0, cpu.0, features.0, level, reloc, codemodel,
+        target,
+        triple.0,
+        LLVM_CPU.0.0,
+        LLVM_CPU_FEAT.0.0,
+        level,
+        reloc,
+        codemodel,
       ));
 
       let layout = OpaqueTargetData(LLVMCreateTargetDataLayout(machine.0));
@@ -164,10 +192,12 @@ impl SaVMLLVM {
       LLVMSetDataLayout(module.0, layout_str.0);
       LLVMSetTarget(module.0, triple.0);
 
-      Ok(Self {
-        ctx,
+      Ok(SaVMLLVM {
         machine,
         module,
+        layout,
+        ctx,
+        _dep: PhantomData,
       })
     }
   }
@@ -212,6 +242,23 @@ impl NativeCompiler for SaVMLLVM {
     pickle: &[super::pickle::def::PickleInstruction],
     jumps: &std::collections::HashMap<u64, usize, ahash::RandomState>,
   ) -> crate::CacheData {
-    todo!()
+    unsafe {
+      let ctx = self.ctx;
+      let td = self.layout.0;
+      let module = self.module.0;
+      let name = c"".as_ptr();
+
+      let mut params = [LLVMIntPtrTypeInContext(ctx, td)];
+      let func_ty = LLVMFunctionType(LLVMVoidTypeInContext(ctx), params.as_mut_ptr(), 1, 0);
+
+      let function_val = LLVMAddFunction(module, name, func_ty);
+
+      // Print Module
+      let module = LLVMMsg({ LLVMPrintModuleToString(module) });
+
+      println!("{}", CStr::from_ptr(module.0).to_str().unwrap());
+    }
+
+    CacheData::None
   }
 }

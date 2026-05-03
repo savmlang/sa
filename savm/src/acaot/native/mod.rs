@@ -1,4 +1,4 @@
-use std::{collections::HashMap, marker::PhantomData, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 use sart::structures::serde;
 use sart::structures::serde::{Deserialize, Serialize};
@@ -6,7 +6,7 @@ use sart::structures::serde::{Deserialize, Serialize};
 #[cfg(feature = "cranelift")]
 use crate::acaot::native::cranelift::SaVMCranelift;
 #[cfg(feature = "llvm")]
-use crate::acaot::native::llvm_compiler::SaVMLLVM;
+use crate::acaot::native::llvm_compiler::{SaVMLLVM, SaVMLLVMBuilder};
 use crate::{CacheData, CacheLevel, acaot::pickle::def::PickleInstruction};
 
 #[cfg(feature = "cranelift")]
@@ -32,56 +32,35 @@ pub trait NativeCompilerBuilder: Send {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct CompilerBuilder<T: NativeCompiler + Sized + Send>(
-  PhantomData<T>,
-  fn() -> Box<dyn NativeCompiler>,
-  CacheLevel,
-);
+pub struct CompilerBuilder(fn() -> Box<dyn NativeCompiler>, CacheLevel);
 
-impl<T: NativeCompiler + Sized + Send> NativeCompilerBuilder for CompilerBuilder<T> {
+impl NativeCompilerBuilder for CompilerBuilder {
   fn cache(&self) -> CacheLevel {
-    self.2
+    self.1
   }
 
   fn get(&self) -> Box<dyn NativeCompiler> {
-    (self.1)()
+    (self.0)()
   }
 }
 
 pub fn compiler_infra() -> &'static [&'static dyn NativeCompilerBuilder] {
   &[
     #[cfg(all(feature = "llvm", not(feature = "cranelift")))]
-    &CompilerBuilder(
-      PhantomData::<SaVMLLVM>,
-      SaVMLLVM::create_cinder,
-      CacheLevel::LLVMCinder,
-    ),
+    &CompilerBuilder(SaVMLLVMBuilder::create_cinder, CacheLevel::LLVMCinder),
     #[cfg(feature = "cranelift")]
-    &CompilerBuilder(
-      PhantomData::<SaVMCranelift>,
-      SaVMCranelift::create_abs8,
-      CacheLevel::CraneliftCrafter,
-    ),
+    &CompilerBuilder(SaVMCranelift::create_abs8, CacheLevel::CraneliftCrafter),
     #[cfg(feature = "llvm")]
-    &CompilerBuilder(
-      PhantomData::<SaVMLLVM>,
-      SaVMLLVM::create_crater,
-      CacheLevel::LLVMCrater,
-    ),
+    &CompilerBuilder(SaVMLLVMBuilder::create_crater, CacheLevel::LLVMCrater),
   ]
 }
 
 pub fn epitier_compiler() -> impl NativeCompilerBuilder {
   #[cfg(feature = "llvm")]
-  return CompilerBuilder(
-    PhantomData::<SaVMLLVM>,
-    SaVMLLVM::create_epitome,
-    CacheLevel::LLVMEpitome,
-  );
+  return CompilerBuilder(SaVMLLVMBuilder::create_epitome, CacheLevel::LLVMEpitome);
 
   #[cfg(all(feature = "cranelift", not(feature = "llvm")))]
   return CompilerBuilder(
-    PhantomData::<SaVMCranelift>,
     SaVMCranelift::create_rel_optimized,
     CacheLevel::CraneliftEpicenter,
   );

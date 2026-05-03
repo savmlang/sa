@@ -51,7 +51,10 @@ fn main() {
   let mut jmem = JITMemoryManager::new();
   let ptr = match code {
     savm::CacheData::JITCache { binary, .. } => jmem.write_quick(&binary, &[]),
-    _ => panic!(),
+    _ => {
+      forget(jmem);
+      panic!()
+    }
   };
 
   let mut durs = vec![];
