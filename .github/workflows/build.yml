@@ -175,7 +175,7 @@ jobs:
           ARCH: ${{ matrix.target.arch }}
           TARGET: ${{ matrix.target.rust }}
           CTARGET: ${{ matrix.target.clang }}
-          EXTRA: --features savmrun/${{ matrix.target.rust }} ${{ matrix.target.exclude }}
+          EXTRA: --features savmrun/${{ matrix.target.feature }} ${{ matrix.target.exclude }}
 
       - name: Package
         shell: pwsh
