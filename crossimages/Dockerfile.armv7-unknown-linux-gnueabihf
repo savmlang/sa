@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
     libc6-dev-armhf-cross
 
 COPY crossimages/deny-debian-packages.sh /
-RUN TARGET_ARCH=armhf /deny-debian-packages.sh \
+RUN TARGET_ARCH=armhf bash /deny-debian-packages.sh \
     binutils \
     binutils-arm-linux-gnueabihf
 

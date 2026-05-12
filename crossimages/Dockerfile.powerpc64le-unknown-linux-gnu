@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
     libc6-dev-ppc64el-cross
 
 COPY crossimages/deny-debian-packages.sh /
-RUN TARGET_ARCH=ppc64el /deny-debian-packages.sh \
+RUN TARGET_ARCH=ppc64el bash /deny-debian-packages.sh \
     binutils \
     binutils-powerpc64le-linux-gnu
 

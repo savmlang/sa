@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libc6-dev-riscv64-cross
 
 COPY crossimages/deny-debian-packages.sh /
-RUN TARGET_ARCH=riscv64 /deny-debian-packages.sh \
+RUN TARGET_ARCH=riscv64 bash /deny-debian-packages.sh \
     binutils \
     binutils-riscv64-linux-gnu
 
