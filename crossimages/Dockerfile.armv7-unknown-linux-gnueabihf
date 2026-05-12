@@ -2,10 +2,10 @@ FROM ubuntu:24.04 AS cross-base
 ENV DEBIAN_FRONTEND=noninteractive
 
 COPY crossimages/common.sh crossimages/lib.sh /
-RUN /common.sh
+RUN sh /common.sh
 
 COPY crossimages/cmake.sh /
-RUN /cmake.sh
+RUN sh /cmake.sh
 
 FROM cross-base AS build
 
@@ -20,13 +20,13 @@ RUN TARGET_ARCH=armhf /deny-debian-packages.sh \
     binutils-arm-linux-gnueabihf
 
 COPY crossimages/qemu.sh /
-RUN /qemu.sh arm softmmu
+RUN sh /qemu.sh arm softmmu
 
 COPY crossimages/dropbear.sh /
-RUN /dropbear.sh
+RUN sh /dropbear.sh
 
 COPY crossimages/linux-image.sh /
-RUN /linux-image.sh armv7
+RUN sh /linux-image.sh armv7
 
 COPY crossimages/linux-runner crossimages/base-runner.sh /
 COPY crossimages/toolchain.cmake /opt/toolchain.cmake
