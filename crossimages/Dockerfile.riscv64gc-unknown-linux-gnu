@@ -1,7 +1,7 @@
 FROM ubuntu:24.04 AS cross-base
 ENV DEBIAN_FRONTEND=noninteractive
 
-COPY crossimages/common.sh lib.sh /
+COPY crossimages/common.sh crossimages/lib.sh /
 RUN /common.sh
 
 COPY crossimages/cmake.sh /
