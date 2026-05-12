@@ -8,8 +8,8 @@ export CXX="clang++"
 export AR="llvm-ar"
 
 # cc flags
-export CFLAGS="--target=$TARGET --sysroot=$SYSROOT"
-export CXXFLAGS="--target=$TARGET --sysroot=$SYSROOT"
+export CFLAGS="--sysroot=$SYSROOT"
+export CXXFLAGS="--sysroot=$SYSROOT"
 
 # libffi
 export PKG_CONFIG_SYSROOT_DIR="$SYSROOT"

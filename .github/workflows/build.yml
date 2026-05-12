@@ -177,6 +177,10 @@ jobs:
           CTARGET: ${{ matrix.target.clang }}
           EXTRA: --features savmrun/${{ matrix.target.feature }} ${{ matrix.target.exclude }}
 
+          # Linker
+          DYLD_LIBRARY_PATH: ${{ github.workspace }}/target/${{ matrix.target.rust }}/release
+          LIBRARY_PATH: ${{ github.workspace }}/target/${{ matrix.target.rust }}/release
+
       - name: Package
         shell: pwsh
         env:
