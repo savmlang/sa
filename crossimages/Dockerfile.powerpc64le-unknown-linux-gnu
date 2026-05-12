@@ -1,10 +1,10 @@
 FROM ubuntu:24.04 AS cross-base
 ENV DEBIAN_FRONTEND=noninteractive
 
-COPY common.sh lib.sh /
+COPY crossimages/common.sh lib.sh /
 RUN /common.sh
 
-COPY cmake.sh /
+COPY crossimages/cmake.sh /
 RUN /cmake.sh
 
 FROM cross-base AS build
@@ -14,22 +14,22 @@ RUN apt-get update && apt-get install --assume-yes --no-install-recommends \
     gfortran-powerpc64le-linux-gnu \
     libc6-dev-ppc64el-cross
 
-COPY deny-debian-packages.sh /
+COPY crossimages/deny-debian-packages.sh /
 RUN TARGET_ARCH=ppc64el /deny-debian-packages.sh \
     binutils \
     binutils-powerpc64le-linux-gnu
 
-COPY qemu.sh /
+COPY crossimages/qemu.sh /
 RUN /qemu.sh ppc64le softmmu
 
-COPY dropbear.sh /
+COPY crossimages/dropbear.sh /
 RUN /dropbear.sh
 
-COPY linux-image.sh /
+COPY crossimages/linux-image.sh /
 RUN /linux-image.sh powerpc64le
 
-COPY linux-runner base-runner.sh /
-COPY toolchain.cmake /opt/toolchain.cmake
+COPY crossimages/linux-runner base-runner.sh /
+COPY crossimages/toolchain.cmake /opt/toolchain.cmake
 
 ENV CROSS_TOOLCHAIN_PREFIX=powerpc64le-linux-gnu-
 ENV CROSS_SYSROOT=/usr/powerpc64le-linux-gnu
