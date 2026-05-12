@@ -18,4 +18,4 @@ export PKG_CONFIG_ALLOW_CROSS=1
 
 echo "Building Rust"
 
-cargo build --release --target $TARGET $EXTRA
+cargo build -Zbuild-std --release --target $TARGET $EXTRA
