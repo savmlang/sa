@@ -2,10 +2,10 @@ FROM ubuntu:24.04 AS cross-base
 ENV DEBIAN_FRONTEND=noninteractive
 
 COPY crossimages/common.sh crossimages/lib.sh /
-RUN sh /common.sh
+RUN bash /common.sh
 
 COPY crossimages/cmake.sh /
-RUN sh /cmake.sh
+RUN bash /cmake.sh
 
 FROM cross-base AS build
 
@@ -20,13 +20,13 @@ RUN TARGET_ARCH=ppc64el /deny-debian-packages.sh \
     binutils-powerpc64le-linux-gnu
 
 COPY crossimages/qemu.sh /
-RUN sh /qemu.sh ppc64le softmmu
+RUN bash /qemu.sh ppc64le softmmu
 
 COPY crossimages/dropbear.sh /
-RUN sh /dropbear.sh
+RUN bash /dropbear.sh
 
 COPY crossimages/linux-image.sh /
-RUN sh /linux-image.sh powerpc64le
+RUN bash /linux-image.sh powerpc64le
 
 COPY crossimages/linux-runner crossimages/base-runner.sh /
 COPY crossimages/toolchain.cmake /opt/toolchain.cmake
