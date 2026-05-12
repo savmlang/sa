@@ -16,6 +16,9 @@ export PKG_CONFIG_SYSROOT_DIR="$SYSROOT"
 export PKG_CONFIG_PATH="$SYSROOT/usr/lib/$CTARGET/pkgconfig"
 export PKG_CONFIG_ALLOW_CROSS=1
 
+# use lld linker
+export RUSTFLAGS="-Clinker=rust-lld --sysroot=$SYSROOT"
+
 echo "Building Rust"
 
-cargo build -Zbuild-std --release --target $TARGET $EXTRA
+cargo build --workspace --no-default-features -Zbuild-std --release --target $TARGET $EXTRA
