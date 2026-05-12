@@ -1,5 +1,6 @@
 use std::{num::NonZeroU8, pin::Pin, ptr::null, sync::Arc};
 
+use sajit::relcar::RELCAR_BASIC;
 use sajit::relocations::RelocKind;
 use sajit::{
   Executable, MemoryExecutableApi, WriteFnResult, advanced::MemoryExecutable,
@@ -54,7 +55,7 @@ impl JITMemoryManager {
     let succ = self
       .quick
       .iter_mut()
-      .any(|x| match x.write_fn(data, relocs) {
+      .any(|x| match x.write_fn(data, relocs, &RELCAR_BASIC) {
         WriteFnResult::Executable(ex) => {
           out = ex;
           true
@@ -80,7 +81,7 @@ impl JITMemoryManager {
 
       let mut m = MemoryExecutable::new_slab(Some(NonZeroU8::new(amt as u8).unwrap()));
 
-      let out = match m.write_fn(data, relocs) {
+      let out = match m.write_fn(data, relocs, &RELCAR_BASIC) {
         WriteFnResult::Executable(ex) => ex,
         _ => panic!("Reached a position where calculation is not idompotent"),
       };

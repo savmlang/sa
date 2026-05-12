@@ -12,7 +12,7 @@ members = [
   "bin/savmrun",
 ]
 resolver = "3"
-exclude = ["jitemission"]
+exclude = ["jitemission", "sajit/llvmtest"]
 
 [profile.release]
 opt-level = 3
