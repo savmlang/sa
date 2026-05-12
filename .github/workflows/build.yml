@@ -133,25 +133,65 @@ jobs:
 
       matrix:
         target:
+          # MIPS64 (EL)
+          - rust: mips64el-unknown-linux-gnuabi64
+            clang: mips64el-linux-gnu
+            feature: nano
+            arch: mips64el
+            exclude: --exclude satest
+
+          - rust: mips64el-unknown-linux-gnuabi64
+            clang: mips64el-linux-gnu
+            feature: pro
+            arch: mips64el
+            exclude: --exclude satest
+
+          # Armv7 (HF)
+          - rust: armv7-unknown-linux-gnueabihf
+            clang: armv7-linux-gnueabihf
+            feature: nano
+            arch: armhf
+            exclude: --exclude satest
+
+          - rust: armv7-unknown-linux-gnueabihf
+            clang: armv7-linux-gnueabihf
+            feature: pro
+            arch: armhf
+            exclude: --exclude satest
+
+          # PowerPC 64-bit
+          - rust: powerpc64le-unknown-linux-gnu
+            clang: powerpc64le-linux-gnu
+            feature: nano
+            arch: ppc64el
+            exclude: --exclude satest
+
+          - rust: powerpc64le-unknown-linux-gnu
+            clang: powerpc64le-linux-gnu
+            feature: pro
+            arch: ppc64el
+            exclude: --exclude satest
+
+          # RISC-V 64-bit (gc)
           - rust: riscv64gc-unknown-linux-gnu
-            clang: riscv64-linux-gnueabihf
+            clang: riscv64-linux-gnu
             feature: nano
             arch: riscv64
             exclude: --exclude satest
 
           - rust: riscv64gc-unknown-linux-gnu
-            clang: riscv64-linux-gnueabihf
+            clang: riscv64-linux-gnu
             feature: standard
             arch: riscv64
 
           - rust: riscv64gc-unknown-linux-gnu
-            clang: riscv64-linux-gnueabihf
+            clang: riscv64-linux-gnu
             feature: pro
             arch: riscv64
             exclude: --exclude satest
 
           - rust: riscv64gc-unknown-linux-gnu
-            clang: riscv64-linux-gnueabihf
+            clang: riscv64-linux-gnu
             feature: pro_standard
             arch: riscv64
 

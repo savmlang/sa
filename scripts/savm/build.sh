@@ -8,8 +8,8 @@ export CXX="clang++"
 export AR="llvm-ar"
 
 # cc flags
-export CFLAGS="--sysroot=$SYSROOT"
-export CXXFLAGS="--sysroot=$SYSROOT"
+export CFLAGS="--sysroot=$SYSROOT -fuse-ld=lld"
+export CXXFLAGS="--sysroot=$SYSROOT -fuse-ld=lld"
 
 # libffi
 export PKG_CONFIG_SYSROOT_DIR="$SYSROOT"
@@ -17,8 +17,20 @@ export PKG_CONFIG_PATH="$SYSROOT/usr/lib/$CTARGET/pkgconfig"
 export PKG_CONFIG_ALLOW_CROSS=1
 
 # use lld linker
-export RUSTFLAGS="-Clinker=rust-lld --sysroot=$SYSROOT"
+export RUSTFLAGS="-C linker=clang \
+  -C link-arg=-fuse-ld=lld \
+  -C link-arg=--target=$CTARGET \
+  -C link-arg=--sysroot=$SYSROOT \
+  -L target/debug \
+  -L target/release \
+  -L target/$TARGET/debug \
+  -L target/$TARGET/release"
 
-echo "Building Rust"
+echo "Building SaVM"
 
-cargo build --workspace --no-default-features -Zbuild-std --release --target $TARGET $EXTRA
+cargo build \
+  --workspace \
+  --no-default-features \
+  -Zbuild-std=std,core,proc_macro,panic_abort \
+  --release \
+  --target $TARGET $EXTRA

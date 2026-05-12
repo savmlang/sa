@@ -1,6 +1,6 @@
 #! /usr/bin/bash
 
-sudo apt update && sudo apt install -y debootstrap symlinks qemu-user-static
+sudo apt update && sudo apt install -y debootstrap symlinks qemu-user-static binfmt-support
 
 export SYSROOT=$HOME/sysroot/
 export UBUNTU=noble
@@ -10,12 +10,9 @@ rm -rf $SYSROOT || true
 mkdir -p $SYSROOT || true
 sudo debootstrap --arch=$ARCH --variant=minbase $UBUNTU $SYSROOT http://ports.ubuntu.com/ubuntu-ports
 
-# Copy QEMU
-sudo cp /usr/bin/qemu-aarch64-static $SYSROOT/usr/bin/
-
 # Install Dependencies
-sudo chroot $SYSROOT /usr/bin/qemu-aarch64-static /bin/sh -c \
-  "apt-get update && apt-get install -y libffi-dev libtinfo-dev zlib1g-dev llvm-dev"
+sudo chroot $SYSROOT /bin/sh -c \
+  "apt-get update && apt-get install -y libc6-dev gcc g++ build-essential"
 
 # Resolve Symlinks
 sudo symlinks -cr $SYSROOT
