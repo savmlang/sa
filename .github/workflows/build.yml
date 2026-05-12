@@ -219,7 +219,7 @@ jobs:
     name: Build SaVM ${{ matrix.feature }} (${{ matrix.target[0] }})
 
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         target:
           [
