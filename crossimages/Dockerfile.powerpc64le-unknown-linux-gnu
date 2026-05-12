@@ -28,7 +28,7 @@ RUN /dropbear.sh
 COPY crossimages/linux-image.sh /
 RUN /linux-image.sh powerpc64le
 
-COPY crossimages/linux-runner base-runner.sh /
+COPY crossimages/linux-runner crossimages/base-runner.sh /
 COPY crossimages/toolchain.cmake /opt/toolchain.cmake
 
 ENV CROSS_TOOLCHAIN_PREFIX=powerpc64le-linux-gnu-
