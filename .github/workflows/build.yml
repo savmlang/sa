@@ -15,8 +15,13 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        target: [ x86_64-pc-windows-msvc, aarch64-pc-windows-msvc, i686-pc-windows-msvc ]
-        feature: [ nano, standard, pro, pro_standard ]
+        target:
+          [
+            x86_64-pc-windows-msvc,
+            aarch64-pc-windows-msvc,
+            i686-pc-windows-msvc,
+          ]
+        feature: [nano, standard, pro, pro_standard]
 
         exclude:
           - target: i686-pc-windows-msvc
@@ -51,10 +56,10 @@ jobs:
       matrix:
         target:
           [
-            [ x86_64-apple-darwin, x86_64-apple-darwin ],
-            [ aarch64-apple-darwin, arm64-apple-darwin ],
+            [x86_64-apple-darwin, x86_64-apple-darwin],
+            [aarch64-apple-darwin, arm64-apple-darwin],
           ]
-        feature: [ nano, standard, pro, pro_standard ]
+        feature: [nano, standard, pro, pro_standard]
 
     runs-on: ${{ matrix.target[0] == 'aarch64-apple-darwin' && 'macos-15' ||
       'macos-15-intel' }}
@@ -81,26 +86,26 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        feature: [ nano, standard, pro, pro_standard ]
+        feature: [nano, standard, pro, pro_standard]
         target:
           [
-            [ aarch64-unknown-linux-gnu, aarch64-linux-gnu ],
-            [ x86_64-unknown-linux-gnu, x86_64-linux-gnu ],
-            [ i686-unknown-linux-gnu, i686-linux-gnu ],
+            [aarch64-unknown-linux-gnu, aarch64-linux-gnu],
+            [x86_64-unknown-linux-gnu, x86_64-linux-gnu],
+            [i686-unknown-linux-gnu, i686-linux-gnu],
           ]
 
         include:
-          - os: ubuntu-22.04-arm
-            target: [ aarch64-unknown-linux-gnu, aarch64-linux-gnu ]
+          - os: ubuntu-24.04-arm
+            target: [aarch64-unknown-linux-gnu, aarch64-linux-gnu]
 
         exclude:
-          - target: [ i686-unknown-linux-gnu, i686-linux-gnu ]
+          - target: [i686-unknown-linux-gnu, i686-linux-gnu]
             feature: standard
 
-          - target: [ i686-unknown-linux-gnu, i686-linux-gnu ]
+          - target: [i686-unknown-linux-gnu, i686-linux-gnu]
             feature: pro_standard
 
-    runs-on: ${{ matrix.os || 'ubuntu-22.04' }}
+    runs-on: ${{ matrix.os || 'ubuntu-latest' }}
 
     steps:
       - name: Checkout
@@ -218,17 +223,17 @@ jobs:
       matrix:
         target:
           [
-            [ armv7-unknown-linux-gnueabihf, arm-linux-gnueabihf ],
-            [ powerpc64le-unknown-linux-gnu, powerpc64le-linux-gnu ],
-            [ riscv64gc-unknown-linux-gnu, riscv64-linux-gnu ],
+            [armv7-unknown-linux-gnueabihf, arm-linux-gnueabihf],
+            [powerpc64le-unknown-linux-gnu, powerpc64le-linux-gnu],
+            [riscv64gc-unknown-linux-gnu, riscv64-linux-gnu],
           ]
-        feature: [ nano, pro ]
+        feature: [nano, pro]
 
         include:
-          - target: [ riscv64gc-unknown-linux-gnu, riscv64-linux-gnu ]
+          - target: [riscv64gc-unknown-linux-gnu, riscv64-linux-gnu]
             feature: standard
 
-          - target: [ riscv64gc-unknown-linux-gnu, riscv64-linux-gnu ]
+          - target: [riscv64gc-unknown-linux-gnu, riscv64-linux-gnu]
             feature: pro_standard
 
     runs-on: ubuntu-latest
