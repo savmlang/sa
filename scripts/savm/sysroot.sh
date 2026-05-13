@@ -1,14 +1,14 @@
 #! /usr/bin/bash
 
-sudo apt update && sudo apt install -y debootstrap symlinks qemu-user-static binfmt-support
+sudo apt update && sudo apt install -y clang lld llvm debootstrap symlinks qemu-user-static binfmt-support
 
 export SYSROOT=$HOME/sysroot/
-export UBUNTU=noble
+export DISTRO=trixie
 
 # Setup SYSROOT
 rm -rf $SYSROOT || true
 mkdir -p $SYSROOT || true
-sudo debootstrap --arch=$ARCH --variant=minbase $UBUNTU $SYSROOT http://ports.ubuntu.com/ubuntu-ports
+sudo debootstrap --arch=$ARCH --variant=minbase $DISTRO $SYSROOT http://debian.org
 
 # Install Dependencies
 sudo chroot $SYSROOT /bin/sh -c \
