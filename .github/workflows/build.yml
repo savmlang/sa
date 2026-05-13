@@ -155,6 +155,7 @@ jobs:
 
           - rust: armv7-unknown-linux-gnueabihf
             clang: armv7-linux-gnueabihf
+            llvm: arm-linux-gnueabihf
             feature: pro
             arch: armhf
             exclude: --exclude satest
@@ -210,7 +211,27 @@ jobs:
       - name: Setup LLVM
         shell: pwsh
         run: |
-          ./sacli.ps1 llvm --llvm-build=llvm-static-${{ matrix.target.clang }}.tar.gz
+          function Invoke-WithRetry {
+            param(
+              [scriptblock]$Command,
+              [int]$MaxRetries = 5,
+              [int]$DelaySeconds = 2
+            )
+            $attempts = 0
+            do {
+              try {
+                & $Command
+                return
+              }
+              catch {
+                $attempts++
+                if ($attempts -ge $MaxRetries) { throw "Failed after $MaxRetries attempts." }
+                Start-Sleep -Seconds $DelaySeconds
+              }
+            } while ($attempts -lt $MaxRetries)
+          }
+          
+          Invoke-WithRetry -Command { ./sacli.ps1 llvm --llvm-build=llvm-static-${{ matrix.target.llvm || matrix.target.clang }}.tar.gz } -MaxRetries 5
 
       - name: Build SaVM
         run: |
