@@ -44,6 +44,20 @@ impl NativeCompilerBuilder for CompilerBuilder {
   }
 }
 
+pub fn testing_compiler_infra() -> &'static [(&'static str, &'static dyn NativeCompilerBuilder)] {
+  &[
+    // #[cfg(all(feature = "llvm", not(feature = "cranelift")))]
+    // &CompilerBuilder(SaVMLLVMBuilder::create_cinder, CacheLevel::LLVMCinder),
+    #[cfg(feature = "cranelift")]
+    (
+      "Crafter - Cranelift JIT",
+      &CompilerBuilder(SaVMCranelift::create_abs8, CacheLevel::CraneliftCrafter),
+    ),
+    // #[cfg(feature = "llvm")]
+    // &CompilerBuilder(SaVMLLVMBuilder::create_crater, CacheLevel::LLVMCrater),
+  ]
+}
+
 pub fn compiler_infra() -> &'static [&'static dyn NativeCompilerBuilder] {
   &[
     #[cfg(all(feature = "llvm", not(feature = "cranelift")))]

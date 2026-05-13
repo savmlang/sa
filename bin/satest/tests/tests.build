@@ -1,0 +1,26 @@
+; satest Build Script
+;
+; This is ran w.r.t chdir
+
+; This describes the args to provide to compile with `sasm`
+; :compile <bindir> <distdir>
+:compile text dist
+:compile support.text dist
+
+; This means to also benchmark
+:bench
+
+; Also test jit
+:jit
+
+; 1k benchmark iteration
+; Allowed extensions: M, k, n
+;
+; B = billion (*1000*1000*1000)
+; M = million (*1000*1000)
+; k = thousand (*1000)
+; n = Number (*1) 
+;
+; Format `:iter <num> <unit>`
+; <num> cannot be float
+:iter 1 k

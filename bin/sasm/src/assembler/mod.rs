@@ -1,15 +1,14 @@
-use phf::{phf_map, Map};
+#![allow(dead_code)]
+
+use phf::{Map, phf_map};
 use std::{
   borrow::Cow,
   collections::{HashMap, HashSet},
 };
 
-use crate::{
-  assembler::{
-    macros::{AssertOp, MacroJIT, MicroJITBuilder},
-    number::parse_expr,
-  },
-  GLOB_MACROS, GLOB_VALUES,
+use crate::assembler::{
+  macros::{AssertOp, MacroJIT, MicroJITBuilder},
+  number::parse_expr,
 };
 
 use sart::ctr::parse_instrution;
@@ -257,7 +256,11 @@ pub struct State<'a> {
   curr_macro: Option<MicroJITBuilder<'a>>,
 }
 
-pub fn assemble<'a>(data: &'a str) -> State<'a> {
+pub fn assemble<'a>(
+  data: &'a str,
+  macros: &'a HashMap<&'a str, Cow<'a, MacroJIT<'a>>>,
+  resolved: &'a HashMap<&'a str, OutValue>,
+) -> State<'a> {
   let mut state = State {
     resolved: HashMap::new(),
     suppress: HashSet::new(),
@@ -281,7 +284,7 @@ pub fn assemble<'a>(data: &'a str) -> State<'a> {
 
     match statement.chars().next().unwrap() {
       // Definition
-      '#' => parse_pwr(statement, &mut state, &mut final_macromode),
+      '#' => parse_pwr(statement, &mut state, &mut final_macromode, macros, resolved),
       _ => {
         let Some((instr, ops)) = statement.split_once(" ") else {
           let instr = parse_instrution(statement.trim()).expect("Unknown intruction found");
@@ -357,7 +360,13 @@ pub fn assemble<'a>(data: &'a str) -> State<'a> {
   state
 }
 
-fn parse_pwr<'a>(statement: &'a str, state: &mut State<'a>, macromode: &mut bool) {
+fn parse_pwr<'a>(
+  statement: &'a str,
+  state: &mut State<'a>,
+  macromode: &mut bool,
+  macros: &'a HashMap<&'a str, Cow<'a, MacroJIT<'a>>>,
+  resolved: &'a HashMap<&'a str, OutValue>,
+) {
   let (inst, payload) = statement.split_once(" ").map_or_else(
     || {
       if statement == "#end" {
@@ -401,20 +410,15 @@ fn parse_pwr<'a>(statement: &'a str, state: &mut State<'a>, macromode: &mut bool
           }
         });
       } else if id.starts_with("#") {
-        let Some(mc) = GLOB_MACROS
-          .get()
-          .expect("`macros` cannot globally import macros!")
-          .get(id)
-        else {
+        let Some(mc) = macros.get(id) else {
           panic!("Unable to resolve global macro : {id}");
         };
 
         state.macros.insert(id, Cow::Borrowed(mc));
       } else if let Some(_) = hmap.insert(
         id,
-        GLOB_VALUES
-          .get()
-          .and_then(|x| x.get(&id))
+        resolved
+          .get(&id)
           .map(|x| *x)
           .or_else(|| IMPORTS.get(id).map(|x| *x))
           .or_else(|| {

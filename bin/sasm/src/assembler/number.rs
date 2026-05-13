@@ -161,7 +161,6 @@ pub fn parse_expr<'a>(
     }
     // Fallback to basic parsing
     _ => {
-      println!("{data}");
       let (data, width) = data.split_once("::u").unwrap();
       let width = width.parse::<u8>().unwrap();
 

@@ -217,7 +217,7 @@ jobs:
               }
             } while ($attempts -lt $MaxRetries)
           }
-          
+
           Invoke-WithRetry -Command { ./sacli.ps1 llvm --llvm-build=llvm-static-${{ matrix.target.llvm || matrix.target.clang }}.tar.gz } -MaxRetries 5
 
       - name: Build SaVM
@@ -229,7 +229,7 @@ jobs:
           ARCH: ${{ matrix.target.arch }}
           TARGET: ${{ matrix.target.rust }}
           CTARGET: ${{ matrix.target.clang }}
-          EXTRA: --features savmrun/${{ matrix.target.feature }} ${{ matrix.target.exclude }}
+          EXTRA: --features savmrun/${{ matrix.target.feature }},satest/${{ matrix.target.feature }} ${{ matrix.target.exclude }}
 
           # Linker
           DYLD_LIBRARY_PATH: ${{ github.workspace }}/target/${{ matrix.target.rust }}/release

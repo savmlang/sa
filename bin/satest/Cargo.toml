@@ -1,14 +1,29 @@
 [package]
 name = "satest"
 version = "0.0.1"
+description = "The SaVM test harness designed to test SaVM itself."
 edition = "2024"
 
 [dependencies]
-savm = { path = "../../savm", default-features = false, features = [
-  "cranelift",
-  "sendback",
-] }
+savm = { path = "../../savm", default-features = false }
+sasm = { path = "../sasm" }
+
+console = "^0.16"
+indicatif = "^0.18"
+
+statrs = "^0.18"
 
 serde = { version = "^1", features = ["derive"] }
 serde_json = "^1"
+
 toml = "^1"
+
+[features]
+nano = []
+standard = ["native", "cranelift"]
+pro = ["native", "llvm"]
+pro_standard = ["native", "standard", "pro"]
+
+native = []
+cranelift = ["native", "savm/cranelift", "savm/sendback"]
+llvm = ["native", "savm/llvm", "savm/sendback"]

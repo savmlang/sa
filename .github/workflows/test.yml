@@ -7,38 +7,6 @@ permissions:
   contents: read
 
 jobs:
-  jitemitvm:
-    name: Run jitemission
-
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          submodules: recursive
-
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: nightly
-
-      - name: Build SaVM
-        uses: ./.github/actions/build-savm
-
-      - name: Run
-        uses: ./.github/actions/sashell
-        env:
-          LIBRARY_PATH: ${{ github.workspace }}/jitemission/target/release
-        with:
-          shell: bash
-          run: |
-            cd jitemission
-
-            mkdir ./target/release || true
-            cp ${{ github.workspace }}/target/release/libsalloc.so ${{ github.workspace }}/jitemission/target/release/libsalloc.so
-
-            cargo run --release
-
   init:
     name: Run test
 

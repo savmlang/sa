@@ -1,36 +1,59 @@
+use console::Style;
 use savm::{
-  BytecodeResolver, CacheData, CacheLevel, JIT_CACHE, ResolvedData, SymbolMapTable,
-  SymbolMapTableInfo, VM, sync::VMSTAT,
+  BytecodeResolver, CacheData, CacheLevel, ResolvedData, SymbolMapTable, SymbolMapTableInfo, VM,
 };
 use serde::{Deserialize, Serialize};
 use std::{
+  borrow::Cow,
+  env::var,
+  fmt::Display,
   fs::{self, File},
-  mem::zeroed,
-  thread::sleep,
-  time::{Duration, Instant},
+  process::exit,
 };
 
-#[derive(Debug, Serialize, Deserialize)]
-struct ExpectedOutput {
-  #[serde(default)]
-  r1: u64,
-  #[serde(default)]
-  r2: u64,
-  #[serde(default)]
-  r3: u64,
-  #[serde(default)]
-  r4: u64,
-  #[serde(default)]
-  r5: u64,
-  #[serde(default)]
-  r6: u64,
-  #[serde(default)]
-  r7: u64,
-  #[serde(default)]
-  r8: u64,
+use crate::bench::interpreter_benchmark;
+mod bench;
+#[cfg(feature = "native")]
+pub(crate) mod jitmem;
+mod testbuild;
+mod testsuite;
+
+pub(crate) fn err<T: Display>(err: T) -> ! {
+  println!("{}", Style::new().red().apply_to(err));
+  exit(-1);
 }
 
-struct Resolver(pub usize);
+pub(crate) struct TestHarness {
+  pub bench: bool,
+  pub jit: bool,
+  pub iter: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExpectedOutput {
+  #[serde(default)]
+  pub r1: u64,
+  #[serde(default)]
+  pub r2: u64,
+  #[serde(default)]
+  pub r3: u64,
+  #[serde(default)]
+  pub r4: u64,
+  #[serde(default)]
+  pub r5: u64,
+  #[serde(default)]
+  pub r6: u64,
+  #[serde(default)]
+  pub r7: u64,
+  #[serde(default)]
+  pub r8: u64,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct Resolver {
+  pub total: usize,
+  pub root: Box<str>,
+}
 
 impl BytecodeResolver for Resolver {
   fn learn_data(&self, _: u64) -> SymbolMapTableInfo {
@@ -42,116 +65,163 @@ impl BytecodeResolver for Resolver {
   fn get_best_cache(&self, _: u64) -> CacheData {
     CacheData::None
   }
-  fn update_cache(&self, _section: u64, _cache: CacheData) {}
+  fn update_cache(&self, _section: u64, _cache: CacheData) {
+    err("This shouldn't happen");
+  }
   fn heuristic_pgo(&self) -> [&[u64]; 2] {
     [&[], &[]]
   }
   fn last_section_id(&self) -> u64 {
-    (self.0 - 1) as _
+    (self.total - 1) as _
   }
   fn resolve_data(&self, section: u64) -> SymbolMapTable<Box<dyn ResolvedData>> {
     SymbolMapTable::MixedSizedBytecode {
-      bytecode: Box::new(File::open(format!("./dist/{section}")).unwrap()),
+      bytecode: Box::new(File::open(format!("./{}/dist/{section}", self.root)).unwrap()),
     }
   }
 }
 
 fn main() {
-  let total = fs::read_dir("./dist").unwrap().count();
-  let vm = VM::new(Resolver(total));
+  let tests = var("TESTS_DIR")
+    .map(|x| Cow::Owned(x))
+    .unwrap_or(Cow::Borrowed("./tests"));
 
-  sleep(Duration::from_secs(30));
+  let mut harness = TestHarness {
+    bench: false,
+    jit: true,
+    iter: 100,
+  };
 
-  for sectionid in 0..total {
-    println!("[TESTING] #{sectionid}");
+  if let Ok(asmbuild) = File::open(format!("./{tests}/tests.build")) {
+    println!(
+      "{:>12} tests.build",
+      Style::new().yellow().bold().apply_to("Forging")
+    );
+    testbuild::asmbuild(asmbuild, &mut harness, &tests);
 
-    let out = fs::read(format!("./expected/{sectionid}.toml")).unwrap();
-    let out: ExpectedOutput = toml::from_slice(&out).unwrap();
-
-    let mut durs_intl = vec![];
-    let mut durs_clif = vec![];
-
-    for _ in 0..100 {
-      let t0 = Instant::now();
-      vm.dispatch_chocolate::<false>(sectionid as _);
-      let tf = t0.elapsed();
-
-      durs_intl.push(tf);
-
-      assertchecks(&out, sectionid);
-
-      if let Some(true) = JIT_CACHE
-        .get()
-        .and_then(|x| Some(x.0.contains_key(&(sectionid as u64))))
-      {
-        let t0 = Instant::now();
-        vm.dispatch_jit(sectionid as _);
-        let tf = t0.elapsed();
-
-        durs_clif.push(tf);
-      }
-
-      assertchecks(&out, sectionid);
-    }
-
-    durs_intl.sort();
-    durs_clif.sort();
-
-    let d = |durs: &[Duration]| {
-      let len = durs.len();
-      if len == 0 {
-        return Duration::new(0, 0);
-      }
-
-      if len % 2 == 1 {
-        // 2a. If odd, take the middle element
-        durs[len / 2]
-      } else {
-        // 2b. If even, take the average of the two middle elements
-        let mid1 = durs[len / 2 - 1];
-        let mid2 = durs[len / 2];
-        (mid1 + mid2) / 2
-      }
-    };
-
-    let interpreter = d(&durs_intl);
-    let cranelift = d(&durs_clif);
-    println!("[PASS]    #{sectionid} in {interpreter:?} (Chocolate - Interpreter)");
-
-    if cranelift.is_zero() {
-      println!("[PASS]    #{sectionid} could not compile for (Crafter JIT - Compiler)");
-    } else {
-      println!("[PASS]    #{sectionid} in {cranelift:?} (Crafter JIT - Compiler)");
-    }
-    println!();
+    println!(
+      "{:>12} tests.build\n",
+      Style::new().green().bold().apply_to("Forged")
+    );
   }
-}
 
-fn assertchecks<T: std::fmt::Display>(out: &ExpectedOutput, sectionid: T) {
-  VMSTAT.with(|x| unsafe {
-    let mt = &mut *x.get();
+  let resolver = Resolver {
+    total: fs::read_dir(format!("./{tests}/dist"))
+      .expect("Couldn't read directory")
+      .count(),
+    root: Box::from(tests.as_ref()),
+  };
 
-    let ts = &mt.ts[0];
+  let savm = unsafe { VM::new_unsafe::<_, false>(resolver) };
 
-    let actual = [
-      ts.r1.u64, ts.r2.u64, ts.r3.u64, ts.r4.u64, ts.r5.u64, ts.r6.u64, ts.r7.u64, ts.r8.u64,
-    ];
-    let expected = [
-      out.r1, out.r2, out.r3, out.r4, out.r5, out.r6, out.r7, out.r8,
-    ];
+  #[cfg(feature = "native")]
+  let mut jitdata = jitmem::default();
 
-    assert_eq!(actual, expected);
+  let mut sectionids = vec![];
 
-    for i in 0..8 {
-      assert_eq!(
-        actual[i],
-        expected[i],
-        "Logic Error in Section {} at Register r{}",
-        sectionid,
-        i + 1
+  // FileTests
+  {
+    println!(
+      "{:>12} filetests",
+      Style::new().yellow().bold().apply_to("Starting")
+    );
+
+    let mut fail = 0u64;
+
+    for entry in fs::read_dir(format!("./{tests}/expected")).unwrap() {
+      let entry = entry.expect("Unable to unwrap dir entry.");
+
+      let sectionid = entry
+        .file_name()
+        .to_str()
+        .unwrap()
+        .split_once(".")
+        .unwrap()
+        .0
+        .parse::<u64>()
+        .unwrap();
+      let out: ExpectedOutput =
+        toml::from_slice(&fs::read(entry.path()).expect("Unable to read file"))
+          .expect("Unable to parse toml entry");
+
+      sectionids.push(sectionid);
+
+      println!(
+        "{:>12} Starting TestID #{sectionid}",
+        Style::new().yellow().apply_to("Test")
       );
+
+      let mut failtest = false;
+
+      testsuite::test_vm_interpreter(&savm, &out, sectionid, &mut failtest);
+
+      #[cfg(feature = "native")]
+      if harness.jit {
+        testsuite::test_jits(&savm, &mut jitdata, &out, sectionid, &mut failtest);
+      }
+
+      if failtest {
+        fail += 1;
+        println!(
+          "{:>12} TestID #{sectionid}",
+          Style::new().green().apply_to("Pass")
+        );
+      } else {
+        println!(
+          "{:>12} TestID #{sectionid}",
+          Style::new().green().apply_to("Pass")
+        );
+      }
     }
 
-    mt.ts = zeroed();
-  });
+    if fail != 0 {
+      println!(
+        "{:>12} {fail} test(s) have failed. Cannot continue to benchmarks.",
+        Style::new().red().bold().apply_to("FAILED")
+      );
+
+      err("\nTests Failed. Aborting");
+    }
+
+    println!(
+      "{:>12} All Tests Passed",
+      Style::new().green().bold().apply_to("Successful")
+    );
+  }
+
+  if harness.bench {
+    println!();
+
+    println!(
+      "{:>12} benchmarks ({} iterations)",
+      Style::new().yellow().bold().apply_to("Starting"),
+      harness.iter
+    );
+
+    println!(
+      "{:>12} These may take a while to finish.",
+      Style::new().yellow().apply_to("Note")
+    );
+
+    for sectionid in sectionids {
+      println!(
+        "{:>12} TestID #{sectionid}",
+        Style::new().bold().yellow().apply_to("Begin")
+      );
+
+      interpreter_benchmark(&savm, sectionid, harness.iter);
+
+      #[cfg(feature = "native")]
+      if harness.jit {
+        use crate::bench::jit_benchmark;
+
+        jit_benchmark(&savm, &mut jitdata, sectionid, harness.iter);
+      }
+    }
+
+    println!(
+      "{:>12} Benchmarks complete.",
+      Style::new().green().bold().apply_to("Complete")
+    );
+  }
 }
