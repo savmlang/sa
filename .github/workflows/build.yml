@@ -207,6 +207,11 @@ jobs:
           components: rust-src
           toolchain: nightly
 
+      - name: Setup LLVM
+        shell: pwsh
+        run: |
+          ./sacli.ps1 llvm --llvm-build=llvm-static-${{ matrix.target.clang }}.tar.gz
+
       - name: Build SaVM
         run: |
           bash ./scripts/savm/sysroot.sh

@@ -5,7 +5,7 @@ sudo apt update && sudo apt install -y clang lld llvm debootstrap symlinks qemu-
 export SYSROOT=$HOME/sysroot/
 export DISTRO=trixie
 
-if [[ "$ARCH" == "mipsel64" ]]; then
+if [[ "$ARCH" == "mips64el" ]]; then
   export DISTRO=bookworm
 fi
 
