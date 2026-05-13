@@ -135,13 +135,13 @@ jobs:
         target:
           # MIPS64 (EL)
           - rust: mips64el-unknown-linux-gnuabi64
-            clang: mips64el-linux-gnu
+            clang: mips64el-linux-gnuabi64
             feature: nano
             arch: mips64el
             exclude: --exclude satest
 
           - rust: mips64el-unknown-linux-gnuabi64
-            clang: mips64el-linux-gnu
+            clang: mips64el-linux-gnuabi64
             feature: pro
             arch: mips64el
             exclude: --exclude satest
