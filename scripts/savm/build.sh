@@ -26,6 +26,11 @@ export RUSTFLAGS="-C linker=clang \
   -L target/$TARGET/debug \
   -L target/$TARGET/release"
 
+if [[ "$TARGET" == "armv7-unknown-linux-gnueabihf" ]]; then
+  export RUSTFLAGS="$RUSTFLAGS \
+    -C link-arg=-Wl,--allow-shlib-undefined"
+fi
+
 echo "Building SaVM"
 
 cargo build \

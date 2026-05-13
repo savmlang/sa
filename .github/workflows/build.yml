@@ -212,6 +212,7 @@ jobs:
           bash ./scripts/savm/sysroot.sh
           bash ./scripts/savm/build.sh
         env:
+          LLVM_SYS_221_PREFIX: ${{ github.workspace }}/llvm/install
           ARCH: ${{ matrix.target.arch }}
           TARGET: ${{ matrix.target.rust }}
           CTARGET: ${{ matrix.target.clang }}
