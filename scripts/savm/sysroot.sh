@@ -8,7 +8,7 @@ export DISTRO=trixie
 # Setup SYSROOT
 rm -rf $SYSROOT || true
 mkdir -p $SYSROOT || true
-sudo debootstrap --arch=$ARCH --variant=minbase $DISTRO $SYSROOT http://debian.org
+sudo debootstrap --arch=$ARCH --variant=minbase $DISTRO $SYSROOT https://deb.debian.org/debian
 
 # Install Dependencies
 sudo chroot $SYSROOT /bin/sh -c \
