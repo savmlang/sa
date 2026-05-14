@@ -229,6 +229,13 @@ jobs:
           DYLD_LIBRARY_PATH: ${{ github.workspace }}/target/${{ matrix.target.rust }}/release
           LIBRARY_PATH: ${{ github.workspace }}/target/${{ matrix.target.rust }}/release
 
+      - name: Dryrun satest
+        continue-on-error: true
+        run: |
+          bash ./scripts/savm/testing.sh
+        env:
+          TARGET: ${{ matrix.target.rust }}
+
       - name: Package
         shell: pwsh
         env:

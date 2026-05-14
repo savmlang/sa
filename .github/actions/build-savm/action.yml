@@ -118,6 +118,13 @@ runs:
 
         ${{ inputs.builder }} build ${{ inputs.argv }} --release --workspace --no-default-features --features savmrun/${{ inputs.feature }},satest/${{ inputs.feature }}
 
+    - name: Dryrun satest
+      shell: pwsh
+      continue-on-error: true
+      working-directory: bin/satest
+      run: |
+        ${{ github.workspace }}/target/${{ inputs.rusttarget }}/release/satest
+
     - name: Package
       shell: pwsh
       env:

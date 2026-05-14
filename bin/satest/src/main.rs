@@ -82,7 +82,7 @@ impl BytecodeResolver for Resolver {
 }
 
 fn main() {
-  let tests = var("TESTS_DIR")
+  let tests = var("SATEST_TEST_DIR")
     .map(|x| Cow::Owned(x))
     .unwrap_or(Cow::Borrowed("./tests"));
 
