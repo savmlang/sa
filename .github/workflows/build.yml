@@ -53,7 +53,7 @@ jobs:
         continue-on-error: true
         working-directory: bin/satest
         run: |
-          ${{ github.workspace }}/target/${{ matrix.target[0] }}/release/satest
+          ${{ github.workspace }}/target/${{ matrix.target }}/release/satest
 
   darwin:
     name: Build SaVM ${{ matrix.feature }} (${{ matrix.target[0] }})
