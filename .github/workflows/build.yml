@@ -138,34 +138,29 @@ jobs:
             clang: armv7-linux-gnueabihf
             feature: nano
             arch: armhf
-            exclude: --exclude satest
 
           - rust: armv7-unknown-linux-gnueabihf
             clang: armv7-linux-gnueabihf
             llvm: arm-linux-gnueabihf
             feature: pro
             arch: armhf
-            exclude: --exclude satest
 
           # PowerPC 64-bit
           - rust: powerpc64le-unknown-linux-gnu
             clang: powerpc64le-linux-gnu
             feature: nano
             arch: ppc64el
-            exclude: --exclude satest
 
           - rust: powerpc64le-unknown-linux-gnu
             clang: powerpc64le-linux-gnu
             feature: pro
             arch: ppc64el
-            exclude: --exclude satest
 
           # RISC-V 64-bit (gc)
           - rust: riscv64gc-unknown-linux-gnu
             clang: riscv64-linux-gnu
             feature: nano
             arch: riscv64
-            exclude: --exclude satest
 
           - rust: riscv64gc-unknown-linux-gnu
             clang: riscv64-linux-gnu
@@ -176,7 +171,6 @@ jobs:
             clang: riscv64-linux-gnu
             feature: pro
             arch: riscv64
-            exclude: --exclude satest
 
           - rust: riscv64gc-unknown-linux-gnu
             clang: riscv64-linux-gnu
@@ -229,7 +223,7 @@ jobs:
           ARCH: ${{ matrix.target.arch }}
           TARGET: ${{ matrix.target.rust }}
           CTARGET: ${{ matrix.target.clang }}
-          EXTRA: --features savmrun/${{ matrix.target.feature }},satest/${{ matrix.target.feature }} ${{ matrix.target.exclude }}
+          EXTRA: --features savmrun/${{ matrix.target.feature }},satest/${{ matrix.target.feature }}
 
           # Linker
           DYLD_LIBRARY_PATH: ${{ github.workspace }}/target/${{ matrix.target.rust }}/release
