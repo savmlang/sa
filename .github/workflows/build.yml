@@ -92,7 +92,6 @@ jobs:
         continue-on-error: true
         working-directory: bin/satest
         run: |
-          sudo ldconfig
           ${{ github.workspace }}/target/${{ matrix.target[0] }}/release/satest
 
   linux:
@@ -143,7 +142,8 @@ jobs:
         continue-on-error: true
         working-directory: bin/satest
         run: |
-          cp ${{ github.workspace }}/target/${{ matrix.target[0] }}/release/libsalloc.so 
+          sudo cp ${{ github.workspace }}/target/${{ matrix.target[0] }}/release/libsalloc.so /usr/lib/libsalloc.so
+          sudo ldconfig
 
           ${{ github.workspace }}/target/${{ matrix.target[0] }}/release/satest
 
