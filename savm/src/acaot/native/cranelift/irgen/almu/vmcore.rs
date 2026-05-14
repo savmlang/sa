@@ -2,7 +2,6 @@ use std::mem::offset_of;
 
 use cranelift::prelude::{
   AbiParam, FunctionBuilder, InstBuilder, MemFlags, Signature, Value,
-  isa::CallConv,
   types::{I8, I32, I64},
 };
 use sart::ctr::VMTaskState;
@@ -69,14 +68,14 @@ pub fn hwnd_vcopy(
       target.synchronize(builder, meta);
     }
 
-    countdata => hwnd_vcopy_libccall(builder, meta, pickle, vcopy),
+    _count => hwnd_vcopy_libccall(builder, meta, pickle, vcopy),
   }
 }
 
 fn hwnd_vcopy_libccall(
   builder: &mut FunctionBuilder,
   meta: &mut CompilerMeta,
-  pickle: PickleInstruction,
+  _: PickleInstruction,
   vcopy: VCOPY,
 ) {
   let VCOPY {
@@ -86,8 +85,7 @@ fn hwnd_vcopy_libccall(
     src_offset,
     target_offset,
     overlapping,
-    src_align,
-    target_align,
+    ..
   } = vcopy;
 
   let count: Value = match count {
@@ -178,7 +176,7 @@ pub fn hwnd_scratch(
     SCRATCH::Allocate {
       size_reg,
       align_reg,
-    } => unsafe {
+    } => {
       let size = resolve_reg(builder, meta, size_reg);
       let size = builder.use_var(size);
 
@@ -188,7 +186,7 @@ pub fn hwnd_scratch(
       let op = builder.ins().iconst(I8, 0);
 
       builder.ins().call(fref, &[op, ws, size, align])
-    },
+    }
     // Drop classic
     SCRATCH::DropClassic => {
       let nil = builder.ins().iconst(I64, 0);
@@ -203,7 +201,6 @@ pub fn hwnd_scratch(
 
       builder.ins().call(fref, &[op, ws, nil, nil])
     }
-    _ => unreachable!(),
   };
 
   let largepad = builder.inst_results(largepad)[0];

@@ -7,7 +7,7 @@ use crate::{
       vfop::{FOP_CEIL, FOP_FLOOR, FOP_ROUND, FOP_SQRT, FOP_TRUNC, VFOP, parse_vfop},
     },
   },
-  arrcastint, resolve_location_src,
+  resolve_location_src,
 };
 use sart::{ctr::VMTaskState, structures::QuadPackedData};
 use std::ptr;

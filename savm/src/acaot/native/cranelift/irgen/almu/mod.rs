@@ -106,7 +106,7 @@ pub fn hwnd_rem(builder: &mut FunctionBuilder, meta: &mut CompilerMeta, pickle: 
 
 #[macro_export]
 macro_rules! arithprelude {
-  ($pickle:ident, $meta:ident, $builder:ident) => {{
+  ( $meta:ident, $builder:ident) => {{
     let flags = readws!($meta, start = 0, stop = 4, u32);
 
     let instdefined = flags as u16;
@@ -147,13 +147,8 @@ macro_rules! arithprelude {
   }};
 }
 
-pub fn hwnd_vadd(
-  builder: &mut FunctionBuilder,
-  meta: &mut CompilerMeta,
-  pickle: PickleInstruction,
-) {
-  let (instdefined, count, typ, src1, src2, (mut target, _, _)) =
-    arithprelude!(pickle, meta, builder);
+pub fn hwnd_vadd(builder: &mut FunctionBuilder, meta: &mut CompilerMeta, _: PickleInstruction) {
+  let (instdefined, count, typ, src1, src2, (mut target, _, _)) = arithprelude!(meta, builder);
 
   // [<Carry/Sigflow bit>] [<saturation bit>] [Padding (14bits)] (16b)
   let carry = (instdefined >> 15) == 1; // gets the last bit
@@ -226,13 +221,8 @@ pub fn hwnd_vadd(
   target.synchronize(builder, meta);
 }
 
-pub fn hwnd_vsub(
-  builder: &mut FunctionBuilder,
-  meta: &mut CompilerMeta,
-  pickle: PickleInstruction,
-) {
-  let (instdefined, count, typ, src1, src2, (mut target, _, _)) =
-    arithprelude!(pickle, meta, builder);
+pub fn hwnd_vsub(builder: &mut FunctionBuilder, meta: &mut CompilerMeta, _: PickleInstruction) {
+  let (instdefined, count, typ, src1, src2, (mut target, _, _)) = arithprelude!(meta, builder);
 
   // [<borrow bit>] [<saturation bit>] [Padding (14bits)] (16b)
   let borrow = (instdefined >> 15) == 1; // gets the last bit
@@ -305,12 +295,9 @@ pub fn hwnd_vsub(
   target.synchronize(builder, meta);
 }
 
-pub fn hwnd_vmul(
-  builder: &mut FunctionBuilder,
-  meta: &mut CompilerMeta,
-  pickle: PickleInstruction,
-) {
-  let (instdefined, count, typ, src1, src2, target) = arithprelude!(pickle, meta, builder);
+#[allow(unused)]
+pub fn hwnd_vmul(builder: &mut FunctionBuilder, meta: &mut CompilerMeta, _: PickleInstruction) {
+  let (instdefined, count, typ, src1, src2, target) = arithprelude!(meta, builder);
 
   let (mut target, t_src, t_offset) = target;
 
@@ -328,6 +315,7 @@ pub fn hwnd_vmul(
   let clif = typ.clif_mapping();
 
   if wide {
+    todo!("Wide mul is being rethoughtof");
     let basetype = clif.x1;
     target = resolve_location_src_store(builder, meta, typ, t_src, None, t_offset, count * 2);
 

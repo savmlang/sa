@@ -62,7 +62,7 @@ pub fn reglane_extract(builder: &mut FunctionBuilder, reg: Value, shrink: Type, 
 
 pub fn abstract_insertlane(
   builder: &mut FunctionBuilder,
-  meta: &mut CompilerMeta,
+  _: &mut CompilerMeta,
   vector: Value,
   valadd: Value,
   idx: u8,
@@ -72,7 +72,7 @@ pub fn abstract_insertlane(
 
 pub fn abstract_extractlane(
   builder: &mut FunctionBuilder,
-  meta: &mut CompilerMeta,
+  _: &mut CompilerMeta,
   vector: Value,
   idx: u8,
 ) -> Value {

@@ -4,7 +4,7 @@ use crate::{
     implementation::WorkingSet,
     reader::vsh::{VSH, parse_vsh},
   },
-  arrcastint, resolve_location_src,
+  resolve_location_src,
 };
 use sart::{ctr::VMTaskState, structures::QuadPackedData};
 use std::ptr;

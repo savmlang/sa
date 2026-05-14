@@ -1,4 +1,4 @@
-use std::{num::NonZeroU8, pin::Pin, ptr::null, sync::Arc};
+use std::{num::NonZeroU8, pin::Pin, ptr::null};
 
 use sajit::relcar::RELCAR_BASIC;
 use sajit::relocations::RelocKind;

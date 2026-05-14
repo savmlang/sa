@@ -107,7 +107,7 @@ impl VM {
 
   #[inline(always)]
   pub fn dispatch_chocolate<const JMPTOJIT: bool>(&self, sectionid: u64) {
-    let Some((mut data, jumps)) = CODE_CACHE.get(&sectionid) else {
+    let Some((data, jumps)) = CODE_CACHE.get(&sectionid) else {
       return self.pickle_section(sectionid, Self::dispatch_chocolate::<JMPTOJIT>);
     };
 
@@ -128,8 +128,6 @@ impl VM {
 
       (*ts).engine_or_pt.pt = self as *const _ as _;
       (*ts).curline_or_resume.usi = 0;
-
-      let mut atmark = false;
 
       'jcheck: loop {
         let dt = data.as_ref();
@@ -182,7 +180,7 @@ impl VM {
             jumptomark = Some(out);
 
             (*ts).curline_or_resume.usi += 3;
-            atmark = true;
+
             continue 'jcheck;
           }
 
@@ -223,7 +221,7 @@ impl VM {
     use crate::JIT_CACHE;
 
     let Some(jitcache) = JIT_CACHE.get() else {
-      return unreachable!();
+      unreachable!();
     };
 
     let Some(jit) = jitcache.0.get_one(&sectionid) else {

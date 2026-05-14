@@ -1,6 +1,6 @@
 use std::mem::forget;
 
-use cranelift::prelude::{FunctionBuilder, InstBuilder, Value, Variable, types::I64};
+use cranelift::prelude::{FunctionBuilder, InstBuilder, Value, types::I64};
 
 use crate::acaot::native::cranelift::{CompilerMeta, irgen::reg::resolve_reg};
 

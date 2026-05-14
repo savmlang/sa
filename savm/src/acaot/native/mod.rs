@@ -1,12 +1,9 @@
-use std::{collections::HashMap, sync::Arc};
-
-use sart::structures::serde;
-use sart::structures::serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[cfg(feature = "cranelift")]
 use crate::acaot::native::cranelift::SaVMCranelift;
 #[cfg(feature = "llvm")]
-use crate::acaot::native::llvm_compiler::{SaVMLLVM, SaVMLLVMBuilder};
+use crate::acaot::native::llvm_compiler::SaVMLLVMBuilder;
 use crate::{CacheData, CacheLevel, acaot::pickle::def::PickleInstruction};
 
 #[cfg(feature = "cranelift")]
@@ -46,15 +43,40 @@ impl NativeCompilerBuilder for CompilerBuilder {
 
 pub fn testing_compiler_infra() -> &'static [(&'static str, &'static dyn NativeCompilerBuilder)] {
   &[
-    // #[cfg(all(feature = "llvm", not(feature = "cranelift")))]
-    // &CompilerBuilder(SaVMLLVMBuilder::create_cinder, CacheLevel::LLVMCinder),
+    // #[cfg(feature = "llvm")]
+    // (
+    //   "Cinder - LLVM JIT",
+    //   &CompilerBuilder(SaVMLLVMBuilder::create_cinder, CacheLevel::LLVMCinder),
+    // ),
     #[cfg(feature = "cranelift")]
     (
       "Crafter - Cranelift JIT",
       &CompilerBuilder(SaVMCranelift::create_abs8, CacheLevel::CraneliftCrafter),
     ),
     // #[cfg(feature = "llvm")]
-    // &CompilerBuilder(SaVMLLVMBuilder::create_crater, CacheLevel::LLVMCrater),
+    // (
+    //   "Crater - LLVM JIT",
+    //   &CompilerBuilder(SaVMLLVMBuilder::create_crater, CacheLevel::LLVMCrater),
+    // ),
+  ]
+}
+
+pub fn testing_epitier_compilers() -> &'static [(&'static str, &'static dyn NativeCompilerBuilder)]
+{
+  &[
+    // #[cfg(feature = "llvm")]
+    // (
+    //   "Epitome - LLVM JIT",
+    //   &CompilerBuilder(SaVMLLVMBuilder::create_epitome, CacheLevel::LLVMEpitome),
+    // ),
+    #[cfg(feature = "cranelift")]
+    (
+      "Epicenter - Cranelift JIT",
+      &CompilerBuilder(
+        SaVMCranelift::create_rel_optimized,
+        CacheLevel::CraneliftEpicenter,
+      ),
+    ),
   ]
 }
 

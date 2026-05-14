@@ -1,4 +1,4 @@
-use cranelift::prelude::{FloatCC, FunctionBuilder, InstBuilder, IntCC, types::I64};
+use cranelift::prelude::{FloatCC, FunctionBuilder, InstBuilder, IntCC};
 
 use crate::{
   acaot::{
@@ -76,9 +76,6 @@ pub fn hwnd_vcmp(
           src2,
         )
       } else {
-        let srca = builder.func.dfg.value_type(src1);
-        let srcb = builder.func.dfg.value_type(src2);
-
         builder.ins().icmp(
           match op {
             0 => IntCC::Equal,

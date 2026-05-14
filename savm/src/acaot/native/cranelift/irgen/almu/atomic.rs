@@ -1,5 +1,5 @@
 use cranelift::{
-  codegen::ir::{AtomicRmwOp, Constant, ConstantData},
+  codegen::ir::{AtomicRmwOp, ConstantData},
   prelude::{FunctionBuilder, InstBuilder, IntCC, MemFlags},
 };
 

@@ -1,5 +1,4 @@
 use std::{
-  any::Any,
   ffi::c_void,
   ptr::{self, null_mut},
   thread::spawn,
@@ -29,8 +28,8 @@ pub extern "C" fn savm_spawn(
 
     if launch_async {
       let tokiort = GLOBAL_RUNTIME.spawn(async move {
-        let vm = vm;
-        let taskstate = safe_taskstate;
+        let _vm = vm;
+        let _taskstate = safe_taskstate;
 
         // let [r7, r8] = (*vm.0).async_fncall(section, taskstate.0).await;
         // (r7, r8)

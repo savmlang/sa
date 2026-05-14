@@ -70,6 +70,5 @@ pub fn call_scratch(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: 
 
       ws.salloc_free(pt);
     }
-    _ => unreachable!(),
   }
 }

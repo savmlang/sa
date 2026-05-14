@@ -7,7 +7,7 @@ use crate::{
     implementation::WorkingSet,
     reader::corevm::{VCOPY, parse_vcopy},
   },
-  arrcastint, resolve_location_src,
+  resolve_location_src,
 };
 
 pub fn call_vcopy(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {

@@ -4,7 +4,7 @@ use llvm_sys::{
   target::{LLVMDisposeTargetData, LLVMTargetDataRef},
   target_machine::{LLVMDisposeTargetMachine, LLVMOpaqueTargetMachine},
 };
-use std::ffi::{c_char, c_void};
+use std::ffi::c_char;
 
 macro_rules! llvmdispose {
   (

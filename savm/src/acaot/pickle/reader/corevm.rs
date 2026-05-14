@@ -62,7 +62,7 @@ pub fn parse_vcopy(pickle: &PickleInstruction, ws: &[u8]) -> VCOPY {
 
   let target_align = alignment(memory_flags & 0x03);
   let src_align = alignment((memory_flags >> 2) & 0x03);
-  let overlapping = ((memory_flags & 0x10) > 0);
+  let overlapping = (memory_flags & 0x10) > 0;
 
   let countbit = memflags & 0x80;
 
@@ -104,7 +104,7 @@ pub enum SCRATCH {
   DropAligned,
 }
 
-pub fn parse_scratch(pickle: &PickleInstruction, ws: &[u8]) -> SCRATCH {
+pub fn parse_scratch(pickle: &PickleInstruction, _: &[u8]) -> SCRATCH {
   let op_class = pickle.u1;
 
   let payload = u16::from_ne_bytes([pickle.u2, pickle.u3]);

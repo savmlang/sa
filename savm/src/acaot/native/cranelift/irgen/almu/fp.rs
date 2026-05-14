@@ -25,7 +25,7 @@ macro_rules! arithprelude {
       _ => unreachable!(),
     });
 
-    let inst = ((flags >> 14) & 0x01) as u8;
+    let _inst = ((flags >> 14) & 0x01) as u8;
 
     let count = readws!($meta, start = 0, stop = 4, u32);
 
@@ -60,7 +60,7 @@ pub fn handle_vaddf(
   meta: &mut CompilerMeta,
   pickle: PickleInstruction,
 ) {
-  let (fptype, src1, src2, mut target) = arithprelude!(pickle, builder, meta, taskstate);
+  let (_, src1, src2, mut target) = arithprelude!(pickle, builder, meta, taskstate);
 
   src1
     .into_iter()
@@ -80,7 +80,7 @@ pub fn handle_vsubf(
   meta: &mut CompilerMeta,
   pickle: PickleInstruction,
 ) {
-  let (fptype, src1, src2, mut target) = arithprelude!(pickle, builder, meta, taskstate);
+  let (_, src1, src2, mut target) = arithprelude!(pickle, builder, meta, taskstate);
 
   src1
     .into_iter()
@@ -100,7 +100,7 @@ pub fn handle_vmulf(
   meta: &mut CompilerMeta,
   pickle: PickleInstruction,
 ) {
-  let (fptype, src1, src2, mut target) = arithprelude!(pickle, builder, meta, taskstate);
+  let (_, src1, src2, mut target) = arithprelude!(pickle, builder, meta, taskstate);
 
   src1
     .into_iter()
@@ -120,7 +120,7 @@ pub fn handle_vdivf(
   meta: &mut CompilerMeta,
   pickle: PickleInstruction,
 ) {
-  let (fptype, src1, src2, mut target) = arithprelude!(pickle, builder, meta, taskstate);
+  let (_, src1, src2, mut target) = arithprelude!(pickle, builder, meta, taskstate);
 
   src1
     .into_iter()
@@ -150,7 +150,7 @@ macro_rules! fmaprelude {
       _ => unreachable!(),
     });
 
-    let inst = ((flags >> 14) & 0x01) as u8;
+    let _inst = ((flags >> 14) & 0x01) as u8;
 
     let count = readws!($meta, start = 0, stop = 4, u32);
 
@@ -192,7 +192,7 @@ pub fn handle_vfma(
   meta: &mut CompilerMeta,
   pickle: PickleInstruction,
 ) {
-  let (fptype, src1, src2, src3, mut target) = fmaprelude!(pickle, builder, meta, taskstate);
+  let (_, src1, src2, src3, mut target) = fmaprelude!(pickle, builder, meta, taskstate);
 
   src1
     .into_iter()

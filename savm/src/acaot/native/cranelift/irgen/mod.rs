@@ -19,11 +19,7 @@ use crate::acaot::{
 };
 use cranelift::{
   frontend::Switch,
-  prelude::{
-    Block, FunctionBuilder, InstBuilder, MemFlags, TrapCode,
-    isa::TargetIsa,
-    types::{I64, I64X8},
-  },
+  prelude::{FunctionBuilder, InstBuilder, MemFlags, TrapCode, isa::TargetIsa, types::I64},
 };
 use sart::ctr::VMTaskState;
 
@@ -291,17 +287,17 @@ pub fn compile(
     builder.switch_to_block(meta.epilogue);
 
     let vars = [
-      (&meta.r7, offset_of!(VMTaskState, r7) as i32),
-      (&meta.r8, offset_of!(VMTaskState, r8) as i32),
-    ];
-
-    #[cfg(feature = "sendback")]
-    let vars = [
+      #[cfg(feature = "sendback")]
       (&meta.r1, offset_of!(VMTaskState, r1) as i32),
+      #[cfg(feature = "sendback")]
       (&meta.r2, offset_of!(VMTaskState, r2) as i32),
+      #[cfg(feature = "sendback")]
       (&meta.r3, offset_of!(VMTaskState, r3) as i32),
+      #[cfg(feature = "sendback")]
       (&meta.r4, offset_of!(VMTaskState, r4) as i32),
+      #[cfg(feature = "sendback")]
       (&meta.r5, offset_of!(VMTaskState, r5) as i32),
+      #[cfg(feature = "sendback")]
       (&meta.r6, offset_of!(VMTaskState, r6) as i32),
       (&meta.r7, offset_of!(VMTaskState, r7) as i32),
       (&meta.r8, offset_of!(VMTaskState, r8) as i32),

@@ -1,33 +1,20 @@
+#![allow(unused)]
 use std::{
-  borrow::Cow,
-  cell::LazyCell,
-  ffi::CStr,
-  hint::black_box,
-  marker::PhantomData,
-  mem::zeroed,
-  ops::Deref,
-  ptr::{null, null_mut},
-  sync::LazyLock,
+  borrow::Cow, ffi::CStr, hint::black_box, marker::PhantomData, mem::zeroed, ops::Deref,
+  ptr::null_mut, sync::LazyLock,
 };
 
 use llvm_sys::{
-  LLVMContext, LLVMModule,
   core::{
-    LLVMAddFunction, LLVMAppendBasicBlockInContext, LLVMContextCreate,
-    LLVMCreateBasicBlockInContext, LLVMFunctionType, LLVMInt32TypeInContext,
-    LLVMModuleCreateWithNameInContext, LLVMPrintModuleToString, LLVMSetDataLayout, LLVMSetTarget,
-    LLVMVoidTypeInContext,
+    LLVMAddFunction, LLVMContextCreate, LLVMFunctionType, LLVMModuleCreateWithNameInContext,
+    LLVMPrintModuleToString, LLVMSetDataLayout, LLVMSetTarget, LLVMVoidTypeInContext,
   },
   prelude::LLVMContextRef,
-  target::{
-    LLVM_InitializeNativeAsmParser, LLVM_InitializeNativeAsmPrinter,
-    LLVM_InitializeNativeDisassembler, LLVM_InitializeNativeTarget, LLVMCopyStringRepOfTargetData,
-    LLVMIntPtrTypeInContext,
-  },
+  target::{LLVMCopyStringRepOfTargetData, LLVMIntPtrTypeInContext},
   target_machine::{
     LLVMCodeGenOptLevel, LLVMCodeModel, LLVMCreateTargetDataLayout, LLVMCreateTargetMachine,
     LLVMGetDefaultTargetTriple, LLVMGetHostCPUFeatures, LLVMGetHostCPUName,
-    LLVMGetTargetFromTriple, LLVMOpaqueTargetMachine, LLVMRelocMode,
+    LLVMGetTargetFromTriple, LLVMRelocMode,
   },
 };
 

@@ -1,3 +1,4 @@
+#[cfg(target_arch = "aarch64")]
 use std::arch::is_aarch64_feature_detected;
 
 use cranelift::prelude::{
@@ -85,10 +86,6 @@ pub fn break_simd_waterfall_inner(
   let b512_threshold = 64 / width;
   let b256_threshold = 32 / width;
   let b128_threshold = 16 / width;
-  // let b64_threshold = 8 / width;
-  // let b32_threshold = 4 / width;
-  // let b16_threshold = 2 / width;
-  // let b8_threshold = 1 / width;
 
   // MemFlags (Vector)
   let b512_flags = memflags(alignment, 64);

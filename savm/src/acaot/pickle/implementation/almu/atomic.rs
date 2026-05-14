@@ -10,10 +10,8 @@ use crate::{
     implementation::WorkingSet,
     reader::{ATOMIC, ATOMICRmwOp, parse_atomic},
   },
-  arrcastint, resolve_location_src,
+  resolve_location_src,
 };
-
-const TOTAL_ORDERINGS: u8 = 5;
 
 // [Sub Opcode (2-bits)] [type (3-bit)] [ordering (3-bits)]
 // [offset v0 (i8)] [offset v1 (i8)]

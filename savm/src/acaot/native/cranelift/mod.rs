@@ -10,7 +10,6 @@ use ahash::{HashMap, HashMapExt};
 use cranelift::{
   codegen::{
     Context, FinalizedRelocTarget,
-    cursor::Cursor,
     ir::{
       ArgumentPurpose, ConstantPool, FuncRef, Function, SigRef, StackSlot, UserExternalName,
       UserExternalNameRef,
@@ -18,16 +17,14 @@ use cranelift::{
   },
   native::builder,
   prelude::{
-    isa::{Builder, CallConv, TargetIsa},
+    isa::{CallConv, TargetIsa},
     settings::Flags,
-    types::{I32, I64},
     *,
   },
 };
 use sart::ctr::{FLAGS::FLAG_JUMP_TO_RESUME, VMTaskState};
 use std::{
   mem::offset_of,
-  process::abort,
   sync::{Arc, OnceLock},
 };
 
@@ -51,13 +48,13 @@ impl SaVMCranelift {
     .get_or_init(|| {
       let mut settings = settings::builder();
       if highspeed {
-        settings.set("opt_level", "speed");
-        settings.set("regalloc_algorithm", "backtracking");
+        _ = settings.set("opt_level", "speed");
+        _ = settings.set("regalloc_algorithm", "backtracking");
       } else {
-        settings.set("regalloc_algorithm", "single_pass");
+        _ = settings.set("regalloc_algorithm", "single_pass");
       }
 
-      let mut flags = Flags::new(settings);
+      let flags = Flags::new(settings);
 
       if highspeed {
         flags.enable_alias_analysis();

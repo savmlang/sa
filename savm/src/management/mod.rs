@@ -1,32 +1,18 @@
 use crate::{
   BytecodeResolver, CODE_CACHE, CacheData, FNCALL_DISPATCH, SymbolMapTable, ThreadSafe,
   acaot::pickle::{PickleWorker, def::PickleInstruction},
-  sync::UnSafePtr,
 };
 use ahash::{HashMap, HashMapExt};
-use core::range::RangeInclusive;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
-use sart::{ctr::CVMTaskState, structures::ffi::CallSig};
-use std::{
-  iter::{Filter, Peekable},
-  slice::Iter,
-  sync::Arc,
-};
+use sart::structures::ffi::CallSig;
+use std::{iter::Peekable, sync::Arc};
 
 #[cfg(feature = "native")]
 use crossbeam_channel::Sender;
 
 #[cfg(feature = "native")]
 use crate::{
-  CacheLevel, SafeSwappableCodeStore,
-  acaot::{
-    LocSrc,
-    native::NativeCompilerBuilder,
-    pickle::reader::corevm::{
-      jitcall_scratch_ffi, jitcall_vcopy_noalias, jitcall_vcopy_overlapping,
-    },
-  },
-  executor::corevm_libcall,
+  CacheLevel, SafeSwappableCodeStore, acaot::native::NativeCompilerBuilder,
   management::jitmem::calculate_relocation_abs,
 };
 #[cfg(feature = "native")]
@@ -34,7 +20,7 @@ use evmap::handles::WriteHandle;
 #[cfg(feature = "native")]
 use sart::code::SwappableCodeStore;
 #[cfg(feature = "native")]
-use std::{mem::transmute, process::abort};
+use std::process::abort;
 
 #[cfg(feature = "native")]
 pub mod compiler_thread;
@@ -133,8 +119,8 @@ pub fn schedule<
     if *compiler_public + 1 == compilers.len() {
       _ = tx_public.try_send((0, 0, true));
     } else {
-      *compiler_fastlane += 1;
-      *important = important_s();
+      *compiler_public += 1;
+      *others = others_iter();
     }
   }
 }
@@ -195,7 +181,7 @@ pub fn management_main(
 
   #[cfg(feature = "native")]
   {
-    use std::{collections::HashMap, time::Duration};
+    use std::time::Duration;
 
     use crossbeam_channel::{bounded, select, tick};
 

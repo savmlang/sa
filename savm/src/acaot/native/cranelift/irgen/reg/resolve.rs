@@ -6,13 +6,7 @@ use crate::acaot::native::cranelift::irgen::reg::{
 use super::*;
 use cranelift::{
   codegen::ir::Endianness,
-  prelude::{
-    types::{
-      F32X4, F32X8, F32X16, F64X2, F64X4, F64X8, I8X16, I8X32, I8X64, I16X8, I16X16, I16X32, I32X4,
-      I32X8, I32X16, I64X2, I64X4, I64X8, INVALID,
-    },
-    *,
-  },
+  prelude::{types::INVALID, *},
 };
 
 #[inline(always)]
@@ -272,11 +266,7 @@ impl StoreResolver {
   pub fn waterfall_typerating(&self) -> Box<[Type]> {
     match self {
       Self::Pointer { storeseq, .. } => storeseq.iter().map(|&(_, x, _)| x).collect::<Box<[_]>>(),
-      Self::Regs {
-        mapout,
-        typedata,
-        values,
-      } => mapout
+      Self::Regs { mapout, .. } => mapout
         .waterfall
         .iter()
         .map(|&(_, x, _)| x)
@@ -296,7 +286,7 @@ impl StoreResolver {
       Self::Pointer {
         baseptr, storeseq, ..
       } => {
-        let &(offset, typ, memflags) = &storeseq[idx];
+        let &(offset, _, memflags) = &storeseq[idx];
         builder.ins().store(memflags, val, *baseptr, offset as i32);
       }
       Self::Regs { values, .. } => {
@@ -305,12 +295,12 @@ impl StoreResolver {
     }
   }
 
-  pub fn synchronize(mut self, builder: &mut FunctionBuilder, meta: &mut CompilerMeta) {
+  pub fn synchronize(self, builder: &mut FunctionBuilder, meta: &mut CompilerMeta) {
     match &self {
       Self::Pointer {
         baseptr,
-        storeseq,
         regtouches,
+        ..
       } => {
         for (idx, &register) in regtouches.iter().enumerate() {
           let offset = (idx as i32) * 8;
@@ -401,34 +391,6 @@ impl Drop for StoreResolver {
   }
 }
 
-fn register_map(
-  current: u8,
-  count: u8,
-  builder: &mut FunctionBuilder,
-  meta: &mut CompilerMeta,
-) -> (Value, Box<[Variable]>) {
-  let spillmap = meta.regspill;
-
-  let stack_ptr = builder.ins().stack_addr(I64, spillmap, 0);
-
-  let vars = (current..(current + count))
-    .enumerate()
-    .map(|(idx, rg)| {
-      let offset = (idx * 8) as i32;
-      let rg = resolve_reg(builder, meta, rg);
-
-      let value = builder.use_var(rg);
-      builder
-        .ins()
-        .store(MemFlags::trusted(), value, stack_ptr, offset);
-
-      rg
-    })
-    .collect::<Box<[Variable]>>();
-
-  (stack_ptr, vars)
-}
-
 fn get_max_alignment(base_align: u8, byteoffset: i32) -> u8 {
   if byteoffset == 0 {
     return base_align;
@@ -441,12 +403,6 @@ fn get_max_alignment(base_align: u8, byteoffset: i32) -> u8 {
   // The resulting alignment is the minimum of the base and the offset's alignment.
   // (If base is 64-aligned and offset is 8-aligned, the result is 8-aligned).
   u8::min(base_align, offset_align)
-}
-
-pub enum ResolvedLocSrc {
-  Registers { val: Value },
-  ScratchpadPtr { value: Value, align_max: u8 },
-  LargepadPtr { value: Value, align_max: u8 },
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -533,48 +489,6 @@ pub struct ClifTypeMapping {
 impl ClifTypeMapping {
   pub fn width(&self) -> u32 {
     self.width as _
-  }
-
-  pub fn simd_float_width_map(&self, val: Value, builder: &mut FunctionBuilder) -> Value {
-    let ty = builder.func.dfg.value_type(val);
-
-    let typ = match ty.lane_type().bytes() {
-      // 64-bits
-      8 => F64,
-
-      // 32-bits
-      4 => F32,
-
-      // Invalid
-      _ => INVALID,
-    };
-
-    builder.ins().bitcast(
-      typ.by(ty.lane_count()).unwrap_or(INVALID),
-      MemFlags::new().with_endianness(Endianness::Little),
-      val,
-    )
-  }
-
-  pub fn simd_float_width_unmap(&self, floatval: Value, builder: &mut FunctionBuilder) -> Value {
-    let ty = builder.func.dfg.value_type(floatval);
-
-    let typ = match ty.lane_type().bytes() {
-      // 64-bits
-      8 => I64,
-
-      // 32-bits
-      4 => I32,
-
-      // Invalid
-      _ => INVALID,
-    };
-
-    builder.ins().bitcast(
-      typ.by(ty.lane_count()).unwrap_or(INVALID),
-      MemFlags::new().with_endianness(Endianness::Little),
-      floatval,
-    )
   }
 
   pub fn simd_width_type(&self, simdbytes: u8) -> Type {

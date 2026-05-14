@@ -4,7 +4,7 @@ use crate::{
     implementation::WorkingSet,
     reader::vminimax::{VCNT, parse_vcnt},
   },
-  arrcastint, resolve_location_src,
+  resolve_location_src,
 };
 use sart::{ctr::VMTaskState, structures::QuadPackedData};
 use std::ptr;

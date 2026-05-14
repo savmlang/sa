@@ -21,7 +21,7 @@ pub fn regmapper(
     let bytes_touched = width * count + offset_bytes as u32;
     let totalregstouched = bytes_touched.div_ceil(8) as u8;
 
-    (reg0..(reg0 + totalregstouched))
+    reg0..(reg0 + totalregstouched)
   };
 
   let waterfall = break_simd_waterfall(
@@ -40,7 +40,7 @@ pub fn regmapper(
 
       let lanes = (0..total_lanes)
         .map(|add| {
-          let full_offset = (offset_knot_in_count + offset_cnt_additive + add);
+          let full_offset = offset_knot_in_count + offset_cnt_additive + add;
 
           let regidx = full_offset / counts_in_1_reg;
           let laneid = full_offset.rem(counts_in_1_reg);

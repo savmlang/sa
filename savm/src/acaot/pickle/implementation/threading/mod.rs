@@ -1,5 +1,4 @@
 use std::{
-  ffi::c_void,
   iter,
   mem::{transmute, zeroed},
   ptr::{self, addr_of_mut, null_mut},
@@ -48,15 +47,15 @@ pub extern "C" fn ffi_synccall_sectionid(taskstate: *mut VMTaskState, sectionid:
 }
 
 pub extern "C" fn ffi_libcall_sectionid(taskstate: *mut VMTaskState, sectionid: u64) {
-  unsafe {
-    let vm = (*taskstate).engine_or_pt.pt as *const _ as *const VM;
+  {
+    // let vm = (*taskstate).engine_or_pt.pt as *const _ as *const VM;
 
     let (v, cdecl) = FNCALL_DISPATCH.get().unwrap().get(&sectionid).unwrap();
     run_cdecl(v.0, cdecl, taskstate)
   }
 }
 
-pub fn call_synccall(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+pub fn call_synccall(_: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
   let sectionid = arrcastint!(ws, start = 0, stop = 8, u64);
 
   unsafe {
@@ -96,7 +95,7 @@ pub fn call_synccall(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate:
   }
 }
 
-static mut BITS128_ELEMENTS: [*mut ffi_type; 3] = unsafe {
+static mut BITS128_ELEMENTS: [*mut ffi_type; 3] = {
   [
     addr_of_mut!(ffi_type_uint64),
     addr_of_mut!(ffi_type_uint64),
@@ -108,7 +107,7 @@ static FFI_TYPE_BITS128: ThreadSafe<ffi_type> = ThreadSafe(ffi_type {
   size: 0,      // libffi fills this
   alignment: 0, // libffi fills this
   type_: FFI_TYPE_STRUCT as u16,
-  elements: unsafe { &raw mut BITS128_ELEMENTS as *mut _ },
+  elements: { &raw mut BITS128_ELEMENTS as *mut _ },
 });
 
 fn run_cdecl(fnptr: *const (), cdecl: &CallSig, taskstate: *mut VMTaskState) {
@@ -122,7 +121,7 @@ fn run_cdecl(fnptr: *const (), cdecl: &CallSig, taskstate: *mut VMTaskState) {
       let mut bits128 = FFI_TYPE_BITS128.0;
 
       let out_bytes = cdef.out.width();
-      let mut output = match cdef.out {
+      let output = match cdef.out {
         COut::Void => addr_of_mut!(ffi_type_void),
         COut::Bits8 => addr_of_mut!(ffi_type_uint8),
         COut::Bits16 => addr_of_mut!(ffi_type_uint16),
@@ -138,7 +137,7 @@ fn run_cdecl(fnptr: *const (), cdecl: &CallSig, taskstate: *mut VMTaskState) {
         .inargs
         .iter()
         .zip(lffis.iter_mut())
-        .for_each(|(x, slot)| unsafe { x.vtype.as_lffitype(slot) });
+        .for_each(|(x, slot)| x.vtype.as_lffitype(slot));
 
       lffis
         .iter_mut()

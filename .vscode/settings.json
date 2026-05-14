@@ -1,6 +1,10 @@
 {
   "rust-analyzer.linkedProjects": ["./Cargo.toml"],
-  "rust-analyzer.cargo.features": ["savm/dev", "satest/pro_standard"],
+  "rust-analyzer.cargo.features": [
+    "savm/dev",
+    "savmrun/pro_standard",
+    "satest/pro_standard"
+  ],
   "rust-analyzer.cargo.extraEnv": {
     "LLVM_SYS_221_PREFIX": "${workspaceFolder}/llvm/install"
   },

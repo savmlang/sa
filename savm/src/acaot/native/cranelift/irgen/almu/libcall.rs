@@ -20,8 +20,7 @@ use crate::{
     native::cranelift::{
       CompilerMeta,
       irgen::reg::{
-        StoreResolver, TypeOrWidth, resolve_location_src_load, resolve_location_src_store,
-        resolve_reg,
+        TypeOrWidth, resolve_location_src_load, resolve_location_src_store, resolve_reg,
       },
     },
     pickle::def::PickleInstruction,
@@ -171,20 +170,18 @@ pub fn hwnd_libcall_sync(
       }
     }
 
-    [(6u8, VReg::R7), (7, VReg::R8)]
-      .into_iter()
-      .for_each(|(idx, reg)| {
-        // Unload from stack
-        let regval = builder.ins().load(
-          I64,
-          MemFlags::trusted(),
-          tskst,
-          idx as i32 * size_of::<QuadPackedData>() as i32,
-        );
+    [6u8, 7].into_iter().for_each(|idx| {
+      // Unload from stack
+      let regval = builder.ins().load(
+        I64,
+        MemFlags::trusted(),
+        tskst,
+        idx as i32 * size_of::<QuadPackedData>() as i32,
+      );
 
-        let regvar = resolve_reg(builder, meta, idx);
-        builder.def_var(regvar, regval);
-      });
+      let regvar = resolve_reg(builder, meta, idx);
+      builder.def_var(regvar, regval);
+    });
     return;
   };
 
@@ -233,19 +230,17 @@ pub fn hwnd_libcall_sync(
 
         builder.ins().call(funcref, &[stack_tsk, sectionidval]);
 
-        [(6u8, VReg::R7), (7, VReg::R8)]
-          .into_iter()
-          .for_each(|(idx, reg)| {
-            // Unload from stack
-            let regval = builder.ins().stack_load(
-              I64,
-              meta.regspill,
-              idx as i32 * size_of::<QuadPackedData>() as i32,
-            );
+        [6u8, 7].into_iter().for_each(|idx| {
+          // Unload from stack
+          let regval = builder.ins().stack_load(
+            I64,
+            meta.regspill,
+            idx as i32 * size_of::<QuadPackedData>() as i32,
+          );
 
-            let regvar = resolve_reg(builder, meta, idx);
-            builder.def_var(regvar, regval);
-          });
+          let regvar = resolve_reg(builder, meta, idx);
+          builder.def_var(regvar, regval);
+        });
         return;
       }
 
@@ -257,8 +252,6 @@ pub fn hwnd_libcall_sync(
           let mut safficall = Signature::new(callconv);
 
           {
-            let ptr = meta.isa.pointer_type();
-
             safficall
               .params
               .extend(cdef.inargs.iter().map(|x| AbiParam::new(clifmapval(x))));

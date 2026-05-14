@@ -1,4 +1,4 @@
-use cranelift::prelude::{FloatCC, FunctionBuilder, InstBuilder, IntCC, types::I64};
+use cranelift::prelude::{FunctionBuilder, InstBuilder};
 
 use crate::{
   acaot::{

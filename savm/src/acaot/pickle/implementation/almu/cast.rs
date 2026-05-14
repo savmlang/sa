@@ -4,7 +4,7 @@ use crate::{
     implementation::WorkingSet,
     reader::cast::{CAST, parse_cast},
   },
-  arrcastint, resolve_location_src,
+  resolve_location_src,
 };
 use sart::ctr::VMTaskState;
 use std::ptr;

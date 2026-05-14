@@ -1,12 +1,4 @@
-#![allow(unused)]
-#![feature(
-  signed_bigint_helpers,
-  nonpoison_rwlock,
-  sync_nonpoison,
-  read_array,
-  widening_mul,
-  adt_const_params
-)]
+#![feature(signed_bigint_helpers, read_array, widening_mul)]
 
 pub mod acaot;
 
@@ -14,15 +6,14 @@ use std::{
   any::Any,
   hash::Hash,
   io::{Read, Seek},
-  mem::zeroed,
-  sync::{Arc, LazyLock, OnceLock, nonpoison::RwLock},
+  sync::{Arc, LazyLock, OnceLock},
   thread::{self, available_parallelism},
   time::Duration,
 };
 
 use ahash::HashMap;
 use moka::sync::{CacheBuilder, SegmentedCache};
-use sart::{code::SwappableCodeStore, ctr::CVMTaskState, structures::ffi::CallSig};
+use sart::{code::SwappableCodeStore, structures::ffi::CallSig};
 
 pub use sart;
 use tokio::runtime::{Builder, Runtime};
@@ -172,8 +163,6 @@ impl BytecodeResolver for Box<dyn BytecodeResolver + Send + Sync + 'static> {
 pub static GLOBAL_RUNTIME: LazyLock<Runtime> =
   LazyLock::new(|| Builder::new_multi_thread().enable_all().build().unwrap());
 
-pub static VMCONF: RwLock<VmConfig> = RwLock::new(unsafe { zeroed() });
-
 pub(crate) static FNCALL_DISPATCH: OnceLock<HashMap<u64, (ThreadSafe<*const ()>, CallSig)>> =
   OnceLock::new();
 
@@ -195,7 +184,7 @@ use sajit::Executable;
 use evmap::handles::ReadHandle;
 
 #[cfg(feature = "native")]
-pub type SafeSwappableCodeStore = *mut SwappableCodeStore<(*const Executable)>;
+pub type SafeSwappableCodeStore = *mut SwappableCodeStore<*const Executable>;
 
 // This only and only stores JIT instructions
 #[cfg(feature = "native")]
@@ -222,13 +211,6 @@ impl<T: PartialEq> PartialEq for ThreadSafe<T> {
   fn ne(&self, other: &Self) -> bool {
     self.0.ne(&other.0)
   }
-}
-
-#[derive(Debug)]
-#[repr(C)]
-pub struct VmConfig {
-  pub jit: bool,
-  pub cooperative: bool,
 }
 
 /// We create a VM for each thread executed
