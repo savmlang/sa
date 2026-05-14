@@ -48,6 +48,13 @@ jobs:
           rusttarget: ${{ matrix.target }}
           argv: --target ${{ matrix.target }}
 
+      - name: Dryrun satest
+        shell: pwsh
+        continue-on-error: true
+        working-directory: bin/satest
+        run: |
+          ${{ github.workspace }}/target/${{ matrix.target[0] }}/release/satest
+
   darwin:
     name: Build SaVM ${{ matrix.feature }} (${{ matrix.target[0] }})
 
@@ -79,6 +86,14 @@ jobs:
           feature: ${{ matrix.feature }}
           rusttarget: ${{ matrix.target[0] }}
           argv: --target ${{ matrix.target[0] }}
+
+      - name: Dryrun satest
+        shell: pwsh
+        continue-on-error: true
+        working-directory: bin/satest
+        run: |
+          sudo ldconfig
+          ${{ github.workspace }}/target/${{ matrix.target[0] }}/release/satest
 
   linux:
     name: Build SaVM ${{ matrix.feature }} (${{ matrix.target[0] }})
@@ -122,6 +137,15 @@ jobs:
           feature: ${{ matrix.feature }}
           rusttarget: ${{ matrix.target[0] }}
           argv: --target ${{ matrix.target[0] }}
+
+      - name: Dryrun satest
+        shell: pwsh
+        continue-on-error: true
+        working-directory: bin/satest
+        run: |
+          cp ${{ github.workspace }}/target/${{ matrix.target[0] }}/release/libsalloc.so 
+
+          ${{ github.workspace }}/target/${{ matrix.target[0] }}/release/satest
 
   linux_crosscompile:
     name: Build SaVM ${{ matrix.target.feature }} (${{ matrix.target.rust }})
