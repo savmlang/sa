@@ -69,7 +69,7 @@ macro_rules! intop {
   };
 }
 
-pub fn call_vaddf(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+pub fn call_vaddf(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   let (_, fptype, count, src1, src2, target, offset1, offset2, offset_target) =
     arithprelude!(pickle, ws, taskstate);
 
@@ -82,7 +82,7 @@ pub fn call_vaddf(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &m
   }
 }
 
-pub fn call_vsubf(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+pub fn call_vsubf(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   let (_, fptype, count, src1, src2, target, offset1, offset2, offset_target) =
     arithprelude!(pickle, ws, taskstate);
 
@@ -95,7 +95,7 @@ pub fn call_vsubf(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &m
   }
 }
 
-pub fn call_vmulf(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+pub fn call_vmulf(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   let (_, fptype, count, src1, src2, target, offset1, offset2, offset_target) =
     arithprelude!(pickle, ws, taskstate);
 
@@ -108,7 +108,7 @@ pub fn call_vmulf(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &m
   }
 }
 
-pub fn call_vdivf(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+pub fn call_vdivf(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   let (_, fptype, count, src1, src2, target, offset1, offset2, offset_target) =
     arithprelude!(pickle, ws, taskstate);
 

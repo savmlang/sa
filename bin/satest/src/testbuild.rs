@@ -51,7 +51,7 @@ pub fn asmbuild(asm: File, tst: &mut TestHarness, cwd: &str) {
           #[cfg(feature = "native")]
           let cnt = "JIT=true";
           #[cfg(not(feature = "native"))]
-          let cnt = "JIT=true (unsupported)";
+          let cnt = "JIT=requested (unavailable)";
 
           println!(
             "{:>12} {cnt}",

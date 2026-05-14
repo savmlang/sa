@@ -65,15 +65,15 @@ pub extern "C" fn savm_spawn(
   null_mut()
 }
 
-pub fn call_spawn(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
-  let SPAWN {
-    launch_as_async,
-    out_loc,
-    return_hwnd,
-    section,
-  } = parse_spawn(pickle, ws.arr.as_ref());
-
+pub fn call_spawn(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   unsafe {
+    let SPAWN {
+      launch_as_async,
+      out_loc,
+      return_hwnd,
+      section,
+    } = parse_spawn(pickle, (*ws).arr.as_ref());
+
     let hwnd = resolve_location_src!(taskstate => out_loc);
 
     let newhwnd = savm_spawn(taskstate, section, launch_as_async, return_hwnd);

@@ -69,7 +69,7 @@ const fn calc_offset(op: u8, ty: u8) -> usize {
 }
 
 // `vb* <flags as u16> <Op (4-bits)> <padding (3-bits)> <count bit (1-bit)> <count in u32> <base src1 as i32> <base src2 as i32> <base target1 as i32>`
-pub fn call_vbit(pickle: &PickleInstruction, ws: &mut WorkingSet, ts: &mut VMTaskState) {
+pub fn call_vbit(pickle: &PickleInstruction, ws: *mut WorkingSet, ts: *mut VMTaskState) {
   unsafe {
     let count = pickle.u3;
 

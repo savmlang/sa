@@ -128,9 +128,14 @@ fn main() {
 
     let mut fail = 0u64;
 
-    for entry in fs::read_dir(format!("./{tests}/expected")).unwrap() {
-      let entry = entry.expect("Unable to unwrap dir entry.");
+    let mut items = fs::read_dir(format!("./{tests}/expected"))
+      .unwrap()
+      .filter_map(Result::ok)
+      .collect::<Box<_>>();
 
+    items.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
+
+    for entry in items {
       let sectionid = entry
         .file_name()
         .to_str()
@@ -200,13 +205,13 @@ fn main() {
 
     println!(
       "{:>12} These may take a while to finish.",
-      Style::new().yellow().apply_to("Note")
+      Style::new().blue().apply_to("Note")
     );
 
     for sectionid in sectionids {
       println!(
         "{:>12} TestID #{sectionid}",
-        Style::new().bold().yellow().apply_to("Begin")
+        Style::new().yellow().apply_to("Begin")
       );
 
       interpreter_benchmark(&savm, sectionid, harness.iter);

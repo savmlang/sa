@@ -73,7 +73,7 @@ const fn calc_offset(op: u8, ty: u8) -> usize {
 // # Type tag is defined above
 // The flags is split like this into (4-bits + 3 x 4-bit parts):
 //   [Type Tag (4-bits)] [Src1] [Src2] [Target1]
-pub fn call_vminimax(pickle: &PickleInstruction, ws: &mut WorkingSet, ts: &mut VMTaskState) {
+pub fn call_vminimax(pickle: &PickleInstruction, ws: *mut WorkingSet, ts: *mut VMTaskState) {
   unsafe {
     let VMINIMAX {
       op,
@@ -86,7 +86,7 @@ pub fn call_vminimax(pickle: &PickleInstruction, ws: &mut WorkingSet, ts: &mut V
       of_target,
       typ,
       ..
-    } = parse_vminimax(pickle, ws.arr);
+    } = parse_vminimax(pickle, (*ws).arr);
 
     let src1 = resolve_location_src!(ts => flags_src1);
     let src2 = resolve_location_src!(ts => flags_src2);

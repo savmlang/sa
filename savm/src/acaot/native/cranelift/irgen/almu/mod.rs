@@ -4,7 +4,8 @@ use crate::acaot::{
   native::cranelift::{
     CompilerMeta,
     irgen::reg::{
-      TypeOrWidth, resolve_location_src_load, resolve_location_src_store, resolve_reg,
+      COUNTSPILLER_USES_SIMD, TypeOrWidth, resolve_location_src_load, resolve_location_src_store,
+      resolve_reg,
       vector::{abstract_extractlane, abstract_insertlane},
     },
   },
@@ -295,11 +296,14 @@ pub fn hwnd_vsub(builder: &mut FunctionBuilder, meta: &mut CompilerMeta, _: Pick
   target.synchronize(builder, meta);
 }
 
-#[allow(unused)]
-pub fn hwnd_vmul(builder: &mut FunctionBuilder, meta: &mut CompilerMeta, _: PickleInstruction) {
-  let (instdefined, count, typ, src1, src2, target) = arithprelude!(meta, builder);
+// VMUL_WIDE depends on unguaranteed behaviour of target resolver
+// Hence it'll blow off once countsplitter.rs starts using SIMD
+const _VMUL_SANITY: () = assert!(!COUNTSPILLER_USES_SIMD);
 
-  let (mut target, t_src, t_offset) = target;
+pub fn hwnd_vmul(builder: &mut FunctionBuilder, meta: &mut CompilerMeta, _: PickleInstruction) {
+  let (instdefined, _, typ, src1, src2, target) = arithprelude!(meta, builder);
+
+  let (mut target, _, _) = target;
 
   // [<Extended Flags (2 bits)>] [Padding (14 bits)]
   // The extended flags:
@@ -315,68 +319,20 @@ pub fn hwnd_vmul(builder: &mut FunctionBuilder, meta: &mut CompilerMeta, _: Pick
   let clif = typ.clif_mapping();
 
   if wide {
-    todo!("Wide mul is being rethoughtof");
-    let basetype = clif.x1;
-    target = resolve_location_src_store(builder, meta, typ, t_src, None, t_offset, count * 2);
-
-    // Split into MAANY individual values, like it or not
-    let mulresult = src1
+    src1
       .into_iter()
       .zip(src2.into_iter())
       .enumerate()
-      .map(|(idx, (src1, src2))| {
+      .for_each(|(idx, (src1, src2))| {
         let lo = builder.ins().imul(src1, src2);
         let hi = if clif.signed {
           builder.ins().smulhi(src1, src2)
         } else {
           builder.ins().umulhi(src1, src2)
         };
-        let tp = builder.func.dfg.value_type(lo);
 
-        // we're looking at scalars
-        if tp.lane_count() == 1 {
-          return vec![lo, hi];
-        }
-
-        let mut out = vec![];
-
-        (0..tp.lane_count()).for_each(|laneid| {
-          let hi = abstract_extractlane(builder, meta, hi, laneid as u8);
-          let lo = abstract_extractlane(builder, meta, lo, laneid as u8);
-
-          out.push(lo);
-          out.push(hi);
-        });
-
-        out
-      })
-      .flatten()
-      .collect::<Box<[_]>>();
-
-    let control = builder.ins().iconst(clif.x1, 0);
-
-    let mut idxmul = 0usize;
-    target
-      .waterfall_typerating()
-      .into_iter()
-      .enumerate()
-      .for_each(|(idx, ty)| {
-        let lanes = ty.lane_count();
-
-        if lanes == 1 {
-          target.store(builder, idx, mulresult[idxmul]);
-          idxmul += 1;
-        } else {
-          let mut datavect = builder.ins().scalar_to_vector(ty, control);
-
-          (0..lanes).for_each(|idx| {
-            datavect = abstract_insertlane(builder, meta, datavect, mulresult[idxmul], idx as u8);
-
-            idxmul += 1;
-          });
-
-          target.store(builder, idx, datavect);
-        }
+        target.store(builder, idx * 2, lo);
+        target.store(builder, idx * 2 + 1, hi);
       });
   } else {
     src1

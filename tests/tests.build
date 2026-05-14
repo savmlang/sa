@@ -1,0 +1,7 @@
+:compile vcopy dist
+:compile mov dist
+
+; Also test jit
+:jit
+
+:bench

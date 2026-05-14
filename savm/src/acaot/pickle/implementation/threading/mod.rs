@@ -55,15 +55,15 @@ pub extern "C" fn ffi_libcall_sectionid(taskstate: *mut VMTaskState, sectionid: 
   }
 }
 
-pub fn call_synccall(_: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+pub fn call_synccall(_: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   let sectionid = arrcastint!(ws, start = 0, stop = 8, u64);
 
   unsafe {
-    let vm = taskstate.engine_or_pt.pt as *const _ as *const VM;
+    let vm = (*taskstate).engine_or_pt.pt as *const _ as *const VM;
 
     let tskptr = taskstate as *mut _;
 
-    let mut dispatch = || {
+    let dispatch = || {
       let [r7, r8] = (*vm).fncall(sectionid, taskstate);
 
       (*taskstate).r7 = r7;
@@ -218,12 +218,12 @@ fn run_cdecl(fnptr: *const (), cdecl: &CallSig, taskstate: *mut VMTaskState) {
 
 pub fn call_asynccall(
   _pickle: &PickleInstruction,
-  _ws: &mut WorkingSet,
-  _taskstate: &mut VMTaskState,
+  _ws: *mut WorkingSet,
+  _taskstate: *mut VMTaskState,
 ) {
   unimplemented!("Synccall-asyncall will be implemented later!")
 }
 
-pub fn call_task(_pickle: &PickleInstruction, _ws: &mut WorkingSet, _taskstate: &mut VMTaskState) {
+pub fn call_task(_pickle: &PickleInstruction, _ws: *mut WorkingSet, _taskstate: *mut VMTaskState) {
   unimplemented!("Task will be implemented later!")
 }

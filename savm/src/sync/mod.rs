@@ -2,7 +2,7 @@ use std::{
   cell::UnsafeCell,
   hint::cold_path,
   mem::zeroed,
-  ptr::{self, null_mut},
+  ptr::{self, addr_of_mut, null_mut},
   sync::{
     Arc, OnceLock,
     atomic::{Ordering, compiler_fence},
@@ -193,8 +193,8 @@ impl VM {
           compiler_fence(Ordering::SeqCst);
           (PICKLE_DISPATCH_TABLE.get_unchecked(pickle.opcode as usize))(
             pickle,
-            &mut (*t).ws,
-            &mut *ts,
+            addr_of_mut!((*t).ws),
+            ts,
           );
           compiler_fence(Ordering::SeqCst);
 

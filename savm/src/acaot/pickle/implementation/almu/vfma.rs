@@ -79,7 +79,7 @@ const fn calc_offset(ty: u8) -> usize {
 // # Type tag is defined above
 // The flags is split like this into (4-bits + 4 x 4-bit parts):
 //   [Src1] [Src2] [Src3] [Target1]
-pub fn call_vfma(pickle: &PickleInstruction, ws: &mut WorkingSet, ts: &mut VMTaskState) {
+pub fn call_vfma(pickle: &PickleInstruction, ws: *mut WorkingSet, ts: *mut VMTaskState) {
   unsafe {
     let flags = u16::from_ne_bytes([pickle.u1, pickle.u2]);
 

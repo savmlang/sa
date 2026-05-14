@@ -13,7 +13,9 @@ use std::{
 
 use ahash::HashMap;
 use moka::sync::{CacheBuilder, SegmentedCache};
-use sart::{code::SwappableCodeStore, structures::ffi::CallSig};
+#[cfg(feature = "native")]
+use sart::code::SwappableCodeStore;
+use sart::structures::ffi::CallSig;
 
 pub use sart;
 use tokio::runtime::{Builder, Runtime};

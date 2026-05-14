@@ -123,7 +123,7 @@ macro_rules! intop_carry {
 }
 
 #[inline(always)]
-pub fn call_vadd(_: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+pub fn call_vadd(_: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   let (instdefined, typetag, count, src1, src2, target, t1, t2, t3) = arithprelude!(ws, taskstate);
 
   // [<Carry/Sigflow bit>] [<saturation bit>] [Padding (14bits)] (16b)
@@ -134,32 +134,32 @@ pub fn call_vadd(_: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMT
   debug_assert!(count != 0);
   debug_assert!(!(carry && count != 1));
 
-  {
+  unsafe {
     match (carry, saturate, typetag) {
       (true, _, tag) => match tag {
         0 => {
-          intop_carry!((u64) target = src1 carrying_add src2 carries addr_of_mut!(taskstate.r5) => { t1, t2, t3 })
+          intop_carry!((u64) target = src1 carrying_add src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
         }
         1 => {
-          intop_carry!((u32) target = src1 carrying_add src2 carries addr_of_mut!(taskstate.r5) => { t1, t2, t3 })
+          intop_carry!((u32) target = src1 carrying_add src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
         }
         2 => {
-          intop_carry!((u16) target = src1 carrying_add src2 carries addr_of_mut!(taskstate.r5) => { t1, t2, t3 })
+          intop_carry!((u16) target = src1 carrying_add src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
         }
         3 => {
-          intop_carry!((u8) target = src1 carrying_add src2 carries addr_of_mut!(taskstate.r5) => { t1, t2, t3 })
+          intop_carry!((u8) target = src1 carrying_add src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
         }
         4 => {
-          intop_carry!((i64) target = src1 carrying_add src2 carries addr_of_mut!(taskstate.r5) => { t1, t2, t3 })
+          intop_carry!((i64) target = src1 carrying_add src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
         }
         5 => {
-          intop_carry!((i32) target = src1 carrying_add src2 carries addr_of_mut!(taskstate.r5) => { t1, t2, t3 })
+          intop_carry!((i32) target = src1 carrying_add src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
         }
         6 => {
-          intop_carry!((i16) target = src1 carrying_add src2 carries addr_of_mut!(taskstate.r5) => { t1, t2, t3 })
+          intop_carry!((i16) target = src1 carrying_add src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
         }
         7 => {
-          intop_carry!((i8) target = src1 carrying_add src2 carries addr_of_mut!(taskstate.r5) => { t1, t2, t3 })
+          intop_carry!((i8) target = src1 carrying_add src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
         }
         _ => todo!(),
       },
@@ -190,7 +190,7 @@ pub fn call_vadd(_: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMT
 }
 
 #[inline(always)]
-pub fn call_vsub(_: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+pub fn call_vsub(_: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   let (instdefined, typetag, count, src1, src2, target, t1, t2, t3) = arithprelude!(ws, taskstate);
 
   // [<Carry/Sigflow  [SBB]>] [<saturation bit>] [Padding (14bits)] (16b)
@@ -201,32 +201,32 @@ pub fn call_vsub(_: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMT
   debug_assert!(count != 0);
   debug_assert!(!(carry && count != 1));
 
-  {
+  unsafe {
     match (carry, saturate, typetag) {
       (true, _, tag) => match tag {
         0 => {
-          intop_carry!((u64) target = src1 borrowing_sub src2 carries addr_of_mut!(taskstate.r5) => { t1, t2, t3 })
+          intop_carry!((u64) target = src1 borrowing_sub src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
         }
         1 => {
-          intop_carry!((u32) target = src1 borrowing_sub src2 carries addr_of_mut!(taskstate.r5) => { t1, t2, t3 })
+          intop_carry!((u32) target = src1 borrowing_sub src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
         }
         2 => {
-          intop_carry!((u16) target = src1 borrowing_sub src2 carries addr_of_mut!(taskstate.r5) => { t1, t2, t3 })
+          intop_carry!((u16) target = src1 borrowing_sub src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
         }
         3 => {
-          intop_carry!((u8) target = src1 borrowing_sub src2 carries addr_of_mut!(taskstate.r5) => { t1, t2, t3 })
+          intop_carry!((u8) target = src1 borrowing_sub src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
         }
         4 => {
-          intop_carry!((i64) target = src1 borrowing_sub src2 carries addr_of_mut!(taskstate.r5) => { t1, t2, t3 })
+          intop_carry!((i64) target = src1 borrowing_sub src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
         }
         5 => {
-          intop_carry!((i32) target = src1 borrowing_sub src2 carries addr_of_mut!(taskstate.r5) => { t1, t2, t3 })
+          intop_carry!((i32) target = src1 borrowing_sub src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
         }
         6 => {
-          intop_carry!((i16) target = src1 borrowing_sub src2 carries addr_of_mut!(taskstate.r5) => { t1, t2, t3 })
+          intop_carry!((i16) target = src1 borrowing_sub src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
         }
         7 => {
-          intop_carry!((i8) target = src1 borrowing_sub src2 carries addr_of_mut!(taskstate.r5) => { t1, t2, t3 })
+          intop_carry!((i8) target = src1 borrowing_sub src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
         }
         _ => todo!(),
       },
@@ -257,7 +257,7 @@ pub fn call_vsub(_: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMT
 }
 
 #[inline(always)]
-pub fn call_vmul(_: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+pub fn call_vmul(_: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   let (instdefined, typetag, count, src1, src2, target, t1, t2, t3) = arithprelude!(ws, taskstate);
 
   // [<Extended Flags (2 bits)>] [Padding (14 bits)]
@@ -273,7 +273,7 @@ pub fn call_vmul(_: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMT
 
   debug_assert!(count != 0);
 
-  {
+  unsafe {
     match (wide, lowbits, typetag) {
       // Wide Multiplication
       (true, _, tag) => match tag {
@@ -360,7 +360,7 @@ macro_rules! divlikeprelude {
   }
 
 #[inline(always)]
-pub fn call_div(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+pub fn call_div(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   let (typetag, src1, src2, target, t1, t2, t3) = divlikeprelude!(pickle, ws, taskstate);
 
   let count = 1;
@@ -379,7 +379,7 @@ pub fn call_div(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut
 }
 
 #[inline(always)]
-pub fn call_rem(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+pub fn call_rem(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   let (typetag, src1, src2, target, t1, t2, t3) = divlikeprelude!(pickle, ws, taskstate);
 
   let count = 1;

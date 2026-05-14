@@ -72,7 +72,7 @@ const fn calc_offset(op: u8, ty: u8) -> usize {
   (op * TYPE_COUNT + ty) as _
 }
 
-pub fn call_vcnt(pickle: &PickleInstruction, ws: &mut WorkingSet, ts: &mut VMTaskState) {
+pub fn call_vcnt(pickle: &PickleInstruction, ws: *mut WorkingSet, ts: *mut VMTaskState) {
   unsafe {
     let VCNT {
       op,
@@ -83,7 +83,7 @@ pub fn call_vcnt(pickle: &PickleInstruction, ws: &mut WorkingSet, ts: &mut VMTas
       of_target,
       typ,
       ..
-    } = parse_vcnt(pickle, ws.arr);
+    } = parse_vcnt(pickle, unsafe { (*ws).arr });
 
     let src = resolve_location_src!(ts => flags_src);
     let target = resolve_location_src!(ts => flags_target);

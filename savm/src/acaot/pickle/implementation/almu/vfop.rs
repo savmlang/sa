@@ -32,7 +32,7 @@ macro_rules! intop {
 //
 // Flags are like this:
 //   [padding (3-bits)] [float type (1 bit)] [Src1 (4-bits)] [Target1 (4-bits)] [count bit (1-bit)] [Sub-Op (3-bit)]
-pub fn call_vfop(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+pub fn call_vfop(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   let VFOP {
     src,
     target,
@@ -41,7 +41,7 @@ pub fn call_vfop(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
     count,
     subop,
     typetag,
-  } = parse_vfop(pickle, ws.arr.as_ref());
+  } = parse_vfop(pickle, unsafe { (*ws).arr }.as_ref());
 
   let src1 = resolve_location_src!(taskstate => src);
   let target1 = resolve_location_src!(taskstate => target);
@@ -73,7 +73,7 @@ pub fn call_vfop(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
 //
 // Flags are like this:
 //   [Padding] [count bit (1-bit)] [op (1-bit)] [f width (1-bit)] [int type tag (3 bits)] [Src1 (4-bits)] [Target1 (4-bits)]
-pub fn call_vfcast(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+pub fn call_vfcast(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   let VFCAST {
     offset_src,
     offset_target,
@@ -82,7 +82,7 @@ pub fn call_vfcast(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &
     target,
     type_initial,
     type_final,
-  } = parse_vfcast(pickle, ws.arr.as_ref());
+  } = parse_vfcast(pickle, unsafe { (*ws).arr }.as_ref());
 
   let f = match (type_initial, type_final) {
     // f64 -> iN

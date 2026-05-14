@@ -48,7 +48,7 @@ macro_rules! cast_grammar {
   };
 }
 
-pub fn call_cast(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+pub fn call_cast(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   unsafe {
     // The 16-bit args are distributed as follows (4x4-bit slices):
     //   [Type tag Initial] [Type tag Final] [Src1] [Target1]
@@ -59,7 +59,7 @@ pub fn call_cast(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
       target,
       type_initial: tag_initial,
       type_final: tag_final,
-    } = parse_cast(pickle, ws.arr);
+    } = parse_cast(pickle, unsafe { (*ws).arr });
 
     let src1 = resolve_location_src!(taskstate => src);
     let target = resolve_location_src!(taskstate => target);

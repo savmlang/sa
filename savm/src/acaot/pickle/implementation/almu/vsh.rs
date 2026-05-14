@@ -77,7 +77,7 @@ const fn calc_offset(op: u8, ty: u8) -> usize {
 }
 
 // `vsh <flags as u16> <padding (6-bits)> <op bit (1-bit)> <count bit (1-bit)> <count in u32> <base src1 as i32> <amount i.e. src2 as i32> <base target1 as i32>`
-pub fn call_vsh(pickle: &PickleInstruction, ws: &mut WorkingSet, ts: &mut VMTaskState) {
+pub fn call_vsh(pickle: &PickleInstruction, ws: *mut WorkingSet, ts: *mut VMTaskState) {
   unsafe {
     let VSH {
       op,
@@ -89,7 +89,7 @@ pub fn call_vsh(pickle: &PickleInstruction, ws: &mut WorkingSet, ts: &mut VMTask
       of_src2,
       of_target,
       typ,
-    } = parse_vsh(pickle, &ws.arr);
+    } = parse_vsh(pickle, &(&(*ws).arr));
 
     let src1 = resolve_location_src!(ts => flags_src1);
     let src2 = resolve_location_src!(ts => flags_src2);

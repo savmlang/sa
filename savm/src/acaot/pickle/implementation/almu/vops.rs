@@ -26,7 +26,7 @@ macro_rules! prelude {
     let count = if (countbit == 0) {
       count_data
     } else {
-      unsafe { $task.r1.u32 }
+      unsafe { (*$task).r1.u32 }
     };
 
     let offset1 = arrcastint!($ws, start = 4, stop = 8, i32);
@@ -62,7 +62,7 @@ macro_rules! intop {
   };
 }
 
-pub fn call_vneg(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+pub fn call_vneg(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   let (count, typetag, src1, target, offset1, offset2) = prelude!(pickle, ws, taskstate);
 
   match typetag {
@@ -84,7 +84,7 @@ pub fn call_vneg(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mu
   }
 }
 
-pub fn call_vabs(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+pub fn call_vabs(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   let (count, typetag, src1, target, offset1, offset2) = prelude!(pickle, ws, taskstate);
 
   match typetag {

@@ -16,9 +16,9 @@ use crate::{
 // [Sub Opcode (2-bits)] [type (3-bit)] [ordering (3-bits)]
 // [offset v0 (i8)] [offset v1 (i8)]
 // [offset v2 (i8)] [offset v3 (i8)] [instruction defined (16-bit)]
-pub fn call_atomic(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+pub fn call_atomic(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   let ts = taskstate;
-  match parse_atomic(pickle, &ws.arr) {
+  match parse_atomic(pickle, unsafe { &(&(*ws).arr) }) {
     ATOMIC::LOAD {
       typedata,
       ptr_loc,
@@ -235,7 +235,7 @@ atomicable! {
 
 #[allow(unused)]
 fn call_store<T: Atomicable + Clone + Copy>(
-  taskstate: &mut VMTaskState,
+  taskstate: *mut VMTaskState,
   ord: Ordering,
 
   o1: u8,
@@ -256,7 +256,7 @@ fn call_store<T: Atomicable + Clone + Copy>(
 
 #[allow(unused)]
 fn call_load<T: Atomicable + Clone + Copy>(
-  taskstate: &mut VMTaskState,
+  taskstate: *mut VMTaskState,
   ord: Ordering,
   o1: u8,
   o2: u8,
@@ -275,7 +275,7 @@ fn call_load<T: Atomicable + Clone + Copy>(
 
 #[allow(unused)]
 fn call_cas<T: Atomicable + Clone + Copy>(
-  taskstate: &mut VMTaskState,
+  taskstate: *mut VMTaskState,
   ptr_loc: u8,
   ptr_loc_of: u8,
 
@@ -306,7 +306,7 @@ fn call_cas<T: Atomicable + Clone + Copy>(
 
 #[allow(unused)]
 fn call_rmw<T: Atomicable + Clone + Copy>(
-  taskstate: &mut VMTaskState,
+  taskstate: *mut VMTaskState,
   ord: Ordering,
 
   o1: u8,

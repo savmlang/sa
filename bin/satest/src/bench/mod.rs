@@ -8,6 +8,24 @@ use std::time::Instant;
 #[cfg(feature = "native")]
 use crate::jitmem::JITMemData;
 
+fn bench_report(median: &str, p75: &str, p99: &str, sd: &str, compile: Option<&str>) {
+  print!(
+    "{:>14} {} {median:>12};",
+    Style::new().blue().apply_to("Bench"),
+    Style::new().yellow().apply_to("Median")
+  );
+  print!("{:>8} {p75:>12};", Style::new().yellow().apply_to("p75"));
+  print!("{:>8} {p99:>12};", Style::new().yellow().apply_to("p99"));
+  print!("{:>8} {sd:>12}", Style::new().white().apply_to("SD"));
+
+  if let Some(compile) = compile {
+    println!(" ({} {compile})", Style::new().red().apply_to("Compile"));
+  } else {
+    println!();
+  }
+  println!();
+}
+
 pub fn interpreter_benchmark(vm: &VM, sectionid: u64, rounds: u64) {
   let mut store = Vec::with_capacity(rounds as usize);
   for _ in 0..rounds {
@@ -28,10 +46,7 @@ pub fn interpreter_benchmark(vm: &VM, sectionid: u64, rounds: u64) {
     "{:>14} Tier : Chocolate - Interpreter",
     Style::new().green().apply_to("Bench")
   );
-  println!("{:>16} {median}", Style::new().yellow().apply_to("Median"));
-  println!("{:>16} {p75}", Style::new().yellow().apply_to("p75"));
-  println!("{:>16} {p99}", Style::new().yellow().apply_to("p99"));
-  println!("{:>16} {sd}", Style::new().white().apply_to("SD"));
+  bench_report(&median, &p75, &p99, &sd, None);
 }
 
 #[cfg(feature = "native")]
@@ -60,11 +75,7 @@ pub fn jit_benchmark(vm: &VM, jit: &mut JITMemData, sectionid: u64, rounds: u64)
       "{:>14} Tier : {name}",
       Style::new().green().apply_to("Bench")
     );
-    println!("{:>16} {median}", Style::new().yellow().apply_to("Median"));
-    println!("{:>16} {p75}", Style::new().yellow().apply_to("p75"));
-    println!("{:>16} {p99}", Style::new().yellow().apply_to("p99"));
-    println!("{:>16} {sd}", Style::new().white().apply_to("SD"));
-    println!("{:>16} {compile}", Style::new().red().apply_to("Compile"));
+    bench_report(&median, &p75, &p99, &sd, Some(&compile));
   }
 }
 

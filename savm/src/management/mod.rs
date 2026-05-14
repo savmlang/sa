@@ -5,7 +5,7 @@ use crate::{
 use ahash::{HashMap, HashMapExt};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use sart::structures::ffi::CallSig;
-use std::{iter::Peekable, sync::Arc};
+use std::sync::Arc;
 
 #[cfg(feature = "native")]
 use crossbeam_channel::Sender;
@@ -20,7 +20,7 @@ use evmap::handles::WriteHandle;
 #[cfg(feature = "native")]
 use sart::code::SwappableCodeStore;
 #[cfg(feature = "native")]
-use std::process::abort;
+use std::{iter::Peekable, process::abort};
 
 #[cfg(feature = "native")]
 pub mod compiler_thread;

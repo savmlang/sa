@@ -40,8 +40,8 @@ import! {
   vau
 }
 
-pub fn call_scratch(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
-  let scratch = parse_scratch(pickle, ws.arr.as_ref());
+pub fn call_scratch(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
+  let scratch = parse_scratch(pickle, unsafe { (*ws).arr }.as_ref());
 
   match scratch {
     SCRATCH::Allocate {
@@ -51,24 +51,24 @@ pub fn call_scratch(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: 
       let size = resolve!(taskstate => size_reg).u64 as usize;
       let align = resolve!(taskstate => align_reg).u64 as usize;
 
-      debug_assert!(taskstate.largepad.is_null());
+      debug_assert!((*taskstate).largepad.is_null());
       debug_assert!(align == 0 || align.is_power_of_two());
 
-      taskstate.largepad = ws.allocate(size, align);
+      (*taskstate).largepad = (*ws).allocate(size, align);
     },
     // Drop classic
-    SCRATCH::DropClassic => {
-      let pt = taskstate.largepad;
-      taskstate.largepad = null_mut();
+    SCRATCH::DropClassic => unsafe {
+      let pt = (*taskstate).largepad;
+      (*taskstate).largepad = null_mut();
 
-      ws.free(pt);
-    }
+      (*ws).free(pt);
+    },
     // Drop (alignment was given at alloc)
-    SCRATCH::DropAligned => {
-      let pt = taskstate.largepad;
-      taskstate.largepad = null_mut();
+    SCRATCH::DropAligned => unsafe {
+      let pt = (*taskstate).largepad;
+      (*taskstate).largepad = null_mut();
 
-      ws.salloc_free(pt);
-    }
+      (*ws).salloc_free(pt);
+    },
   }
 }

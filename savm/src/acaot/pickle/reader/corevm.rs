@@ -62,7 +62,7 @@ pub fn parse_vcopy(pickle: &PickleInstruction, ws: &[u8]) -> VCOPY {
 
   let target_align = alignment(memory_flags & 0x03);
   let src_align = alignment((memory_flags >> 2) & 0x03);
-  let overlapping = (memory_flags & 0x10) > 0;
+  let overlapping = (memory_flags & 0x10) == 0;
 
   let countbit = memflags & 0x80;
 
@@ -90,10 +90,12 @@ pub fn parse_vcopy(pickle: &PickleInstruction, ws: &[u8]) -> VCOPY {
   }
 }
 
+#[cfg(feature = "native")]
 pub(crate) extern "C" fn jitcall_vcopy_noalias(src: *mut u8, target: *mut u8, count: u32) {
   unsafe { ptr::copy_nonoverlapping(src, target, count as _) };
 }
 
+#[cfg(feature = "native")]
 pub(crate) extern "C" fn jitcall_vcopy_overlapping(src: *mut u8, target: *mut u8, count: u32) {
   unsafe { ptr::copy(src, target, count as _) };
 }

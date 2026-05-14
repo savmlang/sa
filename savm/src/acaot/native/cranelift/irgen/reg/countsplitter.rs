@@ -70,6 +70,8 @@ fn get_cheat_type(assumed: u32) -> Type {
   }
 }
 
+pub const COUNTSPILLER_USES_SIMD: bool = false;
+
 pub fn break_simd_waterfall_inner(
   alignment: u8,
   map: ClifTypeMapping,
@@ -100,7 +102,7 @@ pub fn break_simd_waterfall_inner(
   // Waterfall load
   {
     // Don't even think of SIMD if payload < 16bytes
-    if width * count >= 16 {
+    if width * count >= 16 && COUNTSPILLER_USES_SIMD {
       #[cfg(target_arch = "x86_64")]
       {
         // Don't emit only 1x AVX512 hint

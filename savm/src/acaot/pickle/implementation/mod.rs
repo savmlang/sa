@@ -1,3 +1,5 @@
+#![allow(unused_unsafe)]
+
 use std::{
   collections::HashMap,
   hint::cold_path,
@@ -147,16 +149,18 @@ impl WorkingSet {
 #[macro_export]
 macro_rules! resolve {
   ($task:ident => $x:ident) => {
-    match $x {
-      0 => $task.r1,
-      1 => $task.r2,
-      2 => $task.r3,
-      3 => $task.r4,
-      4 => $task.r5,
-      5 => $task.r6,
-      6 => $task.r7,
-      7 => $task.r8,
-      _ => unimplemented!(),
+    unsafe {
+      match $x {
+        0 => (*$task).r1,
+        1 => (*$task).r2,
+        2 => (*$task).r3,
+        3 => (*$task).r4,
+        4 => (*$task).r5,
+        5 => (*$task).r6,
+        6 => (*$task).r7,
+        7 => (*$task).r8,
+        _ => unimplemented!(),
+      }
     }
   };
 }
@@ -164,16 +168,18 @@ macro_rules! resolve {
 #[macro_export]
 macro_rules! resolve_ptr {
   ($task:ident => $x:ident) => {
-    match $x {
-      0 => std::ptr::addr_of_mut!($task.r1),
-      1 => std::ptr::addr_of_mut!($task.r2),
-      2 => std::ptr::addr_of_mut!($task.r3),
-      3 => std::ptr::addr_of_mut!($task.r4),
-      4 => std::ptr::addr_of_mut!($task.r5),
-      5 => std::ptr::addr_of_mut!($task.r6),
-      6 => std::ptr::addr_of_mut!($task.r7),
-      7 => std::ptr::addr_of_mut!($task.r8),
-      _ => unimplemented!(),
+    unsafe {
+      match $x {
+        0 => std::ptr::addr_of_mut!((*$task).r1),
+        1 => std::ptr::addr_of_mut!((*$task).r2),
+        2 => std::ptr::addr_of_mut!((*$task).r3),
+        3 => std::ptr::addr_of_mut!((*$task).r4),
+        4 => std::ptr::addr_of_mut!((*$task).r5),
+        5 => std::ptr::addr_of_mut!((*$task).r6),
+        6 => std::ptr::addr_of_mut!((*$task).r7),
+        7 => std::ptr::addr_of_mut!((*$task).r8),
+        _ => unimplemented!(),
+      }
     }
   };
 }
@@ -181,105 +187,96 @@ macro_rules! resolve_ptr {
 #[macro_export]
 macro_rules! resolve_location_src {
   ($task:ident => $x:ident $($e:ident)?) => {
-    match $x {
-      0 => std::ptr::addr_of_mut!($task.r1),
-      1 => std::ptr::addr_of_mut!($task.r2),
-      2 => std::ptr::addr_of_mut!($task.r3),
-      3 => std::ptr::addr_of_mut!($task.r4),
-      4 => std::ptr::addr_of_mut!($task.r5),
-      5 => std::ptr::addr_of_mut!($task.r6),
-      6 => std::ptr::addr_of_mut!($task.r7),
-      7 => std::ptr::addr_of_mut!($task.r8),
-      8 => $task.scratchpad,
-      9 => $task.largepad,
+    unsafe { match $x {
+      0 => std::ptr::addr_of_mut!((*$task).r1),
+      1 => std::ptr::addr_of_mut!((*$task).r2),
+      2 => std::ptr::addr_of_mut!((*$task).r3),
+      3 => std::ptr::addr_of_mut!((*$task).r4),
+      4 => std::ptr::addr_of_mut!((*$task).r5),
+      5 => std::ptr::addr_of_mut!((*$task).r6),
+      6 => std::ptr::addr_of_mut!((*$task).r7),
+      7 => std::ptr::addr_of_mut!((*$task).r8),
+      8 => (*$task).scratchpad,
+      9 => (*$task).largepad,
       #[allow(unused_unsafe)]
-      10 => unsafe { $task.r2.selfref },
+      10 => unsafe { (*$task).r2.selfref },
       $(
         _con => $e,
       )?
       #[allow(unreachable_patterns)]
       _ => unimplemented!(),
-    }
+    }}
   };
 }
 
 pub type ResolveFn =
-  fn(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) -> ();
+  fn(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) -> ();
 
 #[inline(always)]
-pub fn call_hint(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
-  let instruction = pickle.u1;
-
-  let total_wsput = pickle.u2 as usize;
-  let bytes = pickle.u3 as usize;
-
-  let pic = unsafe { taskstate.curline_or_resume.usi };
-
-  // Fetch WS_PUTs and decode
-  ws.arr = unsafe {
-    std::slice::from_raw_parts(
-      (taskstate.engine_or_pt.pt as *const PickleInstruction).add(pic + 1) as *const u8,
-      bytes,
-    )
-  };
-
-  // for pidx in (pic + 1)..=(pic + total_wsput) {
-  //   unsafe {
-  //     let wsput = &*(taskstate.engine_or_pt.pt as *const PickleInstruction).add(pidx);
-
-  //     let offset = wsput.u1 as usize;
-
-  //     *ws.arr.get_unchecked_mut(offset * 2) = wsput.u2;
-  //     *ws.arr.get_unchecked_mut(offset * 2 + 1) = wsput.u3;
-  //   }
-  // }
-
-  // Increment counter by that exact amount
-  // total_wsput
-  //
-  // +1 to go past the last WS_PUT
-  taskstate.curline_or_resume.usi = pic + total_wsput + 1;
-
-  // Call next instruction
+pub fn call_hint(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   unsafe {
-    let pkl = &*(taskstate.engine_or_pt.pt as *const PickleInstruction)
-      .add(taskstate.curline_or_resume.usi);
+    let instruction = pickle.u1;
 
-    debug_assert!(pkl.opcode == instruction);
+    let total_wsput = pickle.u2 as usize;
+    let bytes = pickle.u3 as usize;
 
-    // TODO: Replace with `become` once its in nightly-functional
-    match instruction {
-      // These calls are infact inlined
-      PICKLE_OPCODE_MARK => call_mark(pkl, ws, taskstate),
-      PICKLE_OPCODE_JMP => call_jmp(pkl, ws, taskstate),
-      PICKLE_OPCODE_JIF => call_jif(pkl, ws, taskstate),
-      PICKLE_OPCODE_VCMP => call_vcmp(pkl, ws, taskstate),
-      PICKLE_OPCODE_VADD => call_vadd(pkl, ws, taskstate),
-      _ => return PICKLE_DISPATCH_TABLE.get_unchecked(instruction as usize)(pkl, ws, taskstate),
+    let pic = { (*taskstate).curline_or_resume.usi };
+
+    // Fetch WS_PUTs and decode
+    (*ws).arr = {
+      std::slice::from_raw_parts(
+        ((*taskstate).engine_or_pt.pt as *const PickleInstruction).add(pic + 1) as *const u8,
+        bytes,
+      )
+    };
+
+    // Increment counter by that exact amount
+    // total_wsput
+    //
+    // +1 to go past the last WS_PUT
+    (*taskstate).curline_or_resume.usi = pic + total_wsput + 1;
+
+    // Call next instruction
+    {
+      let pkl = &*((*taskstate).engine_or_pt.pt as *const PickleInstruction)
+        .add((*taskstate).curline_or_resume.usi);
+
+      debug_assert!(pkl.opcode == instruction);
+
+      // TODO: Replace with `become` once its in nightly-functional
+      match instruction {
+        // These calls are infact inlined
+        PICKLE_OPCODE_MARK => call_mark(pkl, ws, taskstate),
+        PICKLE_OPCODE_JMP => call_jmp(pkl, ws, taskstate),
+        PICKLE_OPCODE_JIF => call_jif(pkl, ws, taskstate),
+        PICKLE_OPCODE_VCMP => call_vcmp(pkl, ws, taskstate),
+        PICKLE_OPCODE_VADD => call_vadd(pkl, ws, taskstate),
+        _ => return PICKLE_DISPATCH_TABLE.get_unchecked(instruction as usize)(pkl, ws, taskstate),
+      }
     }
   }
 }
 
 #[inline(always)]
-pub fn call_mark(_pickle: &PickleInstruction, _ws: &mut WorkingSet, _taskstate: &mut VMTaskState) {}
+pub fn call_mark(_pickle: &PickleInstruction, _ws: *mut WorkingSet, _taskstate: *mut VMTaskState) {}
 
 #[inline(always)]
 pub fn call_ws_put(
   _pickle: &PickleInstruction,
-  _ws: &mut WorkingSet,
-  _taskstate: &mut VMTaskState,
+  _ws: *mut WorkingSet,
+  _taskstate: *mut VMTaskState,
 ) {
   panic!("WS_PUT is not to be called");
   // let offset = pickle.u1 as usize;
 
   // unsafe {
-  //   *ws.arr.get_unchecked_mut(offset * 2) = pickle.u2;
-  //   *ws.arr.get_unchecked_mut(offset * 2 + 1) = pickle.u3;
+  //   *unsafe { (*ws).arr }.get_unchecked_mut(offset * 2) = pickle.u2;
+  //   *unsafe { (*ws).arr }.get_unchecked_mut(offset * 2 + 1) = pickle.u3;
   // }
 }
 
 #[inline(always)]
-pub fn call_mov(pickle: &PickleInstruction, _ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+pub fn call_mov(pickle: &PickleInstruction, _ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   let source = pickle.u1;
   let target = pickle.u2;
 
@@ -287,9 +284,9 @@ pub fn call_mov(pickle: &PickleInstruction, _ws: &mut WorkingSet, taskstate: &mu
     cold_path();
 
     match source {
-      12 => {
-        taskstate.r1.selfref = taskstate.largepad;
-      }
+      12 => unsafe {
+        (*taskstate).r1.selfref = (*taskstate).largepad;
+      },
       13 => {
         // Get pointer to global state
         todo!("RW Global State isn't yet implemented")
@@ -297,41 +294,43 @@ pub fn call_mov(pickle: &PickleInstruction, _ws: &mut WorkingSet, taskstate: &mu
       _ => panic!("source == target but special ids don't match"),
     }
   } else {
-    let rsrc = resolve!(taskstate => source);
-    let ptarget = resolve_ptr!(taskstate => target);
+    unsafe {
+      let rsrc = resolve!(taskstate => source);
+      let ptarget = resolve_ptr!(taskstate => target);
 
-    unsafe { *ptarget = rsrc };
+      *ptarget = rsrc
+    };
   }
 }
 
 #[inline(always)]
-pub fn call_reg(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+pub fn call_reg(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   let reg = pickle.u1;
 
   let mut filled = [0u8; 8];
-  filled[0..8].copy_from_slice(&ws.arr[0..8]);
+  unsafe { filled[0..8].copy_from_slice(&(&(*ws).arr)[0..8]) };
   let data = u64::from_ne_bytes(filled);
 
   unsafe { *resolve_ptr!(taskstate => reg) = QuadPackedData { u64: data } };
 }
 
 #[inline(always)]
-pub fn call_jmp(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+pub fn call_jmp(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   let mut filled = [0u8; 8];
-  filled[0..6].copy_from_slice(&ws.arr[0..6]);
+  filled[0..6].copy_from_slice(unsafe { &(&(*ws).arr)[0..6] });
   filled[6..8].copy_from_slice(&[pickle.u1, pickle.u2]);
   let data = u64::from_ne_bytes(filled);
 
   unsafe {
-    if ws.jmp.0 == data {
-      taskstate.curline_or_resume.usi = ws.jmp.1;
+    if (*ws).jmp.0 == data {
+      (*taskstate).curline_or_resume.usi = (*ws).jmp.1;
       return;
     }
 
-    let cr = *ws.relocmap.get(&data).unwrap_unchecked();
+    let cr = *(*ws).relocmap.get(&data).unwrap_unchecked();
 
-    ws.jmp = (data, cr);
-    taskstate.curline_or_resume.usi = cr;
+    (*ws).jmp = (data, cr);
+    (*taskstate).curline_or_resume.usi = cr;
   }
 }
 
@@ -361,13 +360,13 @@ macro_rules! jif_comparison {
 }
 
 #[inline(always)]
-pub fn call_jif(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+pub fn call_jif(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   let intent = pickle.u1;
   let relocation_src = pickle.u2;
   let width = pickle.u3;
 
-  let offset = i32::from_ne_bytes(unsafe { ws.arr[0..4].try_into().unwrap_unchecked() });
-  let marker = u64::from_ne_bytes(unsafe { ws.arr[4..12].try_into().unwrap_unchecked() });
+  let offset = i32::from_ne_bytes(unsafe { (&(*ws).arr)[0..4].try_into().unwrap_unchecked() });
+  let marker = u64::from_ne_bytes(unsafe { (&(*ws).arr)[4..12].try_into().unwrap_unchecked() });
 
   let not_zero = jif_comparison!(
     taskstate, relocation_src, offset, width
@@ -382,15 +381,15 @@ pub fn call_jif(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut
 
   unsafe {
     if (intent == 0 && !not_zero) || (intent != 0 && not_zero) {
-      if ws.jmp.0 == marker {
-        taskstate.curline_or_resume.usi = ws.jmp.1;
+      if (*ws).jmp.0 == marker {
+        (*taskstate).curline_or_resume.usi = (*ws).jmp.1;
         return;
       }
 
-      let cr = *ws.relocmap.get(&marker).unwrap_unchecked();
+      let cr = *(*ws).relocmap.get(&marker).unwrap_unchecked();
 
-      ws.jmp = (marker, cr);
-      taskstate.curline_or_resume.usi = cr;
+      (*ws).jmp = (marker, cr);
+      (*taskstate).curline_or_resume.usi = cr;
     }
   }
 }
@@ -399,12 +398,12 @@ pub fn call_jif(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut
 macro_rules! arrcastint {
   ($ws:ident, start = $start:expr, stop = $stop:expr, $i:ty) => {{
     #[allow(unused_unsafe)]
-    <$i>::from_ne_bytes(unsafe { $ws.arr[$start..$stop].try_into().unwrap_unchecked() })
+    <$i>::from_ne_bytes(unsafe { (&(*$ws).arr)[$start..$stop].try_into().unwrap_unchecked() })
   }};
 }
 
 #[inline(always)]
-pub fn call_vcmp(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+pub fn call_vcmp(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   let op = pickle.u1;
   let width = pickle.u2;
 

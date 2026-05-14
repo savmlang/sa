@@ -7,7 +7,7 @@ use crate::ExpectedOutput;
 use crate::jitmem::JITMemData;
 use console::Style;
 #[cfg(feature = "native")]
-use savm::CacheLevel;
+use savm::{CacheLevel, management::jitmem::calculate_relocation_abs};
 use savm::{VM, sync::VMSTAT};
 
 pub fn test_vm_interpreter(vm: &VM, out: &ExpectedOutput, sectionid: u64, fail: &mut bool) {
@@ -45,7 +45,7 @@ pub fn test_jits(
 
   for (name, builder) in testing_compiler_infra() {
     println!(
-      "{:>14} Start TestID #{sectionid} ({name})",
+      "\n{:>14} Start TestID #{sectionid} ({name})",
       Style::new().yellow().apply_to("Test"),
     );
 
@@ -72,11 +72,9 @@ pub fn test_jits(
         reloc,
       } => match level {
         CacheLevel::CraneliftCrafter | CacheLevel::LLVMCinder | CacheLevel::LLVMCrater => {
-          if !reloc.is_empty() {
-            err("Currently, satest cannot handle JIT with relocations!");
-          }
+          let reloc = calculate_relocation_abs(&reloc);
 
-          let exec = jitdata.mem().write_quick(&binary, &[]);
+          let exec = jitdata.mem().write_quick(&binary, &reloc);
           jitdata.ptrstore.insert((sectionid, *name), (exec as _, tf));
 
           exec

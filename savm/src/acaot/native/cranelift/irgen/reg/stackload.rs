@@ -66,9 +66,11 @@ pub fn resolve_loc_to_ptr(
       .stack_store(var, meta.regspill, idx as i32 * 8);
   });
 
-  let ptr = builder
-    .ins()
-    .stack_addr(meta.isa.pointer_type(), meta.regspill, offset);
+  let ptr = builder.ins().stack_addr(
+    meta.isa.pointer_type(),
+    meta.regspill,
+    locsrc as i32 * 8 + offset,
+  );
   LocToPtr {
     reg_touched: true,
     ptr,

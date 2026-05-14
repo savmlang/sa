@@ -77,7 +77,7 @@ impl<T: Seek + Read> PickleWorker<T> {
         INSTRUCTION_SPAWN => self.handle_spawn(),
         INSTRUCTION_TASK => self.handle_task(),
         INSTRUCTION_ATOMIC => self.handle_atomic(),
-        _ => unreachable!(),
+        _e => unreachable!("INST: {_e}"),
       }
     }
   }

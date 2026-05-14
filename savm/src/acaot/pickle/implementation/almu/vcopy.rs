@@ -10,7 +10,7 @@ use crate::{
   resolve_location_src,
 };
 
-pub fn call_vcopy(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &mut VMTaskState) {
+pub fn call_vcopy(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   let VCOPY {
     src,
     target,
@@ -18,7 +18,7 @@ pub fn call_vcopy(pickle: &PickleInstruction, ws: &mut WorkingSet, taskstate: &m
     src_offset,
     target_offset,
     ..
-  } = parse_vcopy(pickle, ws.arr.as_ref());
+  } = parse_vcopy(pickle, unsafe { (*ws).arr }.as_ref());
 
   // vcopy is defined using COUNT
   let src1 =
