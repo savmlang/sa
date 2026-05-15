@@ -1,6 +1,16 @@
 # SaVM Toolkit
 
-This repository is the savm toolkit consisting on
+This repository is the savm toolkit consisting of
+
+- Packer (sapacker)
+- Assembler (sasm)
+- Runner (savmrun)
+- Filetester + Benchmarker (satest)
+- JIT Memory Manager (sajit)
+- Runtime Layer (sart)
+- VM Core Library (savm)
+- VM Allocator (salloc)
+- FFI Layer (saffi)
 
 ## MSRV
 

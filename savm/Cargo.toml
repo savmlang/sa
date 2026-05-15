@@ -46,7 +46,7 @@ default = []
 # Development mode (rust-analyzer)
 dev = ["cranelift", "llvm", "sendback"]
 
-llvm = ["dep:llvm-sys", "native"]
+llvm = ["dep:llvm-sys", "native", "sajit/llvm"]
 cranelift = ["dep:cranelift", "native"]
 native = ["dep:sajit", "dep:evmap", "dep:crossbeam-channel"]
 
