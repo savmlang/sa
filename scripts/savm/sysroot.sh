@@ -12,7 +12,7 @@ sudo debootstrap --arch=$ARCH --variant=minbase $DISTRO $SYSROOT https://deb.deb
 
 # Install Dependencies
 sudo chroot $SYSROOT /bin/sh -c \
-  "apt-get update && apt-get install -y libc6-dev gcc g++ build-essential"
+  "apt-get update && apt-get install -y libc6-dev gcc g++ build-essential libstdc++-dev"
 
 # Resolve Symlinks
 sudo symlinks -cr $SYSROOT

@@ -45,12 +45,13 @@ runs:
       with:
         targets: ${{ inputs.rusttarget }}
         toolchain: nightly
+        components: rustfmt
 
     - name: Setup Rust (Light)
       if: inputs.builder != 'cargo'
       uses: dtolnay/rust-toolchain@stable
       with:
-        components: rust-src
+        components: rust-src,rustfmt
         toolchain: nightly
 
     - name: Setup NodeJS

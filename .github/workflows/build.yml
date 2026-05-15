@@ -210,7 +210,7 @@ jobs:
       - name: Setup Rust (Full)
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: rust-src
+          components: rust-src,rustfmt
           toolchain: nightly
 
       - name: Setup LLVM
