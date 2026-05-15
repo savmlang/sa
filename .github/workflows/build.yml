@@ -227,7 +227,7 @@ jobs:
         run: |
           ./sacli.ps1 llvm --llvm-build=llvm-static-${{ matrix.target.llvm || matrix.target.clang }}.tar.gz
         env:
-          LLVMENV_VERSION: llvm-static-${{ matrix.target }}.tar.gz
+          LLVMENV_VERSION: llvm-static-${{ matrix.target.llvm || matrix.target.clang }}.tar.gz
 
       - name: Build SaVM
         run: |
