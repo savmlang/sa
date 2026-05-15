@@ -2,7 +2,7 @@
 
 import * as tar from "tar";
 import { log, progress, select, spinner } from "@clack/prompts";
-import { mkdir, rm, rmdir } from "node:fs/promises";
+import { mkdir, rm } from "node:fs/promises";
 import { cwd } from "node:process";
 import { createWriteStream } from "node:fs";
 import { PassThrough, Readable } from "node:stream";
@@ -91,6 +91,15 @@ export default async function handlellvm(argv0) {
         }
       });
 
+      if (!llvmbuild) {
+        log.info(`Found LLVMENV_VERSION : ${process.env["LLVMENV_VERSION"]}`);
+        llvmbuild = process.env["LLVMENV_VERSION"];
+      } else {
+        log.info(
+          `Ignoring LLVMENV_VERSION : ${process.env["LLVMENV_VERSION"]} as ${llvmbuild} was resolved`,
+        );
+      }
+
       let target = jsonout.assets.find((asset) => asset.name == llvmbuild);
 
       // Load the target to download
@@ -171,6 +180,7 @@ export default async function handlellvm(argv0) {
       log.success("LLVM has been downloaded and successfully extracted!");
       break;
     } catch (err) {
+      tries += 1;
       console.error(err);
       await delay(5000);
     }

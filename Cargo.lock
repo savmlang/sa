@@ -71,9 +71,8 @@ checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
 
 [[package]]
 name = "bindgen"
-version = "0.72.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "993776b509cfb49c750f11b8f07a46fa23e0a1386ffc01fb1e7d343efc387895"
+version = "0.72.0"
+source = "git+https://github.com/chrysn-pull-requests/rust-bindgen?branch=extended-floats#3fe9bdc1b7b8c3ddb88351c2a8c7324efdc9577b"
 dependencies = [
  "bitflags",
  "cexpr",

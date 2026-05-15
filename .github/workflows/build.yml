@@ -44,6 +44,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           llvmargs: --llvm-build=llvm-static-${{ matrix.target }}.tar.gz
+          llvmver: llvm-static-${{ matrix.target }}.tar.gz
           feature: ${{ matrix.feature }}
           rusttarget: ${{ matrix.target }}
           argv: --target ${{ matrix.target }}
@@ -83,6 +84,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           llvmargs: --llvm-build=llvm-static-${{ matrix.target[1] }}.tar.gz
+          llvmver: llvm-static-${{ matrix.target }}.tar.gz
           feature: ${{ matrix.feature }}
           rusttarget: ${{ matrix.target[0] }}
           argv: --target ${{ matrix.target[0] }}
@@ -133,6 +135,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           llvmargs: --llvm-build=llvm-static-${{ matrix.target[1] }}.tar.gz
+          llvmver: llvm-static-${{ matrix.target }}.tar.gz
           feature: ${{ matrix.feature }}
           rusttarget: ${{ matrix.target[0] }}
           argv: --target ${{ matrix.target[0] }}
@@ -208,6 +211,11 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Setup NodeJS
+        uses: actions/setup-node@v6
+        with:
+          node-version: ">=24"
+
       - name: Setup Rust (Full)
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -217,27 +225,9 @@ jobs:
       - name: Setup LLVM
         shell: pwsh
         run: |
-          function Invoke-WithRetry {
-            param(
-              [scriptblock]$Command,
-              [int]$MaxRetries = 5,
-              [int]$DelaySeconds = 2
-            )
-            $attempts = 0
-            do {
-              try {
-                & $Command
-                return
-              }
-              catch {
-                $attempts++
-                if ($attempts -ge $MaxRetries) { throw "Failed after $MaxRetries attempts." }
-                Start-Sleep -Seconds $DelaySeconds
-              }
-            } while ($attempts -lt $MaxRetries)
-          }
-
-          Invoke-WithRetry -Command { ./sacli.ps1 llvm --llvm-build=llvm-static-${{ matrix.target.llvm || matrix.target.clang }}.tar.gz } -MaxRetries 5
+          ./sacli.ps1 llvm --llvm-build=llvm-static-${{ matrix.target.llvm || matrix.target.clang }}.tar.gz
+        env:
+          LLVMENV_VERSION: llvm-static-${{ matrix.target }}.tar.gz
 
       - name: Build SaVM
         run: |

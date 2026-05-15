@@ -8,6 +8,10 @@ inputs:
     required: false
     default: "--llvm-probe"
 
+  llvmver:
+    description: LLVM Version Help
+    required: false
+
   feature:
     description: Describe the savmrun feature to build
     required: false
@@ -63,6 +67,8 @@ runs:
       shell: pwsh
       run: |
         ./sacli.ps1 llvm ${{ inputs.llvmargs }}
+      env:
+        LLVMENV_VERSION: ${{ inputs.llvmver }}
 
     - name: Chmod
       if: runner.os == 'Linux' || runner.os == 'macOS'
