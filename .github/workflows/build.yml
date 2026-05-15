@@ -160,6 +160,7 @@ jobs:
           # Armv7 (HF)
           - rust: armv7-unknown-linux-gnueabihf
             clang: armv7-linux-gnueabihf
+            llvm: arm-linux-gnueabihf
             feature: nano
             arch: armhf
 
