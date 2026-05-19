@@ -20,7 +20,14 @@ pub struct PickleWorker<T: Seek + Read> {
 
 trait Extract: Read + Sized {
   fn extract<const N: usize>(&mut self) -> [u8; N] {
-    self.read_array::<N>().unwrap()
+    self.extract_result::<N>().unwrap()
+  }
+
+  fn extract_result<const N: usize>(&mut self) -> std::io::Result<[u8; N]> {
+    let mut my_array = [0u8; N];
+    self.read_exact(&mut my_array)?;
+
+    Ok(my_array)
   }
 }
 
@@ -42,7 +49,7 @@ impl<T: Read + Sized> Extract for T {}
 
 impl<T: Seek + Read> PickleWorker<T> {
   pub fn pass1(&mut self) {
-    while let Ok([opcode]) = self.bytecode.read_array::<1>() {
+    while let Ok([opcode]) = self.bytecode.extract_result::<1>() {
       match opcode {
         INSTRUCTION_MOV => self.handle_mov(),
         INSTRUCTION_REG => self.handle_reg(),
@@ -450,10 +457,10 @@ impl<T: Seek + Read> PickleWorker<T> {
 
   fn handle_jif(&mut self) {
     // cond = intent bit | width (2bit) | 1 bit padding | location src (4bit)
-    let [cond] = self.bytecode.read_array::<1>().unwrap();
-    let offset = i32::from_le_bytes(self.bytecode.read_array::<4>().unwrap()).to_ne_bytes();
+    let [cond] = self.bytecode.extract_result::<1>().unwrap();
+    let offset = i32::from_le_bytes(self.bytecode.extract_result::<4>().unwrap()).to_ne_bytes();
 
-    let marker = u64::from_le_bytes(self.bytecode.read_array::<8>().unwrap()).to_ne_bytes();
+    let marker = u64::from_le_bytes(self.bytecode.extract_result::<8>().unwrap()).to_ne_bytes();
 
     let mut combined_array: [u8; 12] = [0; 12];
     combined_array[..4].copy_from_slice(&offset);
@@ -470,7 +477,7 @@ impl<T: Seek + Read> PickleWorker<T> {
   }
 
   fn handle_jmp(&mut self) {
-    let data = u64::from_le_bytes(self.bytecode.read_array::<8>().unwrap()).to_ne_bytes();
+    let data = u64::from_le_bytes(self.bytecode.extract_result::<8>().unwrap()).to_ne_bytes();
 
     self.emit_copy_bytes::<6>(PICKLE_OPCODE_JMP, data[0..6].try_into().unwrap());
 
@@ -483,7 +490,7 @@ impl<T: Seek + Read> PickleWorker<T> {
   }
 
   fn handle_mark(&mut self) {
-    let marker = u64::from_le_bytes(self.bytecode.read_array::<8>().unwrap());
+    let marker = u64::from_le_bytes(self.bytecode.extract_result::<8>().unwrap());
 
     let data = marker.to_ne_bytes();
 
@@ -502,10 +509,10 @@ impl<T: Seek + Read> PickleWorker<T> {
   }
 
   fn handle_reg(&mut self) {
-    let [register] = self.bytecode.read_array().expect("");
+    let [register] = self.bytecode.extract_result().expect("");
 
     let data_ne: [u8; 8] =
-      u64::from_le_bytes(self.bytecode.read_array::<8>().expect("")).to_ne_bytes();
+      u64::from_le_bytes(self.bytecode.extract_result::<8>().expect("")).to_ne_bytes();
 
     self.emit_copy_bytes(PICKLE_OPCODE_REG, data_ne);
 
@@ -553,7 +560,7 @@ impl<T: Seek + Read> PickleWorker<T> {
   }
 
   fn handle_mov(&mut self) {
-    let [registers] = self.bytecode.read_array().expect("");
+    let [registers] = self.bytecode.extract_result().expect("");
 
     let source = registers >> 4;
     let target = registers & 0x0F;

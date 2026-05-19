@@ -1,6 +1,8 @@
 use crate::{
   acaot::pickle::{def::PickleInstruction, implementation::WorkingSet},
-  arrcastint, resolve_location_src,
+  arrcastint,
+  ints::{IIntImpl, WideningMul},
+  resolve_location_src,
 };
 use sart::ctr::VMTaskState;
 use std::ptr::{self, addr_of_mut};
@@ -150,16 +152,16 @@ pub fn call_vadd(_: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMT
           intop_carry!((u8) target = src1 carrying_add src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
         }
         4 => {
-          intop_carry!((i64) target = src1 carrying_add src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
+          intop_carry!((i64) target = src1 carryadd src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
         }
         5 => {
-          intop_carry!((i32) target = src1 carrying_add src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
+          intop_carry!((i32) target = src1 carryadd src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
         }
         6 => {
-          intop_carry!((i16) target = src1 carrying_add src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
+          intop_carry!((i16) target = src1 carryadd src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
         }
         7 => {
-          intop_carry!((i8) target = src1 carrying_add src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
+          intop_carry!((i8) target = src1 carryadd src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
         }
         _ => todo!(),
       },
@@ -217,16 +219,16 @@ pub fn call_vsub(_: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMT
           intop_carry!((u8) target = src1 borrowing_sub src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
         }
         4 => {
-          intop_carry!((i64) target = src1 borrowing_sub src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
+          intop_carry!((i64) target = src1 borrowsub src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
         }
         5 => {
-          intop_carry!((i32) target = src1 borrowing_sub src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
+          intop_carry!((i32) target = src1 borrowsub src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
         }
         6 => {
-          intop_carry!((i16) target = src1 borrowing_sub src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
+          intop_carry!((i16) target = src1 borrowsub src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
         }
         7 => {
-          intop_carry!((i8) target = src1 borrowing_sub src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
+          intop_carry!((i8) target = src1 borrowsub src2 carries addr_of_mut!((*taskstate).r5) => { t1, t2, t3 })
         }
         _ => todo!(),
       },
@@ -278,25 +280,25 @@ pub fn call_vmul(_: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMT
       // Wide Multiplication
       (true, _, tag) => match tag {
         0 => {
-          wide_mul!((count u64) target = src1 widening_mul src2 { t1, t2, t3 })
+          wide_mul!((count u64) target = src1 mul_widen src2 { t1, t2, t3 })
         }
         1 => {
-          wide_mul!((count u32) target = src1 widening_mul src2 { t1, t2, t3 })
+          wide_mul!((count u32) target = src1 mul_widen src2 { t1, t2, t3 })
         }
         2 => {
-          wide_mul!((count u16) target = src1 widening_mul src2 { t1, t2, t3 })
+          wide_mul!((count u16) target = src1 mul_widen src2 { t1, t2, t3 })
         }
-        3 => wide_mul!((count u8) target = src1 widening_mul src2 { t1, t2, t3 }),
+        3 => wide_mul!((count u8) target = src1 mul_widen src2 { t1, t2, t3 }),
         4 => {
-          wide_mul!((count i64) target = src1 widening_mul src2 { t1, t2, t3 })
+          wide_mul!((count i64) target = src1 mul_widen src2 { t1, t2, t3 })
         }
         5 => {
-          wide_mul!((count i32) target = src1 widening_mul src2 { t1, t2, t3 })
+          wide_mul!((count i32) target = src1 mul_widen src2 { t1, t2, t3 })
         }
         6 => {
-          wide_mul!((count i16) target = src1 widening_mul src2 { t1, t2, t3 })
+          wide_mul!((count i16) target = src1 mul_widen src2 { t1, t2, t3 })
         }
-        7 => wide_mul!((count i8) target = src1 widening_mul src2 { t1, t2, t3 }),
+        7 => wide_mul!((count i8) target = src1 mul_widen src2 { t1, t2, t3 }),
         _ => todo!(),
       },
       (_, true, tag) => match tag {
@@ -311,14 +313,14 @@ pub fn call_vmul(_: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMT
         _ => panic!(),
       },
       (_, _, tag) => match tag {
-        0 => high_mul!((count u64) target = src1 widening_mul src2 { t1, t2, t3 }),
-        1 => high_mul!((count u32) target = src1 widening_mul src2 { t1, t2, t3 }),
-        2 => high_mul!((count u16) target = src1 widening_mul src2 { t1, t2, t3 }),
-        3 => high_mul!((count u8) target = src1 widening_mul src2 { t1, t2, t3 }),
-        4 => high_mul!((count i64) target = src1 widening_mul src2 { t1, t2, t3 }),
-        5 => high_mul!((count i32) target = src1 widening_mul src2 { t1, t2, t3 }),
-        6 => high_mul!((count i16) target = src1 widening_mul src2 { t1, t2, t3 }),
-        7 => high_mul!((count i8) target = src1 widening_mul src2 { t1, t2, t3 }),
+        0 => high_mul!((count u64) target = src1 mul_widen src2 { t1, t2, t3 }),
+        1 => high_mul!((count u32) target = src1 mul_widen src2 { t1, t2, t3 }),
+        2 => high_mul!((count u16) target = src1 mul_widen src2 { t1, t2, t3 }),
+        3 => high_mul!((count u8) target = src1 mul_widen src2 { t1, t2, t3 }),
+        4 => high_mul!((count i64) target = src1 mul_widen src2 { t1, t2, t3 }),
+        5 => high_mul!((count i32) target = src1 mul_widen src2 { t1, t2, t3 }),
+        6 => high_mul!((count i16) target = src1 mul_widen src2 { t1, t2, t3 }),
+        7 => high_mul!((count i8) target = src1 mul_widen src2 { t1, t2, t3 }),
         _ => panic!(),
       },
     }

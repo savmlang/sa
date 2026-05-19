@@ -50,7 +50,10 @@ fn main() {
 
   let mut jmem = JITMemoryManager::new();
   let ptr = match code {
-    savm::CacheData::JITCache { binary, .. } => jmem.write_quick(&binary, &[]),
+    savm::CacheData::JITCache { binary, .. } => {
+      println!("Writing JITMem");
+      jmem.write_quick(&binary, &[])
+    }
     _ => {
       forget(jmem);
       panic!()

@@ -1,0 +1,100 @@
+# yaml-language-server: $schema=https://nfpm.goreleaser.com/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=cnqoj
+
+name: savm_{%edition}
+
+# Must be provided with the ENV
+# BUNDLE_ARCH="..."
+arch: ${BUNDLE_ARCH}
+
+# This is for linux only
+platform: "linux"
+
+# Our Preprocessor auto installs this
+version: "{%version}"
+
+priority: "standard"
+
+# Each SaVM Conflicts with its 3 other editions
+conflicts:
+  - savm_{%C1}
+  - savm_{%C2}
+  - savm_{%C3}
+
+maintainer: "Akshanabha Chakraborty <ahqsecret@gmail.com> (@ahqsoftwares) and SaVM Maintainers, Contributors"
+
+description: |
+  SaVM is a language Virtual Machine built with performance from the ground up.
+
+vendor: The Sa Programming Language and SaVM Foundation
+
+# TODO: Point to GitHub Pages Once Done
+homepage: "https://github.com/savmlang"
+
+license: "MIT"
+
+contents:
+  - dst: /opt/savm
+    type: dir
+    file_info:
+      mode: 0755
+      owner: root
+
+  - src: "../../../LICENSE"
+    dst: /opt/savm/LICENSE.md
+    file_info:
+      mode: 0755
+      owner: root
+
+  - # Copy upto depth of 1
+    src: ${SAVM_EXPANDED}/*
+    dst: /opt/savm/
+    expand: true
+    file_info:
+      mode: 0755
+      owner: root
+
+  # Install our allocator
+  - src: /opt/savm/libsalloc.so
+    dst: /usr/lib/libsalloc.so
+    type: symlink
+    file_info:
+      mode: 0755
+      owner: root
+
+  # Install to path
+  - src: /opt/savm/satest
+    dst: /usr/bin/satest
+    type: symlink
+    file_info:
+      mode: 0755
+      owner: root
+
+  - src: /opt/savm/savmrun
+    dst: /usr/bin/savmrun
+    type: symlink
+    file_info:
+      mode: 0755
+      owner: root
+
+  - src: /opt/savm/sasm
+    dst: /usr/bin/sasm
+    type: symlink
+    file_info:
+      mode: 0755
+      owner: root
+
+  - src: /opt/savm/sapacker
+    dst: /usr/bin/sapacker
+    type: symlink
+    file_info:
+      mode: 0755
+      owner: root
+
+  # TODO: Desktop Registration once savmrun can handle `.sabin` files
+
+# Just to ensure no one gets any by chance !0o755
+umask: 0o002
+
+scripts:
+  postinstall: ./linux/postinstall.sh

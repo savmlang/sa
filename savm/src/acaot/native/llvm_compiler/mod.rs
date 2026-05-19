@@ -1,32 +1,48 @@
 #![allow(unused)]
+use core::slice;
 use std::{
-  borrow::Cow, ffi::CStr, hint::black_box, marker::PhantomData, mem::zeroed, ops::Deref,
-  ptr::null_mut, sync::LazyLock,
+  borrow::Cow,
+  ffi::CStr,
+  hint::black_box,
+  marker::PhantomData,
+  mem::zeroed,
+  ops::Deref,
+  ptr::null_mut,
+  sync::{Arc, LazyLock},
 };
 
 use llvm_sys::{
   core::{
-    LLVMAddFunction, LLVMContextCreate, LLVMFunctionType, LLVMModuleCreateWithNameInContext,
-    LLVMPrintModuleToString, LLVMSetDataLayout, LLVMSetTarget, LLVMVoidTypeInContext,
+    LLVMAddFunction, LLVMContextCreate, LLVMFunctionType, LLVMGetBufferSize, LLVMGetBufferStart,
+    LLVMModuleCreateWithNameInContext, LLVMPrintModuleToString, LLVMSetDataLayout, LLVMSetTarget,
+    LLVMVoidTypeInContext,
   },
   prelude::LLVMContextRef,
   target::{LLVMCopyStringRepOfTargetData, LLVMIntPtrTypeInContext},
   target_machine::{
-    LLVMCodeGenOptLevel, LLVMCodeModel, LLVMCreateTargetDataLayout, LLVMCreateTargetMachine,
-    LLVMGetDefaultTargetTriple, LLVMGetHostCPUFeatures, LLVMGetHostCPUName,
-    LLVMGetTargetFromTriple, LLVMRelocMode,
+    LLVMCodeGenFileType, LLVMCodeGenOptLevel, LLVMCodeModel, LLVMCreateTargetDataLayout,
+    LLVMCreateTargetMachine, LLVMGetDefaultTargetTriple, LLVMGetHostCPUFeatures,
+    LLVMGetHostCPUName, LLVMGetTargetFromTriple, LLVMRelocMode,
+    LLVMTargetMachineEmitToMemoryBuffer,
   },
 };
 
 use crate::{
-  CacheData, ThreadSafe,
-  acaot::native::{
-    NativeCompiler,
-    llvm_compiler::dispose::{LLVMCtx, LLVMMsg, Module, OpaqueMachine, OpaqueTargetData},
+  CacheData, CacheLevel, ThreadSafe,
+  acaot::{
+    JITReloc,
+    native::{
+      NativeCompiler,
+      llvm_compiler::dispose::{
+        LLVMBuffer, LLVMCtx, LLVMMsg, Module, OpaqueMachine, OpaqueTargetData,
+      },
+    },
   },
 };
 
 pub mod dispose;
+
+static JITRELOC_NONE: LazyLock<Arc<[JITReloc]>> = LazyLock::new(|| Arc::from([]));
 
 static LLVMINIT: LazyLock<()> = LazyLock::new(|| unsafe {
   #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
@@ -131,6 +147,7 @@ pub struct SaVMLLVM {
   module: Module,
   layout: OpaqueTargetData,
   ctx: LLVMContextRef,
+  cache: CacheLevel,
   _dep: PhantomData<LLVMCtx>,
 }
 
@@ -141,6 +158,7 @@ impl SaVMLLVMBuilder {
     level: LLVMCodeGenOptLevel,
     reloc: LLVMRelocMode,
     codemodel: LLVMCodeModel,
+    cache: CacheLevel,
   ) -> Result<SaVMLLVM, Cow<'static, str>> {
     unsafe {
       black_box({
@@ -184,6 +202,7 @@ impl SaVMLLVMBuilder {
         module,
         layout,
         ctx,
+        cache,
         _dep: PhantomData,
       })
     }
@@ -195,6 +214,7 @@ impl SaVMLLVMBuilder {
         LLVMCodeGenOptLevel::LLVMCodeGenLevelNone,
         LLVMRelocMode::LLVMRelocStatic,
         LLVMCodeModel::LLVMCodeModelLarge,
+        CacheLevel::LLVMCinder,
       )
       .expect("Unable to initialize LLVM"),
     )
@@ -206,6 +226,7 @@ impl SaVMLLVMBuilder {
         LLVMCodeGenOptLevel::LLVMCodeGenLevelDefault,
         LLVMRelocMode::LLVMRelocStatic,
         LLVMCodeModel::LLVMCodeModelLarge,
+        CacheLevel::LLVMCrater,
       )
       .expect("Unable to initialize LLVM"),
     )
@@ -216,7 +237,8 @@ impl SaVMLLVMBuilder {
       Self::create(
         LLVMCodeGenOptLevel::LLVMCodeGenLevelAggressive,
         LLVMRelocMode::LLVMRelocPIC,
-        LLVMCodeModel::LLVMCodeModelDefault,
+        LLVMCodeModel::LLVMCodeModelMedium,
+        CacheLevel::LLVMEpitome,
       )
       .expect("Unable to initialize LLVM"),
     )
@@ -240,10 +262,51 @@ impl NativeCompiler for SaVMLLVM {
 
       let function_val = LLVMAddFunction(module, name, func_ty);
 
+      // Compile IR Info
+      {}
+
       // Print Module
       let module = LLVMMsg({ LLVMPrintModuleToString(module) });
 
       println!("{}", CStr::from_ptr(module.0).to_str().unwrap());
+
+      // Compile Pipeline
+      {
+        let mut err = null_mut();
+        let mut buf = null_mut();
+        LLVMTargetMachineEmitToMemoryBuffer(
+          self.machine.0,
+          self.module.0,
+          LLVMCodeGenFileType::LLVMObjectFile,
+          &mut err,
+          &mut buf,
+        );
+
+        if !err.is_null() {
+          let err = LLVMMsg(err);
+
+          println!("SaVM ERR: {}", CStr::from_ptr(err.0).to_string_lossy());
+          return CacheData::None;
+        }
+
+        if buf.is_null() {
+          return CacheData::None;
+        }
+
+        let buf = LLVMBuffer(buf);
+
+        let begin = LLVMGetBufferStart(buf.0) as *const u8;
+        let len = LLVMGetBufferSize(buf.0);
+        let data = slice::from_raw_parts(begin, len);
+
+        println!("{data:?}");
+
+        return CacheData::JITCache {
+          level: self.cache,
+          binary: Arc::from(data),
+          reloc: JITRELOC_NONE.clone(),
+        };
+      }
     }
 
     CacheData::None

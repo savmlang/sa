@@ -1,11 +1,11 @@
 # SaVM Toolkit
 
-This repository is the savm toolkit consisting of
+This repository is the SaVM toolkit consisting of
 
 - Packer (sapacker)
 - Assembler (sasm)
 - Runner (savmrun)
-- Filetester + Benchmarker (satest)
+- File Testing + Benchmark Suite (satest)
 - JIT Memory Manager (sajit)
 - Runtime Layer (sart)
 - VM Core Library (savm)
@@ -14,11 +14,16 @@ This repository is the savm toolkit consisting of
 
 ## MSRV
 
-The SaVM Toolkit is only guaranteed to compile on the latest and greatest
-version of the `rustc +nightly` compiler.
+The SaVM Toolkit is guaranteed to compile on the latest stable
+version of `rustc`.
 
-We recommend atleast the below:
+We recommend atleast :
 
 ```sh
-rustc 1.97.0-nightly (ff9a9ea07 2026-05-13)
+rustc 1.95.0 (59807616e 2026-04-14)
 ```
+
+Some platforms require `-Zbuild-std`, which currently
+requires nightly Rust.
+
+and for consistency, our build system also uses nightly Rust.

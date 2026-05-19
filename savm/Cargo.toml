@@ -2,6 +2,7 @@
 name = "savm"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.95"
 
 # license = "AGPL-3.0-only WITH LicenseRef-SaVM-Linking-Exception"
 license-file = "../LICENSE"
@@ -40,8 +41,15 @@ sart = { path = "../sart" }
 sajit = { version = "0.0.1", path = "../sajit", optional = true }
 serde = { version = "^1", features = ["derive"] }
 
+# Lexical
+lexical-core = { version = "^1", default-features = false, features = [
+  "write-integers",
+] }
+
 [features]
 default = []
+
+ffi_system = ["sart/ffi_system"]
 
 # Development mode (rust-analyzer)
 dev = ["cranelift", "llvm", "sendback"]

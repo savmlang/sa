@@ -1,0 +1,29 @@
+FROM alpine:edge
+
+# Install all your heavy tools once
+RUN apk update && apk add --no-cache \
+    llvm22-dev \
+    llvm22-static \
+    clang22 \
+    clang22-libclang \
+    lld \
+    build-base \
+    alpine-sdk \
+    libxml2-dev \
+    coreutils \
+    bash \
+    curl \
+    nodejs \
+    python3 \
+    sqlite-dev \
+    libffi-dev \
+    rustup \
+    zlib-dev \
+    zstd-dev
+
+# Pre-initialize rustup so nightly is baked into the image
+RUN rustup-init -y --default-toolchain nightly --no-modify-path
+RUN ln -s /usr/bin/llvm-config-22 /usr/bin/llvm-config
+
+# Set up the environment path permanently in the image
+ENV PATH="/root/.cargo/bin:${PATH}"

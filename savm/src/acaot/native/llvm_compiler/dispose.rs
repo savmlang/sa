@@ -1,6 +1,7 @@
 use llvm_sys::{
   LLVMContext, LLVMModule,
-  core::{LLVMContextDispose, LLVMDisposeMessage, LLVMDisposeModule},
+  core::{LLVMContextDispose, LLVMDisposeMemoryBuffer, LLVMDisposeMessage, LLVMDisposeModule},
+  prelude::LLVMMemoryBufferRef,
   target::{LLVMDisposeTargetData, LLVMTargetDataRef},
   target_machine::{LLVMDisposeTargetMachine, LLVMOpaqueTargetMachine},
 };
@@ -43,5 +44,6 @@ llvmdispose! {
   Module(*mut LLVMModule, LLVMDisposeModule),
   OpaqueMachine(*mut LLVMOpaqueTargetMachine, LLVMDisposeTargetMachine),
   OpaqueTargetData(LLVMTargetDataRef, LLVMDisposeTargetData),
-  LLVMMsg(*mut c_char, LLVMDisposeMessage)
+  LLVMMsg(*mut c_char, LLVMDisposeMessage),
+  LLVMBuffer(LLVMMemoryBufferRef, LLVMDisposeMemoryBuffer)
 }
