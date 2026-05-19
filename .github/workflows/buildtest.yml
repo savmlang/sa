@@ -7,7 +7,7 @@ on:
     paths:
       - ./bin/**/*
       - ./savm/**/*
-      - ./.github/**
+      - ./.github/**/*
 
   pull_request:
   workflow_dispatch:
@@ -331,26 +331,26 @@ jobs:
             config:
               target: aarch64-unknown-linux-musl
               platform: linux/arm64/v8
-              os: ubuntu-latest
+              os: ubuntu-24.04-arm
 
           - feature: pro_standard
             config:
               target: aarch64-unknown-linux-musl
               platform: linux/arm64/v8
-              os: ubuntu-latest
+              os: ubuntu-24.04-arm
 
           # RISCV64
           - feature: standard
             config:
               target: riscv64gc-unknown-linux-musl
               platform: linux/riscv64
-              os: ubuntu-latest
+              os: ubuntu-24.04-arm
 
           - feature: pro_standard
             config:
               target: riscv64gc-unknown-linux-musl
               platform: linux/riscv64
-              os: ubuntu-latest
+              os: ubuntu-24.04-arm
 
     runs-on: ${{ matrix.config.os }}
 
