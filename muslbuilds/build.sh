@@ -25,6 +25,6 @@ sudo podman run --rm --platform "$TARGET_PLATFORM" -v "$(pwd)/$WORKSPACE_DIR:/co
     export RUSTFLAGS="-C target-feature=-crt-static -L/code/target/release -L/code/target/$TARGET/release"
 
     echo "Building"
-    cargo build --workspace --release --features savm/ffi_system$FEATURES $FLAGS
+    cargo build --workspace --release --features savm/ffi_system$FEATURES --target $TARGET $FLAGS
   cd /
 '

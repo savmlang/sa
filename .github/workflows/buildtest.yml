@@ -415,7 +415,7 @@ jobs:
         shell: pwsh
         run: |
           gh run download ${{ github.run_id }} --dir release
-          winget install --id=goreleaser.nfpm
+          winget install --id=goreleaser.nfpm --silent --accept-package-agreements --accept-source-agreements
 
           ./extract.ps1
           ./build.ps1
