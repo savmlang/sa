@@ -282,7 +282,7 @@ jobs:
     name: Build SaVM ${{ matrix.feature }} (${{ matrix.config.target }})
 
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         feature: [nano, pro]
 
