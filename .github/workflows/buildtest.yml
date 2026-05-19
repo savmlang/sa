@@ -370,7 +370,6 @@ jobs:
         run: |
           sudo podman build --platform "${{ matrix.config.platform }}" -t ahqrt-build-base:latest .
 
-          export TARGET="${{ matrix.config.target }}"
           export TARGET_PLATFORM="${{ matrix.config.platform }}"
           export FEATURES=',savmrun/${{ matrix.feature }},satest/${{ matrix.feature }}'
 
@@ -380,7 +379,7 @@ jobs:
         shell: pwsh
         env:
           PACKAGE: savm-${{ matrix.config.target }}-${{ matrix.feature }}
-          TARGET: ${{ matrix.config.target }}
+          TARGET: ""
         continue-on-error: true
         run: |
           ./package.ps1

@@ -8,17 +8,10 @@ sudo podman run --rm --platform "$TARGET_PLATFORM" -v "$(pwd)/$WORKSPACE_DIR:/co
 
   ln -s /usr/bin/llvm-config-22 /usr/bin/llvm-config || true
 
-  CXXVER=$(basename $(find /usr/include/c++ -maxdepth 1 -mindepth 1 -type d))
+  CXXVER=\$(basename \$(find /usr/include/c++ -maxdepth 1 -mindepth 1 -type d))
 
   CXXDIR=\"/usr/include/c++/\$CXXVER\"
-  TARGETDIR=$(find \"\$CXXDIR\" -mindepth 1 -maxdepth 1 -type d -name '*linux*' | head -n1)
-
-  rustup target add $TARGET || true
-
-  if rustup default nightly; then
-    export CARGO="-Zbuild-std"
-  fi
-
+  TARGETDIR=\$(find \"\$CXXDIR\" -mindepth 1 -maxdepth 1 -type d -name '*linux*' | head -n1)
 
   cd /code
     export CC=\"clang\"
@@ -29,9 +22,9 @@ sudo podman run --rm --platform "$TARGET_PLATFORM" -v "$(pwd)/$WORKSPACE_DIR:/co
     export CXXFLAGS=\"-fuse-ld=lld -I\$CXXDIR -I\$TARGETDIR\"
     export BINDGEN_EXTRA_CLANG_ARGS=\"-fuse-ld=lld\"
 
-    export RUSTFLAGS=\"-C target-feature=-crt-static -L/code/target/release -L/code/target/$TARGET/release\"
+    export RUSTFLAGS=\"-C target-feature=-crt-static -L/code/target/release\"
 
     echo \"Building\"
-    cargo build --workspace \$CARGO --release --features savm/ffi_system$FEATURES --target $TARGET $FLAGS
+    cargo build --workspace \$CARGO --release --features savm/ffi_system$FEATURES $FLAGS
   cd /
 "
