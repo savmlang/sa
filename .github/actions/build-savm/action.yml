@@ -99,6 +99,13 @@ runs:
       run: |
         cargo install cross --git https://github.com/cross-rs/cross
 
+    - name: Rust Cache
+      uses: Swatinem/rust-cache@v2
+      if: inputs.rusttarget != ''
+      with:
+        cache-all-crates: true
+        key: savm_${{ inputs.rusttarget }}_${{ inputs.feature }}
+
     - name: Build SaVM
       shell: pwsh
       env:

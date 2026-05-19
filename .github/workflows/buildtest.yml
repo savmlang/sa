@@ -7,7 +7,6 @@ on:
     paths:
       - ./bin/**/*
       - ./savm/**/*
-      - ./.github/**/*
 
   pull_request:
   workflow_dispatch:
@@ -365,6 +364,12 @@ jobs:
           sudo apt update
           sudo apt install podman qemu-user-static binfmt-support
 
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: true
+          key: savm_${{ matrix.config.target }}_${{ matrix.feature }}
+
       - name: Build
         working-directory: muslbuilds
         run: |
@@ -416,6 +421,7 @@ jobs:
         run: |
           gh run download ${{ github.run_id }} --dir release
           winget install --id=goreleaser.nfpm --silent --accept-package-agreements --accept-source-agreements
+          $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 
           ./extract.ps1
           ./build.ps1
