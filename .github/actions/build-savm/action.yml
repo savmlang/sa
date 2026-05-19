@@ -101,7 +101,7 @@ runs:
 
     - name: Rust Cache
       uses: Swatinem/rust-cache@v2
-      if: inputs.rusttarget != ''
+      if: inputs.rusttarget != '' && !contains(inputs.rusttarget, 'apple') && !contains(inputs.rusttarget, 'windows')
       with:
         cache-all-crates: true
         key: savm_${{ inputs.rusttarget }}_${{ inputs.feature }}
