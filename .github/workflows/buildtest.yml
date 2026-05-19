@@ -132,19 +132,6 @@ jobs:
     runs-on: ${{ matrix.os || 'ubuntu-latest' }}
 
     steps:
-      - name: Force high-speed Azure mirror for Ubuntu Ports
-        run: |
-          # 1. Replace the external ports.ubuntu.com with Azure's internal fast mirror
-          sudo sed -i 's|http://ports.ubuntu.com/ubuntu-ports|http://azure.ports.ubuntu.com/ubuntu-ports|g' /etc/apt/sources.list
-          sudo sed -i 's|http://ports.ubuntu.com/ubuntu-ports|http://azure.ports.ubuntu.com/ubuntu-ports|g' /etc/apt/sources.list.d/* || true
-
-          # 2. Wipe the bad/stale cache
-          sudo rm -rf /var/lib/apt/lists/*
-          sudo apt-get clean
-
-          # 3. Run update again
-          sudo apt-get update
-
       - name: Checkout
         uses: actions/checkout@v6
         with:
@@ -227,19 +214,6 @@ jobs:
             arch: riscv64
 
     steps:
-      - name: Force high-speed Azure mirror for Ubuntu Ports
-        run: |
-          # 1. Replace the external ports.ubuntu.com with Azure's internal fast mirror
-          sudo sed -i 's|http://ports.ubuntu.com/ubuntu-ports|http://azure.ports.ubuntu.com/ubuntu-ports|g' /etc/apt/sources.list
-          sudo sed -i 's|http://ports.ubuntu.com/ubuntu-ports|http://azure.ports.ubuntu.com/ubuntu-ports|g' /etc/apt/sources.list.d/* || true
-
-          # 2. Wipe the bad/stale cache
-          sudo rm -rf /var/lib/apt/lists/*
-          sudo apt-get clean
-
-          # 3. Run update again
-          sudo apt-get update
-
       - name: Checkout
         uses: actions/checkout@v6
         with:
@@ -380,19 +354,6 @@ jobs:
     runs-on: ${{ matrix.config.os }}
 
     steps:
-      - name: Force high-speed Azure mirror for Ubuntu Ports
-        run: |
-          # 1. Replace the external ports.ubuntu.com with Azure's internal fast mirror
-          sudo sed -i 's|http://ports.ubuntu.com/ubuntu-ports|http://azure.ports.ubuntu.com/ubuntu-ports|g' /etc/apt/sources.list
-          sudo sed -i 's|http://ports.ubuntu.com/ubuntu-ports|http://azure.ports.ubuntu.com/ubuntu-ports|g' /etc/apt/sources.list.d/* || true
-
-          # 2. Wipe the bad/stale cache
-          sudo rm -rf /var/lib/apt/lists/*
-          sudo apt-get clean
-
-          # 3. Run update again
-          sudo apt-get update
-
       - name: Checkout
         uses: actions/checkout@v6
         with:
