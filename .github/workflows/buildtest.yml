@@ -506,14 +506,6 @@ jobs:
           components: rust-src,rustfmt
           toolchain: nightly
 
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          cache-all-crates: true
-          key: savm_packaging_cache
-          workspaces: |
-            ./scripts/build -> target
-
       - name: Download & Build Installers
         shell: pwsh
         run: |
