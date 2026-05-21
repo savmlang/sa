@@ -1,6 +1,3 @@
-Remove-Item -Path "./outputs/" -Recurse -ErrorAction SilentlyContinue
-New-Item -Path "./outputs/" -ItemType Directory
-
 $iter = Get-ChildItem "./extracted" -Directory
 
 $curr = 0
