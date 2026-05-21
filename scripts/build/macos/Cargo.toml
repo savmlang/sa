@@ -1,5 +1,5 @@
 [package]
-name = "savm_darwin"
+name = "savm_macos"
 version = "0.1.0"
 edition = "2024"
 
