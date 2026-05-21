@@ -1,0 +1,55 @@
+import { HorizontalBox, Button, ProgressIndicator } from "std-widgets.slint";
+export component SaText inherits Text {
+    font-family: "Segoe UI Variable, Segoe UI";
+    font-size: 1rem;
+    font-weight: 200;
+}
+
+export component SaStyledText inherits StyledText {
+    default-font-family: "Segoe UI Variable, Segoe UI";
+    default-font-size: 1rem;
+}
+
+// Alternative Simple AnimatedPage.slint
+export component AnimatedPage inherits Rectangle {
+    in property <bool> is-active;
+    visible: is-active;
+
+    @children
+}
+
+export component ReuseBottom inherits HorizontalBox {
+    callback next();
+    in property <image> icon;
+    in property <string> contdbtn;
+    in property <bool> nobtn;
+    in property <float> prog;
+
+    padding-left: 6rem;
+    padding-right: 6rem;
+    padding-bottom: 1rem;
+
+    VerticalLayout {
+        alignment: center;
+
+        ProgressIndicator {
+            width: 40%;
+            height: 0.25rem;
+
+            progress: prog;
+        }
+    }
+
+    HorizontalLayout {
+        visible: !nobtn;
+        alignment: end;
+        Button {
+            text: contdbtn;
+            icon: icon;
+            colorize-icon: true;
+            clicked => {
+                next();
+            }
+        }
+    }
+}

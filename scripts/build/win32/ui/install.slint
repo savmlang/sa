@@ -1,0 +1,68 @@
+import {
+    Palette,
+    Button,
+    HorizontalBox,
+    TextEdit,
+    ScrollView,
+    ListView,
+    VerticalBox,
+    GridBox,
+    ProgressIndicator,
+    TabWidget,
+} from "std-widgets.slint";
+import { SaText, AnimatedPage } from "reuse.slint";
+import { HelperTxts } from "gplv3summary.slint";
+
+export component InstallingPage inherits AnimatedPage {
+    callback next();
+
+    in property <float> prog: 0.0;
+    in property <string> status: "Preparing";
+    in property <bool> installed;
+
+    VerticalLayout {
+        Rectangle {
+
+            HorizontalBox {
+                alignment: center;
+                padding-left: 0.5rem;
+                padding-top: 2rem;
+
+                Image {
+                    source: installed ? @image-url("../assets/filled_check.svg") : @image-url("../assets/salang.png");
+                    height: 2.5rem;
+                    width: 2.5rem;
+                }
+
+                SaText {
+                    text: installed ? "Installed!" : "Installing";
+                    font-size: 2rem;
+                }
+            }
+        }
+
+        VerticalLayout {
+            alignment: center;
+            HorizontalLayout {
+                alignment: center;
+                VerticalBox {
+                    height: 2rem;
+                    width: 50rem;
+
+                    if (!installed): ProgressIndicator {
+                        progress: prog;
+                    }
+
+                    HorizontalLayout {
+                        alignment: center;
+                        SaText {
+                            text: installed ? "SaVM has been installed successfully!" : status;
+                            color: installed ? Palette.foreground : Palette.foreground.transparentize(40%);
+                            font-size: installed ? 2rem : 1rem;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

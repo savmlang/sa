@@ -1,0 +1,107 @@
+import {
+    Palette,
+    Button,
+    HorizontalBox,
+    TextEdit,
+    ScrollView,
+    ListView,
+    VerticalBox,
+    GridBox,
+    ProgressIndicator,
+    TabWidget,
+} from "std-widgets.slint";
+import { SaText, AnimatedPage, ReuseBottom, SaStyledText } from "reuse.slint";
+import { HelperTxts } from "gplv3summary.slint";
+
+export component LicensePage inherits AnimatedPage {
+    callback next();
+    in property <[string]> licensegpl;
+
+    VerticalLayout {
+        Rectangle {
+
+            HorizontalBox {
+                alignment: center;
+                padding-left: 0.5rem;
+                padding-top: 2rem;
+
+                Image {
+                    source: @image-url("../assets/salang.png");
+                    height: 2.5rem;
+                    width: 2.5rem;
+                }
+
+                SaText {
+                    text: "License";
+                    font-size: 2rem;
+                }
+            }
+        }
+
+        HorizontalBox {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+            alignment: LayoutAlignment.center;
+            padding-left: 6rem;
+            padding-right: 6rem;
+
+            SaStyledText {
+                text: @markdown("SaVM Runtime is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**. The following license is the **AGPL-3.0 copyleft excerpt** for the SaVM Runtime along with a digestable summary:");
+            }
+        }
+
+        HorizontalBox {
+            padding: 6rem;
+            padding-top: 1rem;
+            padding-bottom: 2rem;
+
+            Rectangle {
+                background: Palette.alternate-background.transparentize(50%);
+                border-radius: 0.5rem;
+
+                TabWidget {
+                    current-index: 0;
+
+                    Tab {
+                        title: "Summary";
+                        ScrollView {
+                            HorizontalBox {
+                                padding: 1rem;
+                                StyledText {
+                                    text: HelperTxts.licensesummary;
+                                    default-font-family: "Segoe UI Variable, Segoe UI";
+                                    default-font-size: 1.25rem;
+                                    default-color: Palette.foreground.transparentize(20%);
+                                }
+                            }
+                        }
+                    }
+
+                    Tab {
+                        title: "Full License Text";
+                        HorizontalBox {
+                            padding: 1rem;
+                            ListView {
+                                for line in licensegpl: Text {
+                                    text: line;
+                                    font-size: 1.25rem;
+                                    width: parent.width;
+                                    wrap: word-wrap;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        ReuseBottom {
+            icon: @image-url("../assets/checkbox.svg");
+            contdbtn: "I agree. Install";
+            prog: 1 / 2;
+            next => {
+                next();
+            }
+        }
+    }
+}

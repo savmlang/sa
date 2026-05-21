@@ -1,0 +1,90 @@
+import { Palette } from "std-widgets.slint";
+import { HomePage } from "home.slint";
+import { LicensePage } from "license.slint";
+import { InstallingPage } from "install.slint";
+import { UninstallingPage } from "uninstall.slint";
+
+enum Page { launchpad, license, installing, uninstall }
+
+export component MainWindow inherits Window {
+    in-out property <bool> dark: Palette.color-scheme == ColorScheme.dark;
+
+    in-out property <bool> win10: true;
+    in-out property <brush> backg: Palette.background;
+
+    background <=> backg;
+    default-font-family: "Segoe UI Variable, Segoe UI";
+
+    min-height: 600px;
+    min-width: 800px;
+
+    preferred-height: 600px;
+    preferred-width: 800px;
+
+    max-height: 600px;
+    max-width: 800px;
+
+    no-frame: false;
+
+    title: "SaVM Installer";
+    icon: @image-url("../assets/salang.png");
+
+    // Properties
+    in-out property <Page> curpage: Page.launchpad;
+
+    in-out property <bool> installed: false;
+    in-out property <bool> uninstalled: false;
+    in-out property <float> prog: 0.0;
+    in-out property <string> status: "Preparing";
+
+    in-out property <[string]> licensegpl: [
+        "Water is free for all mortals.",
+        "Water is provided to all.",
+        "Water is to be man's greatest resource.",
+        "All the water is to be as good as systems."
+    ];
+    callback startinstall();
+
+    if (win10 && dark): Rectangle {
+        background: @radial-gradient(circle, rgba(43, 27, 54, 85%) 0%, rgba(32, 23, 40, 40%) 50%, transparent 100%);
+    }
+
+    if (win10 && dark): Rectangle {
+        background: @radial-gradient(circle, rgba(37, 24, 33, 40%) 0%, transparent 70%);
+    }
+
+    if (curpage == Page.launchpad): HomePage {
+        is-active: curpage == Page.launchpad;
+
+        next => {
+            curpage = Page.license;
+        }
+    }
+
+    // PAGE 2: License Page
+    if (curpage == Page.license): LicensePage {
+        is-active: curpage == Page.license;
+        licensegpl: licensegpl;
+
+        next => {
+            curpage = Page.installing;
+            startinstall();
+        }
+    }
+
+    if (curpage == Page.installing): InstallingPage {
+        is-active: curpage == Page.installing;
+        prog: prog;
+        status: status;
+        installed: installed;
+
+        next => {
+            curpage = Page.installing;
+        }
+    }
+
+    if (curpage == Page.uninstall): UninstallingPage {
+        is-active: curpage == Page.uninstall;
+        uninstalled: uninstalled;
+    }
+}

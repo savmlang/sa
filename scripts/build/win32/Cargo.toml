@@ -3,5 +3,40 @@ name = "savm_windows"
 version = "0.1.0"
 edition = "2024"
 
+[[bin]]
+name = "savm_windows_cli"
+path = "./src/cli.rs"
+
+[[bin]]
+name = "savm_windows_gui"
+path = "./src/gui.rs"
+
 [dependencies]
+slint = { version = "^1", default-features = false, features = [
+  "accessibility",
+  "compat-1-2",
+  "backend-winit",
+  "renderer-femtovg",
+  "std",
+] }
 coreinstaller = { path = "../coreinstaller" }
+i-slint-backend-winit = "^1"
+windows-version = "^0.1"
+textwrap = "^0.16"
+windows = { version = "^0.62", features = [
+  "Win32_UI_Shell",
+  "Win32_Foundation",
+  "Win32_System",
+  "Win32_System_Threading",
+  "Win32_Storage_FileSystem",
+] }
+windows-registry = "^0.6"
+
+[build-dependencies]
+slint-build = "^1"
+tauri-winres = "^0.3"
+
+[package.metadata.tauri-winres]
+OriginalFilename = "savminstall.exe"
+FileDescription = "Install the SaVM Runtime on your computer!"
+LegalCopyright = "Copyright © 2026-Present"

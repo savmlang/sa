@@ -1,0 +1,86 @@
+import { Palette, Button } from "std-widgets.slint";
+import { SaText, AnimatedPage } from "reuse.slint";
+
+
+export component HomePage inherits AnimatedPage {
+    callback next();
+
+    VerticalLayout {
+        alignment: center;
+        VerticalLayout {
+            alignment: center;
+
+            HorizontalLayout {
+                alignment: center;
+                Image {
+                    source: @image-url("../assets/salang.png");
+                    height: 150px;
+                    width: 150px;
+                }
+            }
+
+            HorizontalLayout {
+                alignment: center;
+                padding-top: 2rem;
+                SaText {
+                    text: "SaVM Runtime";
+                    font-size: 3rem;
+                    font-weight: 700;
+                }
+            }
+
+            HorizontalLayout {
+                alignment: center;
+                padding-top: 0.15rem;
+                SaText {
+                    text: "Experience code flowing like music";
+                    color: Palette.accent-background;
+                    font-size: 1rem;
+                }
+            }
+
+            HorizontalLayout {
+                alignment: center;
+                padding-top: 3rem;
+                Button {
+                    text: "Get Started";
+                    icon: @image-url("../assets/arrow_upright.svg");
+                    colorize-icon: true;
+                    icon-size: 1.25rem;
+                    primary: true;
+                    clicked => {
+                        next();
+                    }
+                }
+            }
+        }
+    }
+
+    VerticalLayout {
+        alignment: end;
+        padding-bottom: 1rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+        HorizontalLayout {
+            HorizontalLayout {
+                alignment: start;
+
+                SaText {
+                    text: "Proudly Open Sourced";
+                    font-size: 1rem;
+                    color: Palette.foreground.transparentize(30%);
+                }
+            }
+
+            HorizontalLayout {
+                alignment: end;
+
+                SaText {
+                    text: "Fully Offline Windows Installer";
+                    font-size: 1rem;
+                    color: Palette.foreground.transparentize(30%);
+                }
+            }
+        }
+    }
+}

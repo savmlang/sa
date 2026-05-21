@@ -1,3 +1,10 @@
 extracted
 outputs
 release
+
+.icons
+
+# Windows SDK packages and generated files
+.winapp
+
+help.txt

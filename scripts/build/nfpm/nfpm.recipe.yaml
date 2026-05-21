@@ -31,7 +31,7 @@ vendor: The Sa Programming Language and SaVM Foundation
 # TODO: Point to GitHub Pages Once Done
 homepage: "https://github.com/savmlang"
 
-license: "MIT"
+license: "AGPL-3.0 With SaVM Linking Exception"
 
 contents:
   - dst: /opt/savm
@@ -41,7 +41,7 @@ contents:
       owner: root
 
   - src: "../../../LICENSE"
-    dst: /opt/savm/LICENSE.md
+    dst: /opt/savm/LICENSE
     file_info:
       mode: 0755
       owner: root

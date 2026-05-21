@@ -88,11 +88,12 @@ foreach ($tech in $iter) {
 
       $target = "$rustarch-pc-windows-msvc"
       rustup target add $target
-      cargo build --release --target $target
+      cargo build --bins --release --target $target
 
       Set-Location ..
 
-      Copy-Item ./target/$target/release/savm_windows.exe -Destination ./outputs/savm_${env:EDITION}_windows_${rustarch}_setup.exe
+      Copy-Item ./target/$target/release/savm_windows_cli.exe -Destination ./outputs/savm_${env:EDITION}_windows_cli_${rustarch}_setup.exe
+      Copy-Item ./target/$target/release/savm_windows_gui.exe -Destination ./outputs/savm_${env:EDITION}_windows_gui_${rustarch}_setup.exe
     }
     else {
       Write-Host "(${curr}/${total}) Ignored Windows ($dirn)"

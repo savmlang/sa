@@ -1,0 +1,73 @@
+import {
+    Palette,
+    Button,
+    HorizontalBox,
+    TextEdit,
+    ScrollView,
+    ListView,
+    VerticalBox,
+    GridBox,
+    ProgressIndicator,
+    TabWidget,
+} from "std-widgets.slint";
+import { SaText, AnimatedPage } from "reuse.slint";
+import { HelperTxts } from "gplv3summary.slint";
+
+export component UninstallingPage inherits AnimatedPage {
+    callback next();
+
+    in property <bool> uninstalled;
+
+    VerticalLayout {
+        Rectangle {
+
+            HorizontalBox {
+                alignment: center;
+                padding-left: 0.5rem;
+                padding-top: 2rem;
+
+                Image {
+                    source: uninstalled ? @image-url("../assets/filled_check.svg") : @image-url("../assets/salang.png");
+                    height: 2.5rem;
+                    width: 2.5rem;
+                }
+
+                SaText {
+                    text: uninstalled ? "Uninstalled!" : "Removing...";
+                    font-size: 2rem;
+                }
+            }
+        }
+
+        VerticalLayout {
+            alignment: center;
+            HorizontalLayout {
+                alignment: center;
+                VerticalBox {
+                    height: 2rem;
+                    width: 50rem;
+
+                    if (!uninstalled): ProgressIndicator {
+                        indeterminate: true;
+                    }
+
+                    HorizontalLayout {
+                        alignment: center;
+                        SaText {
+                            text: uninstalled ? "SaVM has been uninstalled successfully!" : "Uninstalling SaVM.";
+                            color: uninstalled ? Palette.foreground : Palette.foreground.transparentize(40%);
+                            font-size: uninstalled ? 2rem : 1rem;
+                        }
+                    }
+
+                    if (uninstalled): HorizontalLayout {
+                        alignment: center;
+                        SaText {
+                            text: "A reboot is required to completely clean up stray files.";
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
