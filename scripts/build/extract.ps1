@@ -14,6 +14,6 @@ foreach ($tech in Get-ChildItem "./release" -Directory) {
   }
   else {
     # Output Artifact
-    Copy-Item -Path $tech.FullName -Destination "./outputs/$name"
+    Get-ChildItem -Path $tech.FullName -File -Recurse | Copy-Item -Destination "./outputs/" -Force
   }
 }

@@ -544,10 +544,12 @@ jobs:
 
       - name: Release Artifacts
         uses: softprops/action-gh-release@v3
+        id: release
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         with:
           tag_name: savmdryrun-${{ steps.time.outputs.time }}
           prerelease: true
+          draft: true
           body: |
             Uploaded at : ${{ steps.time.outputs.time }}
 
@@ -555,3 +557,10 @@ jobs:
           files: |
             ./scripts/build/outputs/**/*
             ./scripts/build/release/**/*.zip
+
+      - name: Undraft
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        run: gh release edit savmdryrun-${{ steps.time.outputs.time }} --draft=false
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LINBUILD: true
