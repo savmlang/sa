@@ -11,12 +11,14 @@ permissions:
 
 jobs:
   build:
+    name: Build SaVM
     uses: ./.github/workflows/buildtest.yml
 
     with:
       artifact: "true"
 
   publish:
+    name: Publish Official SaVM
     needs: [build]
 
     runs-on: ubuntu-latest
