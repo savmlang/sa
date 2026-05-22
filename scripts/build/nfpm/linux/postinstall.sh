@@ -1,4 +1,4 @@
-#!/usr/bin/sh
+#!/bin/sh
 
 # Every exotic way to run ldconfig
 ldconfig || true

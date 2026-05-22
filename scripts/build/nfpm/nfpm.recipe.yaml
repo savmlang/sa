@@ -98,3 +98,41 @@ umask: 0o002
 
 scripts:
   postinstall: ./linux/postinstall.sh
+
+overrides:
+  ipk:
+    depends:
+      - libffi
+      - libgcc
+      - zlib
+      - zstd-libs
+      - sqlite
+
+  apk:
+    depends:
+      - libffi
+      - libgcc
+      - zlib
+      - zstd-libs
+      - sqlite
+
+# The Below is a preprocessor entry
+# On non-release build, we want to strip it entirely
+!#RELEASE
+deb:
+  signature:
+    method: debsign
+    signer: Akshanabha Chakraborty <ahqsecret@gmail.com>
+    type: origin
+    key_file: '{%KEYGPG}'
+    key_id: ${GPG_KEY_ID}
+
+rpm:
+  signature:
+    key_file: '{%KEYGPG}'
+    key_id: ${GPG_KEY_ID}
+
+apk:
+  signature:
+    key_file: '{%KEYGPG}'
+    key_name: savm_development
