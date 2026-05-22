@@ -69,7 +69,6 @@ jobs:
       - name: Release Artifacts
         uses: softprops/action-gh-release@v3
         id: release
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         with:
           tag_name: v${{ steps.version.outputs.version }}
           draft: true
@@ -80,7 +79,6 @@ jobs:
             ./scripts/build/release/**/*.zip
 
       - name: Undraft
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: gh release edit v${{ steps.version.outputs.version }} --draft=false
         env:
           GH_TOKEN: ${{ github.token }}
