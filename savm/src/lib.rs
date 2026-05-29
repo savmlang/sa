@@ -1,6 +1,7 @@
 pub mod acaot;
 pub mod ints;
 
+pub use ahash;
 use std::{
   any::Any,
   hash::Hash,
@@ -10,7 +11,7 @@ use std::{
   time::Duration,
 };
 
-use ahash::HashMap;
+use ahash::{HashMap, HashSet};
 use moka::sync::{CacheBuilder, SegmentedCache};
 #[cfg(feature = "native")]
 use sart::code::SwappableCodeStore;
@@ -26,6 +27,7 @@ use crate::{
 
 pub mod executor;
 pub mod management;
+pub mod permute;
 pub mod sync;
 
 pub static TOTAL_THREADS: LazyLock<usize> =
@@ -43,6 +45,7 @@ pub enum SymbolMapTableInfo {
 }
 
 pub type JITRelocs = Arc<[JITReloc]>;
+pub type LibCalls = HashSet<u64>;
 
 #[derive(Debug, Clone)]
 pub enum CacheData {
@@ -50,6 +53,7 @@ pub enum CacheData {
   Pickle {
     out: Arc<[PickleInstruction]>,
     jumps: Arc<HashMap<u64, usize>>,
+    libcalls: Arc<LibCalls>,
   },
   JITCache {
     level: CacheLevel,
@@ -57,6 +61,9 @@ pub enum CacheData {
     reloc: JITRelocs,
   },
 }
+
+unsafe impl Send for CacheData {}
+unsafe impl Sync for CacheData {}
 
 #[derive(Debug, Clone, Copy)]
 pub enum CacheLevel {
@@ -123,6 +130,9 @@ pub trait BytecodeResolver: Any {
   /// Checks if the cache is available!
   fn get_cache(&self, section: u64, level: CacheLevel) -> CacheData;
 
+  /// Gets the SaVM libraries it depends on
+  fn get_libcalls(&self, section: u64) -> Option<Arc<HashSet<u64>>>;
+
   /// Updates the cache
   ///
   /// We hope the callee only updates the tier of cache this produces
@@ -138,6 +148,10 @@ impl BytecodeResolver for Box<dyn BytecodeResolver + Send + Sync + 'static> {
 
   fn heuristic_pgo(&self) -> [&[u64]; 2] {
     BytecodeResolver::heuristic_pgo(self.as_ref())
+  }
+
+  fn get_libcalls(&self, section: u64) -> Option<Arc<HashSet<u64>>> {
+    BytecodeResolver::get_libcalls(self.as_ref(), section)
   }
 
   fn resolve_data(&self, section: u64) -> SymbolMapTable<Box<dyn ResolvedData>> {

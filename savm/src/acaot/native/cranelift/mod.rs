@@ -142,8 +142,7 @@ impl NativeCompiler for SaVMCranelift {
       let (vmtaskstate, largepad) = {
         builder.switch_to_block(prologue);
 
-        let vm_ctx = builder.create_global_value(GlobalValueData::VMContext);
-        let glob = builder.ins().global_value(isa.pointer_type(), vm_ctx);
+        let glob = builder.block_params(prologue)[0];
 
         let largepad = builder.declare_var(isa.pointer_type());
 
@@ -211,7 +210,7 @@ impl NativeCompiler for SaVMCranelift {
         )),
         regspill: builder.create_sized_stack_slot(StackSlotData::new(
           StackSlotKind::ExplicitDynamicSlot,
-          64,
+          128,
           6,
         )),
         blockmap: h,

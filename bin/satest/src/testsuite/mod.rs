@@ -1,13 +1,13 @@
 use std::mem::zeroed;
 #[cfg(feature = "native")]
-use std::time::Instant;
+use std::{sync::Arc, time::Instant};
 
 use crate::ExpectedOutput;
 #[cfg(feature = "native")]
 use crate::jitmem::JITMemData;
 use console::Style;
 #[cfg(feature = "native")]
-use savm::{CacheLevel, management::jitmem::calculate_relocation_abs};
+use savm::{CacheData, CacheLevel, management::jitmem::calculate_relocation_abs};
 use savm::{VM, sync::VMSTAT};
 
 pub fn test_vm_interpreter(vm: &VM, out: &ExpectedOutput, sectionid: u64, fail: &mut bool) {
@@ -43,6 +43,33 @@ pub fn test_jits(
     acaot::{native::testing_compiler_infra, pickle::PickleWorker},
   };
 
+  let mut worker = PickleWorker {
+    bytecode: match vm.resolve.resolve_data(sectionid) {
+      SymbolMapTable::MixedSizedBytecode { bytecode } => bytecode,
+      _ => err("NativePtr is not supported"),
+    },
+    out: vec![],
+    libcalls: Default::default(),
+    jump: Default::default(),
+  };
+
+  worker.pass1();
+
+  let outarc = Arc::from(worker.out.into_boxed_slice());
+  let jumps = Arc::new(worker.jump);
+  let libcalls = Arc::new(worker.libcalls);
+
+  let out2 = outarc.clone();
+  let jumps2 = jumps.clone();
+  vm.resolve.as_ref().update_cache(
+    sectionid,
+    CacheData::Pickle {
+      out: outarc,
+      jumps,
+      libcalls,
+    },
+  );
+
   for (name, builder) in testing_compiler_infra() {
     println!(
       "\n{:>14} Start TestID #{sectionid} ({name})",
@@ -50,19 +77,8 @@ pub fn test_jits(
     );
 
     let t0 = Instant::now();
-    let mut worker = PickleWorker {
-      bytecode: match vm.resolve.resolve_data(sectionid) {
-        SymbolMapTable::MixedSizedBytecode { bytecode } => bytecode,
-        _ => err("NativePtr is not supported"),
-      },
-      out: vec![],
-      jump: Default::default(),
-    };
-
-    worker.pass1();
-
     let mut compiler = builder.get();
-    let compiled = compiler.compile(&worker.out, &worker.jump);
+    let compiled = compiler.compile(&out2, &jumps2);
 
     let tf = t0.elapsed();
     let exec = match compiled {

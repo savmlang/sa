@@ -9,6 +9,7 @@ use std::{
   fmt::Display,
   fs::{self, File},
   process::exit,
+  sync::{Arc, RwLock},
 };
 
 use crate::bench::interpreter_benchmark;
@@ -49,15 +50,29 @@ pub struct ExpectedOutput {
   pub r8: u64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub(crate) struct Resolver {
   pub total: usize,
   pub root: Box<str>,
+  pub store: RwLock<savm::ahash::HashMap<u64, CacheData>>,
 }
 
 impl BytecodeResolver for Resolver {
   fn learn_data(&self, _: u64) -> SymbolMapTableInfo {
     SymbolMapTableInfo::MixedSizedBytecode
+  }
+  fn get_libcalls(&self, section: u64) -> Option<Arc<savm::ahash::HashSet<u64>>> {
+    match self
+      .store
+      .read()
+      .map_or_else(|x| x.into_inner(), |x| x)
+      .get(&section)
+    {
+      Some(CacheData::Pickle { libcalls, .. }) => {
+        return Some(libcalls.clone());
+      }
+      _ => err("Testing failure"),
+    };
   }
   fn get_cache(&self, _: u64, _: CacheLevel) -> CacheData {
     CacheData::None
@@ -65,8 +80,8 @@ impl BytecodeResolver for Resolver {
   fn get_best_cache(&self, _: u64) -> CacheData {
     CacheData::None
   }
-  fn update_cache(&self, _section: u64, _cache: CacheData) {
-    err("This shouldn't happen");
+  fn update_cache(&self, section: u64, cache: CacheData) {
+    self.store.write().unwrap().insert(section, cache);
   }
   fn heuristic_pgo(&self) -> [&[u64]; 2] {
     [&[], &[]]
@@ -110,6 +125,7 @@ fn main() {
       .expect("Couldn't read directory")
       .count(),
     root: Box::from(tests.as_ref()),
+    store: Default::default(),
   };
 
   let savm = unsafe { VM::new_unsafe::<_, false>(resolver) };

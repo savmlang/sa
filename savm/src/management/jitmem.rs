@@ -1,7 +1,11 @@
+#[cfg(feature = "llvm")]
+use std::borrow::Cow;
 use std::{num::NonZeroU8, pin::Pin, ptr::null};
 
 use sajit::relcar::RELCAR_BASIC;
 use sajit::relocations::RelocKind;
+#[cfg(feature = "llvm")]
+use sajit::symbpool::LLVMSymbolPool;
 use sajit::{
   Executable, MemoryExecutableApi, WriteFnResult, advanced::MemoryExecutable,
   relocations::Relocation,
@@ -18,6 +22,8 @@ use crate::{
 };
 
 pub struct JITMemoryManager {
+  #[cfg(feature = "llvm")]
+  symbpool: LLVMSymbolPool,
   quick: Vec<Pin<Box<MemoryExecutable>>>,
 
   // Stores `epicenter` TEXT - our flagship
@@ -31,6 +37,8 @@ impl JITMemoryManager {
     let a = MemoryExecutable::new_slab(Some(NonZeroU8::new(2).unwrap()));
 
     Self {
+      #[cfg(feature = "llvm")]
+      symbpool: LLVMSymbolPool::new(),
       quick: vec![Box::pin(a)],
       epitier: None,
     }
@@ -94,6 +102,93 @@ impl JITMemoryManager {
     self.alloc_quick_new();
     return self.write_quick(data, relocs);
   }
+
+  #[cfg(feature = "llvm")]
+  pub fn write_llvm<T>(
+    &mut self,
+    data: &[u8],
+    mut resolver: T,
+  ) -> Result<*const Executable, Cow<'static, [Cow<'static, str>]>>
+  where
+    T: FnMut(*const str) -> usize,
+  {
+    use sajit::LLVMDryRun;
+
+    let size_needed = MemoryExecutable::sizecalc(data).unwrap().get() as usize;
+
+    println!("Needed : {size_needed}");
+
+    let mut jitwrite = |mexec: &mut MemoryExecutable, symbpool: &LLVMSymbolPool| {
+      if prefer_jitlink() {
+        use sajit::LLVMJITLink;
+
+        mexec.write_jitlink(symbpool, data, |d| {
+          println!("Need to resolve : {}", unsafe { &*d });
+          resolver(d)
+        })
+      } else {
+        use sajit::LLVMRTDyld;
+        use std::borrow::Cow;
+
+        mexec
+          .write_rtdyld(data, |d| {
+            println!("Need to resolve : {}", unsafe { &*d });
+            resolver(d)
+          })
+          .map_err(|_| {
+            Cow::Borrowed(
+              &[Cow::Borrowed("RTDyld was unable to relocate!")] as &'static [Cow<'static, str>]
+            )
+          })
+      }
+    };
+
+    let memexec = self
+      .quick
+      .iter_mut()
+      .find(|x| x.under_size(size_needed).unwrap_or(false));
+
+    let out = if let Some(mexec) = memexec {
+      use sajit::MemorySizeInfo;
+
+      let old = mexec.cursor();
+      let out = jitwrite(mexec, &self.symbpool);
+      let new = mexec.cursor();
+
+      println!("Written really : {}", new - old);
+
+      out
+    } else {
+      todo!();
+    }?;
+
+    println!("Calculated: {size_needed}");
+
+    out.get("compiledlib").map(|x| *x).ok_or_else(|| {
+      Cow::Borrowed(
+        &[Cow::Borrowed("Could now get @compiledlib symbol")] as &'static [Cow<'static, str>]
+      )
+    })
+  }
+}
+
+#[rustfmt::skip]
+fn prefer_jitlink() -> bool {
+  false
+  // cfg!(
+  //   any(
+  //     all(
+  //       target_os = "linux", 
+  //       any(
+  //         target_arch = "x86_64",
+  //         target_arch = "aarch64",
+  //         target_arch = "riscv64",
+  //         target_arch = "powerpc64"
+  //       )
+  //     ),
+  //     target_os = "macos"
+  //   )
+  // )
 }
 
 impl Drop for JITMemoryManager {

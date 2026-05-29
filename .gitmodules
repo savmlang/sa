@@ -13,3 +13,6 @@
 [submodule "architecture"]
 	path = architecture
 	url = https://github.com/savmlang/saarch.git
+[submodule "mixedradix"]
+	path = mixedradix
+	url = https://github.com/savmlang/mixedradix.git

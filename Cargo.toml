@@ -13,6 +13,8 @@ members = [
   "bin/sasm",
   "bin/satest",
   "bin/savmrun",
+  "mixedradix",
+  "mixedradix/macros", "acdagtests",
 ]
 resolver = "3"
 exclude = ["jitemission", "sajit/llvmtest"]

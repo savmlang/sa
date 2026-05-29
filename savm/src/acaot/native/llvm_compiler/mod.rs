@@ -2,7 +2,7 @@
 use core::slice;
 use std::{
   borrow::Cow,
-  ffi::CStr,
+  ffi::c_char,
   hint::black_box,
   marker::PhantomData,
   mem::zeroed,
@@ -11,13 +11,21 @@ use std::{
   sync::{Arc, LazyLock},
 };
 
+use ahash::HashMap;
 use llvm_sys::{
+  analysis::{LLVMVerifierFailureAction, LLVMVerifyModule},
   core::{
-    LLVMAddFunction, LLVMContextCreate, LLVMFunctionType, LLVMGetBufferSize, LLVMGetBufferStart,
-    LLVMModuleCreateWithNameInContext, LLVMPrintModuleToString, LLVMSetDataLayout, LLVMSetTarget,
-    LLVMVoidTypeInContext,
+    LLVMAddFunction, LLVMAppendBasicBlockInContext, LLVMArrayType2, LLVMBuildAlloca,
+    LLVMContextCreate, LLVMCreateBuilderInContext, LLVMDisposeMessage, LLVMFunctionType,
+    LLVMGetBufferSize, LLVMGetBufferStart, LLVMGetParam, LLVMInt8TypeInContext,
+    LLVMInt32TypeInContext, LLVMInt64TypeInContext, LLVMModuleCreateWithNameInContext,
+    LLVMPointerTypeInContext, LLVMPositionBuilderAtEnd, LLVMPrintModuleToString, LLVMSetAlignment,
+    LLVMSetDataLayout, LLVMSetTarget, LLVMVoidTypeInContext,
   },
-  prelude::LLVMContextRef,
+  prelude::{
+    LLVMBasicBlockRef, LLVMBuilderRef, LLVMContextRef, LLVMMemoryBufferRef, LLVMModuleRef,
+    LLVMTypeRef, LLVMValueRef,
+  },
   target::{LLVMCopyStringRepOfTargetData, LLVMIntPtrTypeInContext},
   target_machine::{
     LLVMCodeGenFileType, LLVMCodeGenOptLevel, LLVMCodeModel, LLVMCreateTargetDataLayout,
@@ -33,14 +41,19 @@ use crate::{
     JITReloc,
     native::{
       NativeCompiler,
-      llvm_compiler::dispose::{
-        LLVMBuffer, LLVMCtx, LLVMMsg, Module, OpaqueMachine, OpaqueTargetData,
+      llvm_compiler::{
+        dispose::{LLVMBuffer, LLVMCtx, LLVMMsg, Module, OpaqueMachine, OpaqueTargetData},
+        irgen::compile,
+        ssaupdater::VMRegManager,
       },
     },
+    pickle::def::PickleInstruction,
   },
 };
 
 pub mod dispose;
+pub mod irgen;
+pub mod ssaupdater;
 
 static JITRELOC_NONE: LazyLock<Arc<[JITReloc]>> = LazyLock::new(|| Arc::from([]));
 
@@ -175,9 +188,7 @@ impl SaVMLLVMBuilder {
       let mut target = zeroed();
 
       if LLVMGetTargetFromTriple(triple.0, &mut target, error.as_mut_ref()) != 0 {
-        let out = Err(Cow::Owned(
-          CStr::from_ptr(error.0 as _).to_string_lossy().into_owned(),
-        ));
+        let out = Err(Cow::Owned(error.to_string_lossy().into_owned()));
         return out;
       }
 
@@ -211,7 +222,7 @@ impl SaVMLLVMBuilder {
   pub fn create_cinder() -> Box<dyn NativeCompiler> {
     Box::new(
       Self::create(
-        LLVMCodeGenOptLevel::LLVMCodeGenLevelNone,
+        LLVMCodeGenOptLevel::LLVMCodeGenLevelLess,
         LLVMRelocMode::LLVMRelocStatic,
         LLVMCodeModel::LLVMCodeModelLarge,
         CacheLevel::LLVMCinder,
@@ -245,36 +256,130 @@ impl SaVMLLVMBuilder {
   }
 }
 
+pub static LLVM_VAR_NAME: ThreadSafe<*const c_char> = ThreadSafe(c"".as_ptr());
+pub static LLVM_FNN_NAME: ThreadSafe<*const c_char> = ThreadSafe(c"compiledlib".as_ptr());
+
 impl NativeCompiler for SaVMLLVM {
   fn compile(
     &mut self,
     pickle: &[super::pickle::def::PickleInstruction],
-    jumps: &std::collections::HashMap<u64, usize, ahash::RandomState>,
+    jmps: &std::collections::HashMap<u64, usize, ahash::RandomState>,
   ) -> crate::CacheData {
     unsafe {
       let ctx = self.ctx;
       let td = self.layout.0;
       let module = self.module.0;
-      let name = c"".as_ptr();
+      let fnname = LLVM_FNN_NAME.0;
+      let globalname = LLVM_VAR_NAME.0;
 
-      let mut params = [LLVMIntPtrTypeInContext(ctx, td)];
+      let mut params = [LLVMPointerTypeInContext(ctx, 0)];
       let func_ty = LLVMFunctionType(LLVMVoidTypeInContext(ctx), params.as_mut_ptr(), 1, 0);
 
-      let function_val = LLVMAddFunction(module, name, func_ty);
+      let function_val = LLVMAddFunction(module, fnname, func_ty);
 
-      // Compile IR Info
-      {}
+      {
+        let prologue = LLVMAppendBasicBlockInContext(ctx, function_val, globalname);
+
+        let mut itr = jmps
+          .into_iter()
+          .map(|(marker, _)| {
+            let blk = LLVMAppendBasicBlockInContext(ctx, function_val, globalname);
+
+            (*marker, blk)
+          })
+          .peekable();
+
+        let mut blockmap = HashMap::default();
+        // Register Each Block
+        while let Some((marker, block)) = itr.next() {
+          let next = itr.peek().map(|(_, block)| *block);
+
+          blockmap.insert(
+            marker,
+            IBlock {
+              current: block,
+              next,
+            },
+          );
+        }
+
+        let vmctx = LLVMGetParam(function_val, 0);
+
+        let builder = LLVMCreateBuilderInContext(ctx);
+
+        LLVMPositionBuilderAtEnd(builder, prologue);
+
+        let i64x24 = { LLVMArrayType2(LLVMInt64TypeInContext(ctx), 24) };
+        let i64x16 = { LLVMArrayType2(LLVMInt64TypeInContext(ctx), 16) };
+
+        // Compile IR Info
+        let mut compilermeta = CompilerMeta {
+          pickle,
+          builder,
+          vmctx,
+          llvmctx: ctx,
+          llvmmodule: module,
+          rel: matches!(self.cache, CacheLevel::LLVMCinder | CacheLevel::LLVMCrater),
+          ws: [0; 20],
+          prologue,
+          trap: LLVMAppendBasicBlockInContext(ctx, function_val, globalname),
+          async_epilogue: LLVMAppendBasicBlockInContext(ctx, function_val, globalname),
+          blockv0: LLVMAppendBasicBlockInContext(ctx, function_val, globalname),
+          epilogue: LLVMAppendBasicBlockInContext(ctx, function_val, globalname),
+          jumpresolver: LLVMAppendBasicBlockInContext(ctx, function_val, globalname),
+          blockmap,
+
+          regspill: LLVMBuildAlloca(builder, i64x16, globalname),
+          scratchpad: LLVMBuildAlloca(builder, i64x24, globalname),
+
+          scratchpad_ptr: null_mut(),
+
+          regmnt: VMRegManager::new(prologue),
+
+          i32: LLVMInt32TypeInContext(ctx),
+          i64: LLVMInt64TypeInContext(ctx),
+          i8: LLVMInt8TypeInContext(ctx),
+          iptr: LLVMIntPtrTypeInContext(ctx, td),
+          ptr: LLVMPointerTypeInContext(ctx, 0),
+        };
+        LLVMSetAlignment(compilermeta.regspill, 64);
+        LLVMSetAlignment(compilermeta.scratchpad, 64);
+
+        compile(&mut compilermeta);
+      }
 
       // Print Module
       let module = LLVMMsg({ LLVMPrintModuleToString(module) });
 
-      println!("{}", CStr::from_ptr(module.0).to_str().unwrap());
+      println!("{}", module.to_str().unwrap());
+
+      // Verify pipeline
+      {
+        let mut err: *mut c_char = null_mut();
+        let status = LLVMVerifyModule(
+          self.module.0,
+          LLVMVerifierFailureAction::LLVMReturnStatusAction,
+          &mut err,
+        );
+
+        if !err.is_null() {
+          let err = LLVMMsg(err);
+
+          if status != 0 {
+            println!(
+              "-------------------------------------\nSaVM ERR:\n{}",
+              err.to_string_lossy()
+            );
+            return CacheData::None;
+          }
+        }
+      }
 
       // Compile Pipeline
+      let mut buf: LLVMMemoryBufferRef = null_mut();
       {
-        let mut err = null_mut();
-        let mut buf = null_mut();
-        LLVMTargetMachineEmitToMemoryBuffer(
+        let mut err: *mut c_char = null_mut();
+        let errbool = LLVMTargetMachineEmitToMemoryBuffer(
           self.machine.0,
           self.module.0,
           LLVMCodeGenFileType::LLVMObjectFile,
@@ -285,30 +390,75 @@ impl NativeCompiler for SaVMLLVM {
         if !err.is_null() {
           let err = LLVMMsg(err);
 
-          println!("SaVM ERR: {}", CStr::from_ptr(err.0).to_string_lossy());
-          return CacheData::None;
+          if errbool != 0 {
+            println!("SaVM ERR: {}", err.to_string_lossy());
+            return CacheData::None;
+          }
         }
-
-        if buf.is_null() {
-          return CacheData::None;
-        }
-
-        let buf = LLVMBuffer(buf);
-
-        let begin = LLVMGetBufferStart(buf.0) as *const u8;
-        let len = LLVMGetBufferSize(buf.0);
-        let data = slice::from_raw_parts(begin, len);
-
-        println!("{data:?}");
-
-        return CacheData::JITCache {
-          level: self.cache,
-          binary: Arc::from(data),
-          reloc: JITRELOC_NONE.clone(),
-        };
       }
-    }
 
-    CacheData::None
+      if buf.is_null() {
+        return CacheData::None;
+      }
+
+      let buf = LLVMBuffer(buf);
+
+      println!("{:?}", buf.deref());
+
+      return CacheData::JITCache {
+        level: self.cache,
+        binary: Arc::from(buf.deref()),
+        reloc: JITRELOC_NONE.clone(),
+      };
+
+      CacheData::None
+    }
   }
+}
+
+pub struct CompilerMeta<'a> {
+  pub pickle: &'a [PickleInstruction],
+
+  pub rel: bool,
+  pub ws: [u8; 20],
+
+  // LLVM Builder Ref
+  pub builder: LLVMBuilderRef,
+  pub llvmctx: LLVMContextRef,
+  pub llvmmodule: LLVMModuleRef,
+
+  // Main Blocks
+  pub prologue: LLVMBasicBlockRef,
+  pub trap: LLVMBasicBlockRef,
+  pub async_epilogue: LLVMBasicBlockRef,
+  pub epilogue: LLVMBasicBlockRef,
+  pub blockv0: LLVMBasicBlockRef,
+  pub jumpresolver: LLVMBasicBlockRef,
+
+  // Blockmap (also, resolved jumps)
+  pub blockmap: HashMap<u64, IBlock>,
+
+  // scratchpad
+  pub scratchpad: LLVMValueRef,
+  pub regspill: LLVMValueRef,
+
+  // VM Registers
+  pub regmnt: VMRegManager,
+
+  // VM Context
+  pub vmctx: LLVMValueRef,
+  pub scratchpad_ptr: LLVMValueRef,
+
+  // Few Types
+  pub iptr: LLVMTypeRef,
+  pub ptr: LLVMTypeRef,
+  pub i64: LLVMTypeRef,
+  pub i32: LLVMTypeRef,
+  pub i8: LLVMTypeRef,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct IBlock {
+  pub current: LLVMBasicBlockRef,
+  pub next: Option<LLVMBasicBlockRef>,
 }

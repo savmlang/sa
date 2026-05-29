@@ -271,6 +271,7 @@ impl VM {
 
     let mut worker = PickleWorker {
       bytecode,
+      libcalls: Default::default(),
       out: vec![],
       jump: Default::default(),
     };

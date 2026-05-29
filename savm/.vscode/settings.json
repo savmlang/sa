@@ -1,0 +1,7 @@
+{
+  "rust-analyzer.cargo.features": ["savm/dev"],
+  "rust-analyzer.cargo.extraEnv": {
+    "SAJIT_LLVM_PATH": "${workspaceFolder}/../llvm/install",
+    "LLVM_SYS_221_PREFIX": "${workspaceFolder}/../llvm/install"
+  }
+}

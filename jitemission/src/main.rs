@@ -1,9 +1,10 @@
-use std::mem::forget;
-use std::time::{Duration, Instant};
-
 use savm::acaot::{native::compiler_infra, pickle::PickleWorker};
+use savm::ahash::HashSet;
 use savm::management::jitmem::JITMemoryManager;
 use savm::{sync::VMSTAT, BytecodeResolver, VM};
+use std::mem::forget;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 struct Modules {}
 
@@ -11,6 +12,10 @@ impl BytecodeResolver for Modules {
   fn get_best_cache(&self, _: u64) -> savm::CacheData {
     todo!()
   }
+  fn get_libcalls(&self, _: u64) -> Option<Arc<HashSet<u64>>> {
+    todo!()
+  }
+
   fn get_cache(&self, _: u64, _: savm::CacheLevel) -> savm::CacheData {
     todo!()
   }
@@ -32,11 +37,12 @@ impl BytecodeResolver for Modules {
 }
 
 fn main() {
-  let f = std::fs::File::open("./6").unwrap();
+  let f = std::fs::File::open("./2").unwrap();
 
   let mut worker = PickleWorker {
     bytecode: f,
     out: vec![],
+    libcalls: Default::default(),
     jump: Default::default(),
   };
 
@@ -52,7 +58,7 @@ fn main() {
   let ptr = match code {
     savm::CacheData::JITCache { binary, .. } => {
       println!("Writing JITMem");
-      jmem.write_quick(&binary, &[])
+      jmem.write_llvm(&binary, |_d| 0).unwrap()
     }
     _ => {
       forget(jmem);

@@ -3,6 +3,7 @@ use std::{
   io::{Read, Seek},
 };
 
+use ahash::HashSet;
 use sart::ctr::*;
 
 use crate::acaot::pickle::def::{PickleInstruction, *};
@@ -15,6 +16,7 @@ pub mod implementation;
 pub struct PickleWorker<T: Seek + Read> {
   pub bytecode: T,
   pub out: Vec<PickleInstruction>,
+  pub libcalls: HashSet<u64>,
   pub jump: HashMap<u64, usize, ahash::RandomState>,
 }
 
@@ -150,6 +152,8 @@ impl<T: Seek + Read> PickleWorker<T> {
     let sectionid = self.bytecode.extract::<8>().swap_if_be();
     let marker = self.bytecode.extract::<8>().swap_if_be();
 
+    self.libcalls.insert(u64::from_ne_bytes(sectionid));
+
     let mut copy = [0u8; 16];
     copy[0..8].copy_from_slice(&sectionid);
     copy[8..16].copy_from_slice(&marker);
@@ -168,6 +172,8 @@ impl<T: Seek + Read> PickleWorker<T> {
 
     let [regignore] = self.bytecode.extract::<1>();
     let sectionid = self.bytecode.extract::<8>().swap_if_be();
+
+    self.libcalls.insert(u64::from_ne_bytes(sectionid));
 
     self.emit_copy_bytes(opcode, sectionid);
 

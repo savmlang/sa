@@ -37,7 +37,7 @@ pub fn compiler(
     // Lets not hit it badly
     let bytecode = CODE_CACHE.get(&moduleid).unwrap_or_else(|| {
       match resolve.as_ref().get_cache(moduleid, CacheLevel::Pickle) {
-        CacheData::Pickle { out, jumps } => (out, jumps),
+        CacheData::Pickle { out, jumps, .. } => (out, jumps),
         _ => {
           use std::io::{self, Write};
 

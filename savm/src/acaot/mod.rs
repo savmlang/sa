@@ -26,10 +26,11 @@
 
 use serde::{Deserialize, Serialize};
 
-pub mod pickle;
-
+#[cfg(feature = "dag")]
+pub mod acdag;
 #[cfg(feature = "native")]
 pub mod native;
+pub mod pickle;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum LocSrc {

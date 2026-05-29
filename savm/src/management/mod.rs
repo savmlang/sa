@@ -36,6 +36,7 @@ enum ProcessResult {
     u64,
     Arc<[PickleInstruction]>,
     Arc<ahash::HashMap<u64, usize>>,
+    Arc<ahash::HashSet<u64>>,
   ),
   Native(u64, ThreadSafe<*const ()>, CallSig),
   None,
@@ -141,6 +142,7 @@ pub fn management_main(
           CacheData::None => {
             let mut worker = PickleWorker {
               bytecode,
+              libcalls: Default::default(),
               out: vec![],
               jump: Default::default(),
             };
@@ -148,9 +150,10 @@ pub fn management_main(
 
             let out: Arc<[PickleInstruction]> = Arc::from(worker.out.into_boxed_slice());
             let jumps = Arc::new(worker.jump);
+            let libcalls = Arc::new(worker.libcalls);
 
             CODE_CACHE.insert(id, (out.clone(), jumps.clone()));
-            ProcessResult::Pickle(id, out, jumps)
+            ProcessResult::Pickle(id, out, jumps, libcalls)
           }
           _ => ProcessResult::None,
         }
@@ -166,10 +169,15 @@ pub fn management_main(
     .collect::<Box<[_]>>()
     .into_iter()
     .for_each(|outdata| match outdata {
-      ProcessResult::Pickle(section, cache, jumps) => {
-        resolve
-          .as_ref()
-          .update_cache(section, CacheData::Pickle { out: cache, jumps });
+      ProcessResult::Pickle(section, cache, jumps, libcalls) => {
+        resolve.as_ref().update_cache(
+          section,
+          CacheData::Pickle {
+            out: cache,
+            jumps,
+            libcalls,
+          },
+        );
       }
       ProcessResult::Native(module, fnptr, csig) => {
         _ = nativeptr.insert(module, (fnptr, csig));
@@ -196,6 +204,8 @@ pub fn management_main(
     {
       use std::collections::HashSet;
 
+      use crate::permute::ShuffledSliceIter;
+
       let rs = resolve.as_ref();
       let compilers = compiler_infra();
 
@@ -212,11 +222,16 @@ pub fn management_main(
         .chain(_nptr.iter().map(|x| *x.0))
         .collect::<HashSet<u64, ahash::RandomState>>();
 
-      let mut critical = critical_s.into_iter().peekable();
-      let mut important = important_s.into_iter().peekable();
+      let mut critical = ShuffledSliceIter::new_panicking(critical_s).peekable();
+      let mut important = ShuffledSliceIter::new_panicking(important_s).peekable();
 
       let others_iter = || {
-        (0..=last)
+        use crate::permute::HashedPermutation;
+        use std::num::NonZeroU64;
+
+        // Length: Last Index + 1
+        HashedPermutation::new_panicking(NonZeroU64::new(last + 1).unwrap())
+          .into_iter()
           .filter(|x| !important_critical_nptr_hset.contains(x))
           .peekable()
       };
@@ -323,13 +338,13 @@ pub fn management_main(
               }
             }
 
-            schedule(&tx_critical, &tx_fastlane, &tx_public, &mut critical, &mut important, &mut others, &mut compiler_fastlane, &mut compiler_public, compilers, || important_s.into_iter().peekable(), others_iter);
+            schedule(&tx_critical, &tx_fastlane, &tx_public, &mut critical, &mut important, &mut others, &mut compiler_fastlane, &mut compiler_public, compilers, || ShuffledSliceIter::new_panicking(important_s).peekable(), others_iter);
           }
 
 
           recv(timer) -> _ => {
             // Redundant, but JustInCase
-            schedule(&tx_critical, &tx_fastlane, &tx_public, &mut critical, &mut important, &mut others, &mut compiler_fastlane, &mut compiler_public, compilers, || important_s.into_iter().peekable(), others_iter);
+            schedule(&tx_critical, &tx_fastlane, &tx_public, &mut critical, &mut important, &mut others, &mut compiler_fastlane, &mut compiler_public, compilers, || ShuffledSliceIter::new_panicking(important_s).peekable(), others_iter);
 
             // Break JIT if all modules are processes
             // Now we get into well - nicely linking all of them

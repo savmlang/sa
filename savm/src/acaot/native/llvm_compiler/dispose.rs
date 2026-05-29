@@ -1,11 +1,18 @@
+use core::slice;
 use llvm_sys::{
   LLVMContext, LLVMModule,
-  core::{LLVMContextDispose, LLVMDisposeMemoryBuffer, LLVMDisposeMessage, LLVMDisposeModule},
+  core::{
+    LLVMContextDispose, LLVMDisposeMemoryBuffer, LLVMDisposeMessage, LLVMDisposeModule,
+    LLVMGetBufferSize, LLVMGetBufferStart,
+  },
   prelude::LLVMMemoryBufferRef,
   target::{LLVMDisposeTargetData, LLVMTargetDataRef},
   target_machine::{LLVMDisposeTargetMachine, LLVMOpaqueTargetMachine},
 };
-use std::ffi::c_char;
+use std::{
+  ffi::{CStr, c_char},
+  ops::Deref,
+};
 
 macro_rules! llvmdispose {
   (
@@ -46,4 +53,25 @@ llvmdispose! {
   OpaqueTargetData(LLVMTargetDataRef, LLVMDisposeTargetData),
   LLVMMsg(*mut c_char, LLVMDisposeMessage),
   LLVMBuffer(LLVMMemoryBufferRef, LLVMDisposeMemoryBuffer)
+}
+
+impl Deref for LLVMMsg {
+  type Target = CStr;
+
+  fn deref(&self) -> &Self::Target {
+    unsafe { CStr::from_ptr(self.0) }
+  }
+}
+
+impl Deref for LLVMBuffer {
+  type Target = [u8];
+
+  fn deref(&self) -> &Self::Target {
+    unsafe {
+      let begin = LLVMGetBufferStart(self.0) as *const u8;
+      let len = LLVMGetBufferSize(self.0);
+
+      slice::from_raw_parts(begin, len)
+    }
+  }
 }
