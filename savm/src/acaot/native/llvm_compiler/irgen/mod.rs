@@ -16,7 +16,9 @@ use sart::{
 };
 use std::{mem::offset_of, ptr::null_mut};
 
+pub(crate) mod almu;
 mod pickle;
+pub(crate) mod reg;
 
 pub fn compile(meta: &mut CompilerMeta) {
   unsafe {
@@ -118,15 +120,15 @@ pub fn compile(meta: &mut CompilerMeta) {
       meta.regmnt.newblock(meta.epilogue);
 
       regs.into_iter().for_each(|regid| {
-        let regval = meta.regmnt.usereg(regid, meta_ptr);
-
-        offsetstore(
-          builder,
-          ctx,
-          regval,
-          vmctx,
-          size_of::<QuadPackedData>() * regid,
-        );
+        if let Some(regval) = meta.regmnt.try_usereg(regid, meta_ptr) {
+          offsetstore(
+            builder,
+            ctx,
+            regval,
+            vmctx,
+            size_of::<QuadPackedData>() * regid,
+          );
+        }
       });
 
       LLVMBuildRetVoid(builder);
@@ -142,15 +144,15 @@ pub fn compile(meta: &mut CompilerMeta) {
       meta.regmnt.newblock(meta.async_epilogue);
 
       regs.into_iter().for_each(|regid| {
-        let regval = meta.regmnt.usereg(regid, meta_ptr);
-
-        offsetstore(
-          builder,
-          ctx,
-          regval,
-          vmctx,
-          size_of::<QuadPackedData>() * regid,
-        );
+        if let Some(regval) = meta.regmnt.try_usereg(regid, meta_ptr) {
+          offsetstore(
+            builder,
+            ctx,
+            regval,
+            vmctx,
+            size_of::<QuadPackedData>() * regid,
+          );
+        }
       });
 
       LLVMBuildRetVoid(builder);

@@ -7,7 +7,10 @@ use crate::ExpectedOutput;
 use crate::jitmem::JITMemData;
 use console::Style;
 #[cfg(feature = "native")]
-use savm::{CacheData, CacheLevel, management::jitmem::calculate_relocation_abs};
+use savm::{
+  CacheData, CacheLevel, acaot::pickle::def::PickleInstruction,
+  management::jitmem::calculate_relocation_abs,
+};
 use savm::{VM, sync::VMSTAT};
 
 pub fn test_vm_interpreter(vm: &VM, out: &ExpectedOutput, sectionid: u64, fail: &mut bool) {
@@ -55,7 +58,7 @@ pub fn test_jits(
 
   worker.pass1();
 
-  let outarc = Arc::from(worker.out.into_boxed_slice());
+  let outarc: Arc<[PickleInstruction]> = Arc::from(worker.out.into_boxed_slice());
   let jumps = Arc::new(worker.jump);
   let libcalls = Arc::new(worker.libcalls);
 

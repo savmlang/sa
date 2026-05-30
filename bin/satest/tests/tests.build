@@ -23,4 +23,4 @@
 ;
 ; Format `:iter <num> <unit>`
 ; <num> cannot be float
-:iter 1 k
+:iter 100 n

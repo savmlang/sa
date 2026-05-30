@@ -14,7 +14,7 @@ members = [
   "bin/satest",
   "bin/savmrun",
   "mixedradix",
-  "mixedradix/macros", "acdagtests",
+  "mixedradix/macros", "acdagtests", "bin/savmrtcache", "bin/savmrt", "bin/savmimgrun", "bin/savmruncore",
 ]
 resolver = "3"
 exclude = ["jitemission", "sajit/llvmtest"]

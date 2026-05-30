@@ -200,14 +200,24 @@ impl VMRegManager {
     }
   }
 
+  pub fn try_usereg(&mut self, regid: usize, compiler: *mut CompilerMeta) -> Option<LLVMValueRef> {
+    let (ssaup, regval) = self
+      .registers
+      .get_mut(regid)
+      .expect("Could not expect that rN error")
+      .as_mut()?;
+
+    if let Some(r) = regval {
+      let regval: LLVMValueRef = r.as_ptr();
+      return Some(regval);
+    }
+
+    Some(ssaup.get(self.block).as_ptr())
+  }
+
   pub fn usereg(&mut self, regid: usize, compiler: *mut CompilerMeta) -> LLVMValueRef {
     unsafe {
-      let Some((ssaup, regval)) = self
-        .registers
-        .get_mut(regid)
-        .expect("Could not expect that rN error")
-      // Register uninit
-      else {
+      let Some(out) = self.try_usereg(regid, compiler) else {
         let prologue = (*compiler).prologue;
         let builder = (*compiler).builder;
         let vmctx = (*compiler).vmctx;
@@ -235,12 +245,7 @@ impl VMRegManager {
         return val.as_ptr();
       };
 
-      if let Some(r) = regval {
-        let regval: *mut LLVMValue = r.as_ptr();
-        return regval;
-      }
-
-      ssaup.get(self.block).as_ptr()
+      out
     }
   }
 
