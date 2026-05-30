@@ -1546,6 +1546,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "savmimgrun"
+version = "0.1.0"
+
+[[package]]
+name = "savmrt"
+version = "0.1.0"
+
+[[package]]
+name = "savmrtcache"
+version = "0.1.0"
+
+[[package]]
 name = "savmrun"
 version = "0.1.0"
 dependencies = [
@@ -1561,6 +1573,10 @@ dependencies = [
  "sysinfo",
  "windows",
 ]
+
+[[package]]
+name = "savmruncore"
+version = "0.1.0"
 
 [[package]]
 name = "scoped-tls"
