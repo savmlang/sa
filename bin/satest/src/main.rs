@@ -69,7 +69,7 @@ impl BytecodeResolver for Resolver {
       .get(&section)
     {
       Some(CacheData::Pickle { libcalls, .. }) => {
-        return Some(libcalls.clone());
+        return libcalls.as_ref().map(|x| x.clone());
       }
       _ => err("Testing failure"),
     };

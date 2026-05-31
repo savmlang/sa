@@ -69,7 +69,7 @@ pub fn test_jits(
     CacheData::Pickle {
       out: outarc,
       jumps,
-      libcalls,
+      libcalls: Some(libcalls),
     },
   );
 
