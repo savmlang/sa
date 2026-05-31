@@ -3,13 +3,6 @@
 version = 4
 
 [[package]]
-name = "acdagtests"
-version = "0.1.0"
-dependencies = [
- "savm",
-]
-
-[[package]]
 name = "ahash"
 version = "0.8.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1456,6 +1449,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "saffic"
+version = "0.1.0"
+
+[[package]]
 name = "sajit"
 version = "0.0.1"
 dependencies = [
@@ -1510,6 +1507,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "sasmc"
+version = "0.1.0"
+
+[[package]]
 name = "satest"
 version = "0.0.1"
 dependencies = [
@@ -1544,6 +1545,14 @@ dependencies = [
  "serde",
  "tokio",
 ]
+
+[[package]]
+name = "savm_easyc"
+version = "0.1.0"
+
+[[package]]
+name = "savmc"
+version = "0.1.0"
 
 [[package]]
 name = "savmimgrun"

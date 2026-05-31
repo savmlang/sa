@@ -6,7 +6,7 @@ use llvm_sys::{
     LLVMBuildLoad2, LLVMBuildRetVoid, LLVMBuildStore, LLVMBuildSwitch, LLVMBuildUnreachable,
     LLVMConstInt, LLVMFunctionType, LLVMGetIntrinsicDeclaration, LLVMInt8TypeInContext,
     LLVMInt64TypeInContext, LLVMLookupIntrinsicID, LLVMPointerTypeInContext,
-    LLVMPositionBuilderAtEnd, LLVMVoidTypeInContext,
+    LLVMPositionBuilderAtEnd, LLVMSetAlignment, LLVMVoidTypeInContext,
   },
   prelude::{LLVMBuilderRef, LLVMContextRef, LLVMTypeRef, LLVMValueRef},
 };
@@ -37,7 +37,7 @@ pub fn compile(meta: &mut CompilerMeta) {
         ctx,
         meta.ptr,
         meta.vmctx,
-        offset_of!(VMTaskState, scratchpad),
+        OffsetBytes::U(offset_of!(VMTaskState, scratchpad) as _),
       );
       meta.scratchpad = scratchpad_ptr;
 
@@ -46,7 +46,7 @@ pub fn compile(meta: &mut CompilerMeta) {
         ctx,
         meta.i32,
         meta.vmctx,
-        offset_of!(VMTaskState, flags),
+        OffsetBytes::U(offset_of!(VMTaskState, flags) as _),
       );
 
       let rhs = LLVMConstInt(meta.i32, FLAG_JUMP_TO_RESUME as _, 0);
@@ -74,7 +74,7 @@ pub fn compile(meta: &mut CompilerMeta) {
         ctx,
         meta.i64,
         meta.vmctx,
-        offset_of!(VMTaskState, curline_or_resume),
+        OffsetBytes::I(offset_of!(VMTaskState, curline_or_resume) as _),
       );
       let switch = LLVMBuildSwitch(builder, val, meta.trap, meta.blockmap.len() as _);
 
@@ -126,7 +126,7 @@ pub fn compile(meta: &mut CompilerMeta) {
             ctx,
             regval,
             vmctx,
-            size_of::<QuadPackedData>() * regid,
+            OffsetBytes::U(size_of::<QuadPackedData>() as u64 * regid as u64),
           );
         }
       });
@@ -150,7 +150,7 @@ pub fn compile(meta: &mut CompilerMeta) {
             ctx,
             regval,
             vmctx,
-            size_of::<QuadPackedData>() * regid,
+            OffsetBytes::U(size_of::<QuadPackedData>() as u64 * regid as u64),
           );
         }
       });
@@ -164,13 +164,18 @@ pub fn offsetptr(
   builder: LLVMBuilderRef,
   ctx: LLVMContextRef,
   pointerval: LLVMValueRef,
-  offset_bytes: usize,
+  offset_bytes: u64,
+  signed: bool,
 ) -> LLVMValueRef {
   unsafe {
     let index_ty = LLVMInt64TypeInContext(ctx);
     let i8_ty = LLVMInt8TypeInContext(ctx);
 
-    let mut indices = [LLVMConstInt(index_ty, offset_bytes as _, 0)];
+    let mut indices = [LLVMConstInt(
+      index_ty,
+      offset_bytes as _,
+      if signed { 1 } else { 0 },
+    )];
     LLVMBuildGEP2(
       builder,
       i8_ty,
@@ -182,17 +187,55 @@ pub fn offsetptr(
   }
 }
 
+pub fn offsetload_aligned(
+  builder: LLVMBuilderRef,
+  ctx: LLVMContextRef,
+  ty: LLVMTypeRef,
+  pointerval: LLVMValueRef,
+  offset_bytes: OffsetBytes,
+  align: Option<u32>,
+) -> LLVMValueRef {
+  unsafe {
+    let (of, signed) = offset_bytes.into();
+    let offset_ptr = offsetptr(builder, ctx, pointerval, of, signed);
+
+    let load = LLVMBuildLoad2(builder, ty, offset_ptr, LLVM_VAR_NAME.0);
+
+    if let Some(align) = align {
+      LLVMSetAlignment(load, align);
+    }
+
+    load
+  }
+}
+
 pub fn offsetload(
   builder: LLVMBuilderRef,
   ctx: LLVMContextRef,
   ty: LLVMTypeRef,
   pointerval: LLVMValueRef,
-  offset_bytes: usize,
+  offset_bytes: OffsetBytes,
 ) -> LLVMValueRef {
-  unsafe {
-    let offset_ptr = offsetptr(builder, ctx, pointerval, offset_bytes);
+  offsetload_aligned(builder, ctx, ty, pointerval, offset_bytes, None)
+}
 
-    LLVMBuildLoad2(builder, ty, offset_ptr, LLVM_VAR_NAME.0)
+pub fn offsetstore_aligned(
+  builder: LLVMBuilderRef,
+  ctx: LLVMContextRef,
+  val: LLVMValueRef,
+  pointerval: LLVMValueRef,
+  offset_bytes: OffsetBytes,
+  align: Option<u32>,
+) {
+  unsafe {
+    let (of, signed) = offset_bytes.into();
+    let offset_ptr = offsetptr(builder, ctx, pointerval, of, signed);
+
+    let store = LLVMBuildStore(builder, val, offset_ptr);
+
+    if let Some(align) = align {
+      LLVMSetAlignment(store, align);
+    }
   }
 }
 
@@ -201,11 +244,21 @@ pub fn offsetstore(
   ctx: LLVMContextRef,
   val: LLVMValueRef,
   pointerval: LLVMValueRef,
-  offset_bytes: usize,
+  offset_bytes: OffsetBytes,
 ) {
-  unsafe {
-    let offset_ptr = offsetptr(builder, ctx, pointerval, offset_bytes);
+  offsetstore_aligned(builder, ctx, val, pointerval, offset_bytes, None);
+}
 
-    LLVMBuildStore(builder, val, offset_ptr);
+pub enum OffsetBytes {
+  U(u64),
+  I(i64),
+}
+
+impl OffsetBytes {
+  pub fn into(self) -> (u64, bool) {
+    match self {
+      OffsetBytes::U(x) => (x, false),
+      OffsetBytes::I(x) => (x.cast_unsigned(), true),
+    }
   }
 }

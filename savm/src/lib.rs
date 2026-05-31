@@ -46,14 +46,16 @@ pub enum SymbolMapTableInfo {
 
 pub type JITRelocs = Arc<[JITReloc]>;
 pub type LibCalls = HashSet<u64>;
+pub type SaVMJumps = HashMap<u64, usize>;
 
 #[derive(Debug, Clone)]
 pub enum CacheData {
   None,
   Pickle {
     out: Arc<[PickleInstruction]>,
-    jumps: Arc<HashMap<u64, usize>>,
-    libcalls: Arc<LibCalls>,
+    jumps: Arc<SaVMJumps>,
+    /// This should be None for returned CacheData
+    libcalls: Option<Arc<LibCalls>>,
   },
   JITCache {
     level: CacheLevel,
@@ -74,6 +76,8 @@ pub enum CacheLevel {
   LLVMCrater,
   LLVMEpitome,
 }
+
+pub const OPTLEVEL_PICKLE: i64 = 0;
 
 impl CacheLevel {
   pub fn to_int(&self) -> u8 {
@@ -181,7 +185,8 @@ pub static GLOBAL_RUNTIME: LazyLock<Runtime> =
 pub(crate) static FNCALL_DISPATCH: OnceLock<HashMap<u64, (ThreadSafe<*const ()>, CallSig)>> =
   OnceLock::new();
 
-// This only and only stores Subroutine-Threaded instructions
+// This only and only stores Subroutine-Threaded instructions and their associated jumps
+// We dont directly store libcalls
 pub(crate) static CODE_CACHE: LazyLock<
   SegmentedCache<u64, (Arc<[PickleInstruction]>, Arc<HashMap<u64, usize>>), ahash::RandomState>,
 > = LazyLock::new(|| {

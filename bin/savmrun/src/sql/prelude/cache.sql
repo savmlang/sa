@@ -1,7 +1,7 @@
 -- Sets up the Sqlite Database
 -- for cache store
 
-PRAGMA user_version = 1;
+PRAGMA user_version = 2;
 
 CREATE TABLE IF NOT EXISTS Metadata(
   prim INTEGER PRIMARY KEY DEFAULT 1 CHECK (prim = 1),
@@ -24,6 +24,7 @@ CREATE TABLE Cache(
   sectionid INTEGER NOT NULL,
   optlevel INTEGER NOT NULL,
 
+  picklelibcalls BLOB,
   metamap BLOB,
   machinecode BLOB NOT NULL,
 

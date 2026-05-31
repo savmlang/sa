@@ -7,27 +7,24 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use sart::structures::ffi::CallSig;
 use std::sync::Arc;
 
-#[cfg(feature = "native")]
-use crossbeam_channel::Sender;
-
+// Native (JIT) layers
 #[cfg(feature = "native")]
 use crate::{
   CacheLevel, SafeSwappableCodeStore, acaot::native::NativeCompilerBuilder,
   management::jitmem::calculate_relocation_abs,
 };
 #[cfg(feature = "native")]
+use crossbeam_channel::Sender;
+#[cfg(feature = "native")]
 use evmap::handles::WriteHandle;
 #[cfg(feature = "native")]
 use sart::code::SwappableCodeStore;
 #[cfg(feature = "native")]
 use std::{iter::Peekable, process::abort};
-
 #[cfg(feature = "native")]
 pub mod compiler_thread;
-
 #[cfg(feature = "native")]
 pub mod jitmem;
-
 #[cfg(feature = "native")]
 use jitmem::JITMemoryManager;
 
@@ -175,7 +172,7 @@ pub fn management_main(
           CacheData::Pickle {
             out: cache,
             jumps,
-            libcalls,
+            libcalls: Some(libcalls),
           },
         );
       }
@@ -189,22 +186,19 @@ pub fn management_main(
 
   #[cfg(feature = "native")]
   {
-    use std::time::Duration;
-
-    use crossbeam_channel::{bounded, select, tick};
-
     use crate::{
       acaot::native::compiler_infra,
       management::{compiler_thread::JITOut, jitmem::JITMemoryManager},
     };
+    use crossbeam_channel::{bounded, select, tick};
+    use std::time::Duration;
 
     let mut samgr = JITMemoryManager::new();
 
     // Compiler
     {
-      use std::collections::HashSet;
-
       use crate::permute::ShuffledSliceIter;
+      use std::collections::HashSet;
 
       let rs = resolve.as_ref();
       let compilers = compiler_infra();
@@ -244,11 +238,9 @@ pub fn management_main(
       let mut threads = 0usize;
       // critical node
       let tx_critical = {
-        use std::thread;
-
-        use crossbeam_channel::bounded;
-
         use crate::management::compiler_thread::compiler;
+        use crossbeam_channel::bounded;
+        use std::thread;
 
         let (tx, rx) = bounded::<(u64, usize, bool)>(20);
 
@@ -270,11 +262,9 @@ pub fn management_main(
 
       // fastlane node
       let tx_fastlane = {
-        use std::thread;
-
-        use crossbeam_channel::bounded;
-
         use crate::management::compiler_thread::compiler;
+        use crossbeam_channel::bounded;
+        use std::thread;
 
         let (tx, rx) = bounded::<(u64, usize, bool)>(20);
 
@@ -297,11 +287,9 @@ pub fn management_main(
 
       // Public node
       let tx_public = {
-        use std::thread;
-
-        use crossbeam_channel::bounded;
-
         use crate::management::compiler_thread::compiler;
+        use crossbeam_channel::bounded;
+        use std::thread;
 
         let (tx, rx) = bounded::<(u64, usize, bool)>(20);
 
@@ -389,6 +377,7 @@ fn process_jit(
           reloc,
         } => match level {
           CacheLevel::Pickle => {
+            // How did Jesus allow this honestly?
             abort();
           }
           CacheLevel::CraneliftEpicenter | CacheLevel::LLVMEpitome => {

@@ -33,7 +33,7 @@ members = [
 
   # SaVM C Compatible Libraries (Future Experiments currently)
   # Dynamic Linkable AND Static Linkable
-  # Depends on the C ABI (musl, glibc, msvc, applec)
+  # Depends on the C ABI (musl, glibc, msvc, libSystem)
   "libs/savmc",
   "libs/savm_easyc",
   "libs/sasmc",

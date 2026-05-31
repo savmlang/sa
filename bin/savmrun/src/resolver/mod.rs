@@ -1,5 +1,9 @@
 use parking_lot::Mutex;
-use savm::{acaot::pickle::def::PickleInstruction, sart::structures::ffi::CallSig};
+use savm::{
+  OPTLEVEL_PICKLE,
+  acaot::{JITReloc, pickle::def::PickleInstruction},
+  sart::structures::ffi::CallSig,
+};
 use std::{
   env::consts::{DLL_PREFIX, DLL_SUFFIX},
   io::Cursor,
@@ -119,6 +123,31 @@ impl BytecodeResolver for ApplicationManager {
     self.last_section
   }
 
+  fn get_libcalls(&self, section: u64) -> Option<Arc<ahash::HashSet<u64>>> {
+    let mut conn_guard = self.cache.lock();
+    let Some(conn) = conn_guard.as_mut() else {
+      return None;
+    };
+
+    let query = conn
+      .query_one(
+        "SELECT picklelibcalls
+            FROM Cache 
+            WHERE sectionid = ?1
+              AND optlevel = ?2",
+        rusqlite::params![section as i64, OPTLEVEL_PICKLE],
+        |x| {
+          Ok(
+            postcard::from_bytes(x.get_ref("picklelibcalls")?.as_blob()?)
+              .map_err(|_| rusqlite::Error::InvalidQuery)?,
+          )
+        },
+      )
+      .ok()?;
+
+    Some(Arc::new(query))
+  }
+
   fn heuristic_pgo(&self) -> [&[u64]; 2] {
     [self.pgo[0].as_ref(), self.pgo[1].as_ref()]
   }
@@ -134,7 +163,6 @@ impl BytecodeResolver for ApplicationManager {
       .expect("Cannot query sectionid");
 
     // CRITICAL
-    // Failing to drop early can lead to a
     drop(conn);
 
     let assetid = assetid.cast_unsigned();
@@ -191,7 +219,6 @@ impl BytecodeResolver for ApplicationManager {
       .expect("Cannot query sectionid");
 
     // CRITICAL
-    // Failing to drop early can lead to a
     drop(conn);
 
     let assetid = assetid.cast_unsigned();
@@ -209,8 +236,8 @@ impl BytecodeResolver for ApplicationManager {
       return;
     };
 
-    let cmd = "INSERT INTO Cache (sectionid, optlevel, metamap, machinecode)
-      VALUES (?1, ?2, ?3, ?4)
+    let cmd = "INSERT INTO Cache (sectionid, optlevel, metamap, machinecode, picklelibcalls)
+      VALUES (?1, ?2, ?3, ?4, ?5)
       ON CONFLICT(sectionid, optlevel) 
       DO UPDATE SET
         metamap = excluded.metamap,
@@ -220,23 +247,44 @@ impl BytecodeResolver for ApplicationManager {
       return;
     };
 
-    let (optlevel, metamap, machinecode) = match &cache {
+    let (optlevel, metamap, libcalls, machinecode) = match &cache {
       CacheData::None => return,
-      CacheData::Pickle { out, jumps } => {
+      CacheData::Pickle {
+        out,
+        jumps,
+        libcalls,
+      } => {
         let out_as_bytes: &[u8] =
           unsafe { std::slice::from_raw_parts(out.as_ptr() as *const u8, out.len() * 4) };
-        let metadata = postcard::to_allocvec(jumps.as_ref()).expect("Unable to parse");
+        let jumps = postcard::to_allocvec(jumps.as_ref()).expect("Unable to parse");
+        let libcalls = libcalls
+          .as_ref()
+          .map(|x| postcard::to_allocvec(x.as_ref()).expect("Unable to parse"));
 
-        (0i64, metadata, out_as_bytes)
+        if libcalls.is_none() {
+          println!("SAVM WARN : Possible Corruption detected, ERR_POTENTIAL_CORRUPT_LIBCALLS");
+        }
+
+        (0i64, jumps, libcalls, out_as_bytes)
       }
-      _ => todo!(),
+      CacheData::JITCache {
+        level,
+        binary,
+        reloc,
+      } => {
+        let relocs =
+          postcard::to_allocvec(reloc.as_ref()).expect("Unable to parse : This is unexpected");
+
+        (level.to_int() as i64, relocs, None, binary.as_ref())
+      }
     };
 
     _ = transaction.execute(rusqlite::params![
       section.cast_signed(),
       optlevel,
       &metamap as &[u8],
-      machinecode
+      machinecode,
+      libcalls
     ]);
 
     drop(cache);
@@ -304,17 +352,34 @@ impl ApplicationManager {
           })
           .collect::<Arc<[PickleInstruction]>>();
 
+        let jumps = Arc::new(
+          postcard::from_bytes(row.get_ref("metamap")?.as_bytes()?)
+            .map_err(|_| rusqlite::Error::BlobSizeError)?,
+        );
+
         Ok(CacheData::Pickle {
           out,
-          jumps: Arc::new(
-            postcard::from_bytes(row.get_ref("metamap")?.as_bytes()?)
-              .map_err(|_| rusqlite::Error::BlobSizeError)?,
-          ),
+          jumps,
+          libcalls: None,
         })
       }
       // Use the general Machine Code
-      _mc => {
-        todo!()
+      _ => {
+        let binary = row
+          .get_ref("machinecode")?
+          .as_blob()?
+          .into_iter()
+          .map(|x| *x)
+          .collect::<Arc<[u8]>>();
+
+        let reloc: Box<[JITReloc]> = postcard::from_bytes(row.get_ref("metamap")?.as_bytes()?)
+          .map_err(|_| rusqlite::Error::BlobSizeError)?;
+
+        Ok(CacheData::JITCache {
+          level,
+          binary,
+          reloc: Arc::from(reloc),
+        })
       }
     }
   }

@@ -1,10 +1,14 @@
 use crate::{
-  acaot::pickle::{def::PickleInstruction, implementation::WorkingSet},
+  acaot::pickle::{
+    def::PickleInstruction,
+    implementation::WorkingSet,
+    reader::au::{DIVLIKE, parse_divlike},
+  },
   arrcastint,
   ints::{IIntImpl, WideningMul},
   resolve_location_src,
 };
-use sart::ctr::VMTaskState;
+use sart::{ctr::VMTaskState, structures::QuadPackedData};
 use std::ptr::{self, addr_of_mut};
 
 macro_rules! arithprelude {
@@ -327,43 +331,39 @@ pub fn call_vmul(_: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMT
   }
 }
 
-macro_rules! divlikeprelude {
-    ($pickle:ident, $ws:ident, $task:ident) => {
-      {
-        let args = u16::from_ne_bytes([$pickle.u1, $pickle.u2]);
+pub fn divlike(
+  pickle: &PickleInstruction,
+  ws: *mut WorkingSet,
+  task: *mut VMTaskState,
+) -> (
+  u8,
+  *mut QuadPackedData,
+  *mut QuadPackedData,
+  *mut QuadPackedData,
+  i32,
+  i32,
+  i32,
+) {
+  let DIVLIKE {
+    datatype,
+    src1,
+    src2,
+    tgt,
+    of_src1,
+    of_src2,
+    of_tgt,
+  } = parse_divlike(pickle, unsafe { (*ws).arr });
 
-        let typetag = (args >> 12) as u8;
+  let src1 = resolve_location_src!(task => src1);
+  let src2 = resolve_location_src!(task => src2);
+  let target = resolve_location_src!(task => tgt);
 
-        let t1 = arrcastint!($ws, start = 0, stop = 4, i32);
-        let t2 = arrcastint!($ws, start = 4, stop = 8, i32);
-        let t3 = arrcastint!($ws, start = 8, stop = 12, i32);
-
-        let src1 = {
-          let src = (args >> 8 as u8) & 0x0F;
-
-          resolve_location_src!($task => src)
-        };
-
-        let src2 = {
-          let src = (args as u8) >> 4;
-
-          resolve_location_src!($task => src)
-        };
-
-        let target = {
-          let src = (args as u8) & 0x0F;
-
-          resolve_location_src!($task => src)
-        };
-
-        (typetag, src1, src2, target, t1, t2, t3)
-      }
-    };
-  }
+  (datatype, src1, src2, target, of_src1, of_src2, of_tgt)
+}
 
 #[inline(always)]
 pub fn call_div(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
-  let (typetag, src1, src2, target, t1, t2, t3) = divlikeprelude!(pickle, ws, taskstate);
+  let (typetag, src1, src2, target, t1, t2, t3) = divlike(pickle, ws, taskstate);
 
   let count = 1;
 
@@ -382,7 +382,7 @@ pub fn call_div(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut
 
 #[inline(always)]
 pub fn call_rem(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
-  let (typetag, src1, src2, target, t1, t2, t3) = divlikeprelude!(pickle, ws, taskstate);
+  let (typetag, src1, src2, target, t1, t2, t3) = divlike(pickle, ws, taskstate);
 
   let count = 1;
 

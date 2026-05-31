@@ -4,12 +4,15 @@ use crate::acaot::{
   native::cranelift::{
     CompilerMeta,
     irgen::reg::{
-      COUNTSPILLER_USES_SIMD, TypeOrWidth, resolve_location_src_load, resolve_location_src_store,
-      resolve_reg,
+      COUNTSPILLER_USES_SIMD, StoreResolver, TypeOrWidth, resolve_location_src_load,
+      resolve_location_src_store, resolve_reg,
       vector::{abstract_extractlane, abstract_insertlane},
     },
   },
-  pickle::def::PickleInstruction,
+  pickle::{
+    def::PickleInstruction,
+    reader::au::{DIVLIKE, parse_divlike},
+  },
 };
 use cranelift::{codegen::ir::Endianness, prelude::*};
 
@@ -40,47 +43,44 @@ macro_rules! readws {
   };
 }
 
-#[macro_export]
-macro_rules! divlike {
-  ($pickle:ident, $meta:ident, $builder:ident) => {{
-    let args = u16::from_ne_bytes([$pickle.u1, $pickle.u2]);
+pub fn divlike(
+  pickle: &PickleInstruction,
+  meta: &mut CompilerMeta,
+  builder: &mut FunctionBuilder,
+) -> (TypeOrWidth, Value, Value, StoreResolver) {
+  let DIVLIKE {
+    datatype,
+    src1,
+    src2,
+    tgt,
+    of_src1,
+    of_src2,
+    of_tgt,
+  } = parse_divlike(pickle, &meta.ws);
 
-    let typ = TypeOrWidth::Type((args >> 12) as u8);
+  let typ = TypeOrWidth::Type(datatype);
 
-    let of_src1 = readws!($meta, start = 0, stop = 4, i32);
-    let of_src2 = readws!($meta, start = 4, stop = 8, i32);
-    let of_src3 = readws!($meta, start = 8, stop = 12, i32);
-
-    let src1 = {
-      let src = (args >> 8 as u8) & 0x0F;
-
-      let [src] = *resolve_location_src_load($builder, $meta, typ, src as u8, None, of_src1, 1)
-      else {
-        unreachable!()
-      };
-      src
+  let src1 = {
+    let [src] = *resolve_location_src_load(builder, meta, typ, src1, None, of_src1, 1) else {
+      unreachable!()
     };
-    let src2 = {
-      let src = (args as u8) >> 4;
+    src
+  };
 
-      let [src] = *resolve_location_src_load($builder, $meta, typ, src as u8, None, of_src2, 1)
-      else {
-        unreachable!()
-      };
-      src
+  let src2 = {
+    let [src] = *resolve_location_src_load(builder, meta, typ, src2 as u8, None, of_src2, 1) else {
+      unreachable!()
     };
-    let target = {
-      let src = (args as u8) & 0x0F;
+    src
+  };
 
-      resolve_location_src_store($builder, $meta, typ, src as u8, None, of_src3, 1)
-    };
+  let target = { resolve_location_src_store(builder, meta, typ, tgt, None, of_tgt, 1) };
 
-    (typ, src1, src2, target)
-  }};
+  (typ, src1, src2, target)
 }
 
 pub fn hwnd_div(builder: &mut FunctionBuilder, meta: &mut CompilerMeta, pickle: PickleInstruction) {
-  let (typ, src1, src2, mut target) = divlike!(pickle, meta, builder);
+  let (typ, src1, src2, mut target) = divlike(&pickle, meta, builder);
 
   let tgt = if typ.clif_mapping().signed {
     builder.ins().sdiv(src1, src2)
@@ -93,7 +93,7 @@ pub fn hwnd_div(builder: &mut FunctionBuilder, meta: &mut CompilerMeta, pickle: 
 }
 
 pub fn hwnd_rem(builder: &mut FunctionBuilder, meta: &mut CompilerMeta, pickle: PickleInstruction) {
-  let (typ, src1, src2, mut target) = divlike!(pickle, meta, builder);
+  let (typ, src1, src2, mut target) = divlike(&pickle, meta, builder);
 
   let tgt = if typ.clif_mapping().signed {
     builder.ins().srem(src1, src2)

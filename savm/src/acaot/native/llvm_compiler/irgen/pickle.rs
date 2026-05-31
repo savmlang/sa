@@ -1,6 +1,6 @@
 use crate::acaot::{
-  native::llvm_compiler::CompilerMeta,
-  pickle::def::{PICKLE_OPCODE_HINT, PICKLE_OPCODE_MARK},
+  native::llvm_compiler::{CompilerMeta, irgen::almu::handle_div},
+  pickle::def::{PICKLE_OPCODE_DIV, PICKLE_OPCODE_HINT, PICKLE_OPCODE_MARK},
 };
 use llvm_sys::core::{LLVMBuildBr, LLVMPositionBuilderAtEnd};
 use std::ptr::copy_nonoverlapping;
@@ -47,6 +47,9 @@ pub unsafe fn compile_pickle(meta: &mut CompilerMeta) {
           LLVMPositionBuilderAtEnd(builder, newblock);
           meta.regmnt.newblock(newblock);
         }
+
+        // AU
+        PICKLE_OPCODE_DIV => handle_div(&op, meta),
 
         _ => {}
       }

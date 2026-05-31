@@ -14,7 +14,7 @@ pub static SQL_CACHE_PRELUDE: &'static str = include_str!("./prelude/cache.sql")
 
 pub static SABIN_PRELUDE: &'static str = include_str!("./prelude/sabin_prelude.sql");
 
-pub const SQL_CACHE_VERSION: i32 = 1;
+pub const SQL_CACHE_VERSION: i32 = 2;
 
 pub fn savm_tmp(tmp_to_cwd: bool) -> PathBuf {
   let mut tmp = if tmp_to_cwd {

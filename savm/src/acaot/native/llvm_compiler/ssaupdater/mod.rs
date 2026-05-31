@@ -1,4 +1,7 @@
-use crate::acaot::native::llvm_compiler::{CompilerMeta, LLVM_VAR_NAME, irgen::offsetload};
+use crate::acaot::native::llvm_compiler::{
+  CompilerMeta, LLVM_VAR_NAME,
+  irgen::{OffsetBytes, offsetload},
+};
 use llvm_sys::{
   LLVMValue,
   core::{
@@ -146,7 +149,7 @@ impl VMRegManager {
           ),
           _ => unreachable!("Unknown Values"),
         };
-        let value0 = offsetload(builder, ctx, ty, vmctx, offset_bytes);
+        let value0 = offsetload(builder, ctx, ty, vmctx, OffsetBytes::U(offset_bytes as _));
 
         ssa.def(prologue, value0);
       }
