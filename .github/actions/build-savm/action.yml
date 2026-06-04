@@ -109,6 +109,7 @@ runs:
     - name: Build SaVM
       shell: pwsh
       env:
+        MACOSX_DEPLOYMENT_TARGET: 26.0
         DYLD_LIBRARY_PATH: ${{ github.workspace }}/target/${{ inputs.rusttarget }}/release
         LIBRARY_PATH: ${{ github.workspace }}/target/${{ inputs.rusttarget }}/release
         RUST_BACKTRACE: 1
