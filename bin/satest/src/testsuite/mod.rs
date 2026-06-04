@@ -2,16 +2,16 @@ use std::mem::zeroed;
 #[cfg(feature = "native")]
 use std::{sync::Arc, time::Instant};
 
+#[cfg(feature = "native")]
 use crate::jitmem::JITMemData;
-use crate::ExpectedOutput;
 use crate::ExpectedOutput;
 use console::Style;
 #[cfg(feature = "native")]
 use savm::{
- ckleInstruction, management::jitmem::ca CacheLevel, CacheData,
+  acaot::pickle::def::PickleInstruction, management::jitmem::calculate_relocation_abs, CacheData,
   CacheLevel,
 };
-use savm::{::VMSTAT, VM, VM};
+use savm::{sync::VMSTAT, VM};
 
 pub fn test_vm_interpreter(vm: &VM, out: &ExpectedOutput, sectionid: u64, fail: &mut bool) {
   println!(
@@ -42,7 +42,7 @@ pub fn test_jits(
 ) {
   use crate::err;
   use savm::{
-    SymbolMapTable,
+    acaot::{native::testing_compiler_infra, pickle::PickleWorker},
     SymbolMapTable,
   };
 
