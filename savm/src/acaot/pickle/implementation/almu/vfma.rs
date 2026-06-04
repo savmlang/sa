@@ -1,6 +1,10 @@
 use crate::{
-  acaot::pickle::{def::PickleInstruction, implementation::WorkingSet},
-  arrcastint, resolve_location_src,
+  acaot::pickle::{
+    def::PickleInstruction,
+    implementation::WorkingSet,
+    reader::fp::{VFMA, parse_vfma},
+  },
+  resolve_location_src,
 };
 use sart::{ctr::VMTaskState, structures::QuadPackedData};
 use std::ptr;
@@ -68,7 +72,12 @@ fn vop_fma<T>(
 
 #[inline(always)]
 const fn calc_offset(ty: u8) -> usize {
-  ty as _
+  match ty {
+    8 => 0,
+    9 => 1,
+
+    _ => unreachable!(),
+  }
 }
 
 // ## Syntax
@@ -81,30 +90,28 @@ const fn calc_offset(ty: u8) -> usize {
 //   [Src1] [Src2] [Src3] [Target1]
 pub fn call_vfma(pickle: &PickleInstruction, ws: *mut WorkingSet, ts: *mut VMTaskState) {
   unsafe {
-    let flags = u16::from_ne_bytes([pickle.u1, pickle.u2]);
+    let VFMA {
+      datatype,
+      count,
+      src1,
+      of_src1,
+      src2,
+      of_src2,
+      src3,
+      of_src3,
+      tgt,
+      of_tgt,
+    } = parse_vfma(pickle, unsafe { (*ws).arr });
 
-    let floattype = pickle.u3 & 0x01;
+    let src1 = resolve_location_src!(ts => src1);
+    let src2 = resolve_location_src!(ts => src2);
+    let src3 = resolve_location_src!(ts => src3);
+    let tg = resolve_location_src!(ts => tgt);
 
-    let count = arrcastint!(ws, start = 0, stop = 4, u32);
+    let offset = calc_offset(datatype);
 
-    let flags_src1 = (flags >> 12) as u8 & 0x0F;
-    let flags_src2 = (flags >> 8) as u8 & 0x0F;
-    let flags_src3 = (flags >> 4) as u8 & 0x0F;
-    let flags_tg = flags as u8 & 0x0F;
-
-    let src1 = resolve_location_src!(ts => flags_src1);
-    let src2 = resolve_location_src!(ts => flags_src2);
-    let src3 = resolve_location_src!(ts => flags_src3);
-    let tg = resolve_location_src!(ts => flags_tg);
-
-    let of_src1 = arrcastint!(ws, start = 4, stop = 8, i32);
-    let of_src2 = arrcastint!(ws, start = 8, stop = 12, i32);
-    let of_src3 = arrcastint!(ws, start = 12, stop = 16, i32);
-    let of_tg = arrcastint!(ws, start = 16, stop = 20, i32);
-
-    let offset = calc_offset(floattype);
     (_DISPATCH.get_unchecked(offset))(
-      src1, src2, src3, tg, of_src1, of_src2, of_src3, of_tg, count,
+      src1, src2, src3, tg, of_src1, of_src2, of_src3, of_tgt, count,
     );
   }
 }

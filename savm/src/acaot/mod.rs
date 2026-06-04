@@ -46,6 +46,22 @@ pub enum LocSrc {
 
   NativeLibCall(u64),
   SaLibCall(u64),
+
+  CLIRLibCall(ClirLC),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum ClirLC {
+  Ceil32,
+  Ceil64,
+  Floor32,
+  Floor64,
+  Fma32,
+  Fma64,
+  Trunc32,
+  Trunc64,
+  Nearest32,
+  Nearest64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]

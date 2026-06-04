@@ -34,8 +34,6 @@ pub fn acdag_resolve<E: AsRef<[u64]>, F: FnMut(u64) -> E>(
   // It stores: (current_node, index_of_next_dependency_to_process)
   let mut stack = FixedVec::new(num_nodes);
 
-  // A parallel vector mirroring `stack` to give us O(1) loop lookups
-  // for fast cycle extraction without searching the tuple stack.
   let mut path = FixedVec::new(num_nodes);
 
   for start_node in permutations_iter {

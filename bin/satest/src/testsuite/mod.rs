@@ -21,9 +21,9 @@ pub fn test_vm_interpreter(vm: &VM, out: &ExpectedOutput, sectionid: u64, fail: 
 
   vm.dispatch_chocolate::<false>(sectionid);
 
-  assertchecks(out, fail);
+  let localfail = assertchecks(out, fail);
 
-  if !*fail {
+  if !localfail {
     println!(
       "{:>14} {} TestID #{sectionid} (Chocolate - Interpreter)",
       Style::new().blue().apply_to("Test"),
@@ -90,7 +90,7 @@ pub fn test_jits(
         binary,
         reloc,
       } => match level {
-        CacheLevel::CraneliftCrafter | CacheLevel::LLVMCinder | CacheLevel::LLVMCrater => {
+        CacheLevel::CraneliftCrafter => {
           let reloc = calculate_relocation_abs(&reloc);
 
           let exec = jitdata.mem().write_quick(&binary, &reloc);
@@ -98,6 +98,12 @@ pub fn test_jits(
 
           exec
         }
+        CacheLevel::LLVMCinder | CacheLevel::LLVMCrater => jitdata
+          .mem()
+          .write_llvm(&binary, |_x| {
+            panic!("Resolver asked!");
+          })
+          .expect("Unable to get rest"),
         _ => err("Unsupported CacheLevel"),
       },
       _ => err("Unsupported Compiler Output"),
@@ -105,9 +111,9 @@ pub fn test_jits(
 
     vm.exec_jit(exec);
 
-    assertchecks(out, fail);
+    let localfailure = assertchecks(out, fail);
 
-    if !*fail {
+    if !localfailure {
       println!(
         "{:>14} {} TestID #{sectionid} ({name})",
         Style::new().blue().apply_to("Test"),
@@ -117,7 +123,8 @@ pub fn test_jits(
   }
 }
 
-fn assertchecks(out: &ExpectedOutput, fail: &mut bool) {
+fn assertchecks(out: &ExpectedOutput, fail: &mut bool) -> bool {
+  let mut localfailure = false;
   VMSTAT.with(|x| unsafe {
     let mt = &mut *x.get();
 
@@ -133,6 +140,7 @@ fn assertchecks(out: &ExpectedOutput, fail: &mut bool) {
     for i in 0..8 {
       if actual[i] != expected[i] {
         *fail = true;
+        localfailure = true;
         println!(
           "{:>16} Assertion Failed at r{}. Expected: {:#x}, Found: {:#x}",
           Style::new().red().bold().apply_to("FAIL"),
@@ -145,4 +153,6 @@ fn assertchecks(out: &ExpectedOutput, fail: &mut bool) {
 
     mt.ts = zeroed();
   });
+
+  localfailure
 }

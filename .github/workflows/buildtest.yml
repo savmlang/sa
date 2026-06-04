@@ -430,8 +430,6 @@ jobs:
         shell: pwsh
         run: |
           gh run download ${{ github.run_id }} --dir release
-          brew install goreleaser/tap/nfpm
-          $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 
           ./extract.ps1
           ./build.ps1
@@ -518,14 +516,15 @@ jobs:
           components: rust-src,rustfmt
           toolchain: nightly
 
+      - name: Setup GoLang
+        uses: actions/setup-go@v6
+
       - name: Download & Build Installers
         shell: pwsh
         run: |
           gh run download ${{ github.run_id }} --dir release
 
-          echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
-          sudo apt update
-          sudo apt install nfpm
+          go install github.com/savmlang/nfpm/v2/cmd/nfpm@main
 
           ./extract.ps1
           ./build.ps1

@@ -4,9 +4,9 @@ use llvm_sys::{
   core::{
     LLVMAddCase, LLVMBuildAnd, LLVMBuildCall2, LLVMBuildCondBr, LLVMBuildGEP2, LLVMBuildICmp,
     LLVMBuildLoad2, LLVMBuildRetVoid, LLVMBuildStore, LLVMBuildSwitch, LLVMBuildUnreachable,
-    LLVMConstInt, LLVMFunctionType, LLVMGetIntrinsicDeclaration, LLVMInt8TypeInContext,
-    LLVMInt64TypeInContext, LLVMLookupIntrinsicID, LLVMPointerTypeInContext,
-    LLVMPositionBuilderAtEnd, LLVMSetAlignment, LLVMVoidTypeInContext,
+    LLVMConstInt, LLVMFunctionType, LLVMGetCalledFunctionType, LLVMGetIntrinsicDeclaration,
+    LLVMGlobalGetValueType, LLVMInt8TypeInContext, LLVMInt64TypeInContext, LLVMLookupIntrinsicID,
+    LLVMPointerTypeInContext, LLVMPositionBuilderAtEnd, LLVMSetAlignment, LLVMVoidTypeInContext,
   },
   prelude::{LLVMBuilderRef, LLVMContextRef, LLVMTypeRef, LLVMValueRef},
 };
@@ -26,11 +26,11 @@ pub fn compile(meta: &mut CompilerMeta) {
     let ctx = meta.llvmctx;
     let module = meta.llvmmodule;
     let vmctx = meta.vmctx;
-    let meta_ptr = meta as *mut _;
+    let meta_ptr = meta as *mut CompilerMeta;
 
     // Prologue
     {
-      meta.regmnt.init_largepad(meta_ptr);
+      (*meta_ptr).regmnt.init_largepad(meta_ptr);
 
       let scratchpad_ptr = offsetload(
         builder,
@@ -88,18 +88,7 @@ pub fn compile(meta: &mut CompilerMeta) {
     {
       LLVMPositionBuilderAtEnd(builder, meta.trap);
 
-      let trap = LLVMLookupIntrinsicID(c"llvm.trap".as_ptr(), 9);
-      let trap_func = LLVMGetIntrinsicDeclaration(module, trap, null_mut(), 0);
-      let trap_type = LLVMFunctionType(LLVMVoidTypeInContext(ctx), null_mut(), 0, 0);
-
-      LLVMBuildCall2(
-        builder,
-        trap_type,
-        trap_func,
-        null_mut(),
-        0,
-        LLVM_VAR_NAME.0,
-      );
+      meta.call_intrinsic("llvm.trap", &mut [], &mut []);
       LLVMBuildUnreachable(builder);
     }
 
@@ -120,7 +109,7 @@ pub fn compile(meta: &mut CompilerMeta) {
       meta.regmnt.newblock(meta.epilogue);
 
       regs.into_iter().for_each(|regid| {
-        if let Some(regval) = meta.regmnt.try_usereg(regid, meta_ptr) {
+        if let Some(regval) = (*meta_ptr).regmnt.try_usereg(regid, meta_ptr) {
           offsetstore(
             builder,
             ctx,
@@ -141,10 +130,10 @@ pub fn compile(meta: &mut CompilerMeta) {
       // Sendback all regs in async
       let regs = [0, 1, 2, 3, 4, 5, 6, 7];
 
-      meta.regmnt.newblock(meta.async_epilogue);
+      (*meta_ptr).regmnt.newblock(meta.async_epilogue);
 
       regs.into_iter().for_each(|regid| {
-        if let Some(regval) = meta.regmnt.try_usereg(regid, meta_ptr) {
+        if let Some(regval) = (*meta_ptr).regmnt.try_usereg(regid, meta_ptr) {
           offsetstore(
             builder,
             ctx,
@@ -156,6 +145,33 @@ pub fn compile(meta: &mut CompilerMeta) {
       });
 
       LLVMBuildRetVoid(builder);
+    }
+  }
+}
+
+impl<'a> CompilerMeta<'a> {
+  pub fn call_intrinsic(
+    &mut self,
+    name: &str,
+    params: &mut [LLVMTypeRef],
+    args: &mut [LLVMValueRef],
+  ) -> LLVMValueRef {
+    unsafe {
+      let namebytes = name.as_bytes();
+      let iid = LLVMLookupIntrinsicID(namebytes.as_ptr() as _, namebytes.len());
+
+      let func =
+        LLVMGetIntrinsicDeclaration(self.llvmmodule, iid, params.as_mut_ptr(), params.len());
+      let func_type = LLVMGlobalGetValueType(func);
+
+      LLVMBuildCall2(
+        self.builder,
+        func_type,
+        func,
+        args.as_mut_ptr(),
+        args.len() as _,
+        LLVM_VAR_NAME.0,
+      )
     }
   }
 }

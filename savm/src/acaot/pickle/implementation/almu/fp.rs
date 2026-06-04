@@ -1,54 +1,51 @@
 use crate::{
-  acaot::pickle::{def::PickleInstruction, implementation::WorkingSet},
-  arrcastint, resolve_location_src,
+  acaot::pickle::{
+    def::PickleInstruction,
+    implementation::WorkingSet,
+    reader::fp::{VFP, parse_vfp},
+  },
+  resolve_location_src,
 };
-use sart::ctr::VMTaskState;
+use sart::{ctr::VMTaskState, structures::QuadPackedData};
 use std::{
   ops::{Add, Div, Mul, Sub},
   ptr,
 };
 
-macro_rules! arithprelude {
-  ($pickle:ident, $ws:ident, $task:ident) => {
-    {
-    // `vaddf <flags as u16> <count in u32> <base src1 as i32> <base src2 as i32> <base target1 as i32>`
-    // The flags is split like this into (4-bits + 3 x 4-bit parts):
-    //   [00 <inst defined> <float type>] [Src1] [Src2] [Target1]
-    let f1 = $pickle.u1;
-    let f2 = $pickle.u2;
+fn arithprelude(
+  pickle: &PickleInstruction,
+  ws: *mut WorkingSet,
+  task: *mut VMTaskState,
+) -> (
+  u8,
+  u8,
+  u32,
+  *mut QuadPackedData,
+  *mut QuadPackedData,
+  *mut QuadPackedData,
+  i32,
+  i32,
+  i32,
+) {
+  let VFP {
+    instdef,
+    count,
+    datatype,
+    src1,
+    src2,
+    tgt,
+    of_src1,
+    of_src2,
+    of_tgt,
+  } = parse_vfp(pickle, unsafe { (*ws).arr });
 
-    let flags = u16::from_ne_bytes([f1, f2]);
+  let src1 = { resolve_location_src!(task => src1) };
+  let src2 = { resolve_location_src!(task => src2) };
+  let target = { resolve_location_src!(task => tgt) };
 
-    let fptype = ((flags >> 12) & 0x01) as u8;
-    let inst = ((flags >> 13) & 0x01) as u8;
-
-    let count = arrcastint!($ws, start = 0, stop = 4, u32);
-
-    let offset1 = arrcastint!($ws, start = 4, stop = 8, i32);
-    let offset2 = arrcastint!($ws, start = 8, stop = 12, i32);
-    let offset3 = arrcastint!($ws, start = 12, stop = 16, i32);
-
-    let src1 = {
-      let src = (flags >> 8 as u8) & 0x0F;
-
-      resolve_location_src!($task => src)
-    };
-
-    let src2 = {
-      let src = (flags as u8) >> 4;
-
-      resolve_location_src!($task => src)
-    };
-
-    let target = {
-      let src = (flags as u8) & 0x0F;
-
-      resolve_location_src!($task => src)
-    };
-
-    (inst, fptype, count, src1, src2, target, offset1, offset2, offset3)
-    }
-  };
+  (
+    instdef, datatype, count, src1, src2, target, of_src1, of_src2, of_tgt,
+  )
 }
 
 macro_rules! intop {
@@ -71,12 +68,12 @@ macro_rules! intop {
 
 pub fn call_vaddf(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   let (_, fptype, count, src1, src2, target, offset1, offset2, offset_target) =
-    arithprelude!(pickle, ws, taskstate);
+    arithprelude(pickle, ws, taskstate);
 
   {
     match fptype {
-      0 => intop!((count f64) target = src1 add src2 { offset1, offset2, offset_target }),
-      1 => intop!((count f32) target = src1 add src2 { offset1, offset2, offset_target }),
+      8 => intop!((count f64) target = src1 add src2 { offset1, offset2, offset_target }),
+      9 => intop!((count f32) target = src1 add src2 { offset1, offset2, offset_target }),
       _ => unreachable!(),
     }
   }
@@ -84,12 +81,12 @@ pub fn call_vaddf(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *m
 
 pub fn call_vsubf(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   let (_, fptype, count, src1, src2, target, offset1, offset2, offset_target) =
-    arithprelude!(pickle, ws, taskstate);
+    arithprelude(pickle, ws, taskstate);
 
   {
     match fptype {
-      0 => intop!((count f64) target = src1 sub src2 { offset1, offset2, offset_target }),
-      1 => intop!((count f32) target = src1 sub src2 { offset1, offset2, offset_target }),
+      8 => intop!((count f64) target = src1 sub src2 { offset1, offset2, offset_target }),
+      9 => intop!((count f32) target = src1 sub src2 { offset1, offset2, offset_target }),
       _ => unreachable!(),
     }
   }
@@ -97,12 +94,12 @@ pub fn call_vsubf(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *m
 
 pub fn call_vmulf(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   let (_, fptype, count, src1, src2, target, offset1, offset2, offset_target) =
-    arithprelude!(pickle, ws, taskstate);
+    arithprelude(pickle, ws, taskstate);
 
   {
     match fptype {
-      0 => intop!((count f64) target = src1 mul src2 { offset1, offset2, offset_target }),
-      1 => intop!((count f32) target = src1 mul src2 { offset1, offset2, offset_target }),
+      8 => intop!((count f64) target = src1 mul src2 { offset1, offset2, offset_target }),
+      9 => intop!((count f32) target = src1 mul src2 { offset1, offset2, offset_target }),
       _ => unreachable!(),
     }
   }
@@ -110,12 +107,12 @@ pub fn call_vmulf(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *m
 
 pub fn call_vdivf(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
   let (_, fptype, count, src1, src2, target, offset1, offset2, offset_target) =
-    arithprelude!(pickle, ws, taskstate);
+    arithprelude(pickle, ws, taskstate);
 
   {
     match fptype {
-      0 => intop!((count f64) target = src1 div src2 { offset1, offset2, offset_target }),
-      1 => intop!((count f32) target = src1 div src2 { offset1, offset2, offset_target }),
+      8 => intop!((count f64) target = src1 div src2 { offset1, offset2, offset_target }),
+      9 => intop!((count f32) target = src1 div src2 { offset1, offset2, offset_target }),
       _ => unreachable!(),
     }
   }

@@ -2,6 +2,7 @@ use super::{JITReloc, LocSrc, SigStore};
 use crate::{
   CacheData, CacheLevel,
   acaot::{
+    ClirLC,
     native::{NativeCompiler, cranelift::irgen::compile},
     pickle::def::PickleInstruction,
   },
@@ -11,8 +12,8 @@ use cranelift::{
   codegen::{
     Context, FinalizedRelocTarget,
     ir::{
-      ArgumentPurpose, ConstantPool, FuncRef, Function, SigRef, StackSlot, UserExternalName,
-      UserExternalNameRef,
+      ArgumentPurpose, ConstantPool, FuncRef, Function, LibCall, SigRef, StackSlot,
+      UserExternalName, UserExternalNameRef,
     },
   },
   native::builder,
@@ -285,6 +286,23 @@ impl NativeCompiler for SaVMCranelift {
                   loc: *srcloc,
                 }
               }
+              ExternalName::LibCall(lc) => JITReloc {
+                addend,
+                offset: reloc.offset,
+                loc: LocSrc::CLIRLibCall(match lc {
+                  LibCall::CeilF32 => ClirLC::Ceil32,
+                  LibCall::CeilF64 => ClirLC::Ceil64,
+                  LibCall::FloorF32 => ClirLC::Floor32,
+                  LibCall::FloorF64 => ClirLC::Floor64,
+                  LibCall::FmaF32 => ClirLC::Fma32,
+                  LibCall::FmaF64 => ClirLC::Fma64,
+                  LibCall::TruncF32 => ClirLC::Trunc32,
+                  LibCall::TruncF64 => ClirLC::Trunc64,
+                  LibCall::NearestF32 => ClirLC::Nearest32,
+                  LibCall::NearestF64 => ClirLC::Nearest64,
+                  e => unreachable!("Unkexpected CLIR {e:?}"),
+                }),
+              },
               e => unreachable!("Unkexpected {e:?}"),
             },
             _ => unreachable!("target::Func shouldn't be a reloc"),

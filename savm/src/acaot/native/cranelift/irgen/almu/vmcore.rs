@@ -36,6 +36,7 @@ pub fn hwnd_vcopy(
     overlapping,
     src_align,
     target_align,
+    .. // We assume all volatile
   } = vcopy;
 
   match count {

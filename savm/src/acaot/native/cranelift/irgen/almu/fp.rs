@@ -1,58 +1,43 @@
-use cranelift::prelude::{FunctionBuilder, InstBuilder};
-
-use crate::acaot::native::cranelift::{
-  CompilerMeta,
-  irgen::{
-    TypeOrWidth,
-    reg::{resolve_location_src_load, resolve_location_src_store},
+use crate::acaot::pickle::reader::fp::{VFMA, parse_vfma};
+use crate::acaot::pickle::{def::PickleInstruction, reader::fp::parse_vfp};
+use crate::acaot::{
+  native::cranelift::{
+    CompilerMeta,
+    irgen::{
+      TypeOrWidth,
+      reg::{StoreResolver, resolve_location_src_load, resolve_location_src_store},
+    },
   },
+  pickle::reader::fp::VFP,
 };
-use crate::acaot::pickle::def::PickleInstruction;
-use crate::readws;
+use cranelift::{
+  codegen::ir::Value,
+  prelude::{FunctionBuilder, InstBuilder},
+};
 
-macro_rules! arithprelude {
-  ($pickle:ident, $builder:ident, $meta:ident, $task:ident) => {{
-    let f1 = $pickle.u1;
-    let f2 = $pickle.u2;
+fn arithprelude(
+  pickle: &PickleInstruction,
+  builder: &mut FunctionBuilder,
+  meta: &mut CompilerMeta,
+) -> (TypeOrWidth, Box<[Value]>, Box<[Value]>, StoreResolver) {
+  let VFP {
+    count,
+    datatype,
+    src1,
+    src2,
+    tgt,
+    of_src1,
+    of_src2,
+    of_tgt,
+    ..
+  } = parse_vfp(pickle, meta.ws.as_ref());
 
-    let flags = u16::from_ne_bytes([f1, f2]);
+  let typ = TypeOrWidth::Type(datatype);
+  let src1 = { resolve_location_src_load(builder, meta, typ, src1 as u8, None, of_src1, count) };
+  let src2 = { resolve_location_src_load(builder, meta, typ, src2 as u8, None, of_src2, count) };
+  let target = { resolve_location_src_store(builder, meta, typ, tgt as u8, None, of_tgt, count) };
 
-    let fptype = ((flags >> 12) & 0x01) as u8;
-
-    let typ = TypeOrWidth::Type(match fptype {
-      0 => 8,
-      1 => 9,
-      _ => unreachable!(),
-    });
-
-    let _inst = ((flags >> 14) & 0x01) as u8;
-
-    let count = readws!($meta, start = 0, stop = 4, u32);
-
-    let ofset1 = readws!($meta, start = 4, stop = 8, i32);
-    let ofset2 = readws!($meta, start = 8, stop = 12, i32);
-    let ofset3 = readws!($meta, start = 12, stop = 16, i32);
-
-    let src1 = {
-      let src = (flags >> 8 as u8) & 0x0F;
-
-      resolve_location_src_load($builder, $meta, typ, src as u8, None, ofset1, count)
-    };
-
-    let src2 = {
-      let src = (flags as u8) >> 4;
-
-      resolve_location_src_load($builder, $meta, typ, src as u8, None, ofset2, count)
-    };
-
-    let target = {
-      let src = (flags as u8) & 0x0F;
-
-      resolve_location_src_store($builder, $meta, typ, src as u8, None, ofset3, count)
-    };
-
-    (typ, src1, src2, target)
-  }};
+  (typ, src1, src2, target)
 }
 
 pub fn handle_vaddf(
@@ -60,7 +45,7 @@ pub fn handle_vaddf(
   meta: &mut CompilerMeta,
   pickle: PickleInstruction,
 ) {
-  let (_, src1, src2, mut target) = arithprelude!(pickle, builder, meta, taskstate);
+  let (_, src1, src2, mut target) = arithprelude(&pickle, builder, meta);
 
   src1
     .into_iter()
@@ -80,7 +65,7 @@ pub fn handle_vsubf(
   meta: &mut CompilerMeta,
   pickle: PickleInstruction,
 ) {
-  let (_, src1, src2, mut target) = arithprelude!(pickle, builder, meta, taskstate);
+  let (_, src1, src2, mut target) = arithprelude(&pickle, builder, meta);
 
   src1
     .into_iter()
@@ -100,7 +85,7 @@ pub fn handle_vmulf(
   meta: &mut CompilerMeta,
   pickle: PickleInstruction,
 ) {
-  let (_, src1, src2, mut target) = arithprelude!(pickle, builder, meta, taskstate);
+  let (_, src1, src2, mut target) = arithprelude(&pickle, builder, meta);
 
   src1
     .into_iter()
@@ -120,7 +105,7 @@ pub fn handle_vdivf(
   meta: &mut CompilerMeta,
   pickle: PickleInstruction,
 ) {
-  let (_, src1, src2, mut target) = arithprelude!(pickle, builder, meta, taskstate);
+  let (_, src1, src2, mut target) = arithprelude(&pickle, builder, meta);
 
   src1
     .into_iter()
@@ -135,56 +120,38 @@ pub fn handle_vdivf(
   target.synchronize(builder, meta);
 }
 
-macro_rules! fmaprelude {
-  ($pickle:ident, $builder:ident, $meta:ident, $task:ident) => {{
-    let f1 = $pickle.u1;
-    let f2 = $pickle.u2;
+fn fmaprelude(
+  pickle: &PickleInstruction,
+  builder: &mut FunctionBuilder,
+  meta: &mut CompilerMeta,
+) -> (
+  TypeOrWidth,
+  Box<[Value]>,
+  Box<[Value]>,
+  Box<[Value]>,
+  StoreResolver,
+) {
+  let VFMA {
+    datatype,
+    count,
+    src1,
+    of_src1,
+    src2,
+    of_src2,
+    src3,
+    of_src3,
+    tgt,
+    of_tgt,
+  } = parse_vfma(pickle, meta.ws.as_ref());
 
-    let flags = u16::from_ne_bytes([f1, f2]);
+  let typ = TypeOrWidth::Type(datatype);
 
-    let fptype = ((flags >> 12) & 0x01) as u8;
+  let src1 = { resolve_location_src_load(builder, meta, typ, src1 as u8, None, of_src1, count) };
+  let src2 = { resolve_location_src_load(builder, meta, typ, src2 as u8, None, of_src2, count) };
+  let src3 = { resolve_location_src_load(builder, meta, typ, src3 as u8, None, of_src3, count) };
+  let target = { resolve_location_src_store(builder, meta, typ, tgt as u8, None, of_tgt, count) };
 
-    let typ = TypeOrWidth::Type(match fptype {
-      0 => 8,
-      1 => 9,
-      _ => unreachable!(),
-    });
-
-    let _inst = ((flags >> 14) & 0x01) as u8;
-
-    let count = readws!($meta, start = 0, stop = 4, u32);
-
-    let ofset1 = readws!($meta, start = 4, stop = 8, i32);
-    let ofset2 = readws!($meta, start = 8, stop = 12, i32);
-    let ofset3 = readws!($meta, start = 12, stop = 16, i32);
-    let ofset4 = readws!($meta, start = 16, stop = 20, i32);
-
-    let src1 = {
-      let src = (flags >> 12) & 0x0F;
-
-      resolve_location_src_load($builder, $meta, typ, src as u8, None, ofset1, count)
-    };
-
-    let src2 = {
-      let src = (flags >> 8) & 0x0F;
-
-      resolve_location_src_load($builder, $meta, typ, src as u8, None, ofset2, count)
-    };
-
-    let src3 = {
-      let src = (flags as u8) >> 4;
-
-      resolve_location_src_load($builder, $meta, typ, src as u8, None, ofset3, count)
-    };
-
-    let target = {
-      let src = (flags as u8) & 0x0F;
-
-      resolve_location_src_store($builder, $meta, typ, src as u8, None, ofset4, count)
-    };
-
-    (typ, src1, src2, src3, target)
-  }};
+  (typ, src1, src2, src3, target)
 }
 
 pub fn handle_vfma(
@@ -192,7 +159,7 @@ pub fn handle_vfma(
   meta: &mut CompilerMeta,
   pickle: PickleInstruction,
 ) {
-  let (_, src1, src2, src3, mut target) = fmaprelude!(pickle, builder, meta, taskstate);
+  let (_, src1, src2, src3, mut target) = fmaprelude(&pickle, builder, meta);
 
   src1
     .into_iter()

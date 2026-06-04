@@ -349,8 +349,10 @@ impl NativeCompiler for SaVMLLVM {
       }
 
       // Print Module
+      // #[cfg(not(feature = "sendback"))]
       let module = LLVMMsg({ LLVMPrintModuleToString(module) });
 
+      // #[cfg(not(feature = "sendback"))]
       println!("{}", module.to_str().unwrap());
 
       // Verify pipeline
@@ -402,8 +404,6 @@ impl NativeCompiler for SaVMLLVM {
       }
 
       let buf = LLVMBuffer(buf);
-
-      println!("{:?}", buf.deref());
 
       return CacheData::JITCache {
         level: self.cache,

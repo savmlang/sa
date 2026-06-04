@@ -13,12 +13,13 @@ use sajit::{
 
 use crate::{
   acaot::{
-    JITReloc, LocSrc,
+    ClirLC, JITReloc, LocSrc,
     pickle::reader::corevm::{
       jitcall_scratch_ffi, jitcall_vcopy_noalias, jitcall_vcopy_overlapping,
     },
   },
   executor::corevm_libcall,
+  management::polyfills::*,
 };
 
 pub struct JITMemoryManager {
@@ -119,27 +120,25 @@ impl JITMemoryManager {
     println!("Needed : {size_needed}");
 
     let mut jitwrite = |mexec: &mut MemoryExecutable, symbpool: &LLVMSymbolPool| {
+      let resolver_full = |d: *const str| match unsafe { &*d } {
+        "fmaf" => (llvm::fmaf as *const ()).addr(),
+        "fma" => (llvm::fma as *const ()).addr(),
+        _ => resolver(d),
+      };
+
       if prefer_jitlink() {
         use sajit::LLVMJITLink;
 
-        mexec.write_jitlink(symbpool, data, |d| {
-          println!("Need to resolve : {}", unsafe { &*d });
-          resolver(d)
-        })
+        mexec.write_jitlink(symbpool, data, resolver_full)
       } else {
         use sajit::LLVMRTDyld;
         use std::borrow::Cow;
 
-        mexec
-          .write_rtdyld(data, |d| {
-            println!("Need to resolve : {}", unsafe { &*d });
-            resolver(d)
-          })
-          .map_err(|_| {
-            Cow::Borrowed(
-              &[Cow::Borrowed("RTDyld was unable to relocate!")] as &'static [Cow<'static, str>]
-            )
-          })
+        mexec.write_rtdyld(data, resolver_full).map_err(|_| {
+          Cow::Borrowed(
+            &[Cow::Borrowed("RTDyld was unable to relocate!")] as &'static [Cow<'static, str>]
+          )
+        })
       }
     };
 
@@ -234,6 +233,18 @@ pub fn calculate_relocation_abs(reloc: &[JITReloc]) -> Box<[Relocation]> {
         LocSrc::VCopyNoAlias => (jitcall_vcopy_noalias as *const ()).addr() as _,
         LocSrc::VCopyOverlapping => (jitcall_vcopy_overlapping as *const ()).addr() as _,
         LocSrc::VMScratchAction => (jitcall_scratch_ffi as *const ()).addr() as _,
+        LocSrc::CLIRLibCall(cir) => match cir {
+          ClirLC::Ceil32 => (ceil32 as *const ()).addr() as _,
+          ClirLC::Ceil64 => (ceil64 as *const ()).addr() as _,
+          ClirLC::Floor32 => (floor32 as *const ()).addr() as _,
+          ClirLC::Floor64 => (floor64 as *const ()).addr() as _,
+          ClirLC::Fma32 => (fma32 as *const ()).addr() as _,
+          ClirLC::Fma64 => (fma64 as *const ()).addr() as _,
+          ClirLC::Nearest32 => (nearest32 as *const ()).addr() as _,
+          ClirLC::Nearest64 => (nearest64 as *const ()).addr() as _,
+          ClirLC::Trunc32 => (trunc32 as *const ()).addr() as _,
+          ClirLC::Trunc64 => (trunc64 as *const ()).addr() as _,
+        },
         _ => relocdata.symbol_addr,
       };
 

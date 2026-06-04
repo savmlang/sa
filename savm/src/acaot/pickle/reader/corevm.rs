@@ -20,6 +20,7 @@ pub struct VCOPY {
   pub src_offset: i32,
   pub target_offset: i32,
 
+  pub volatile: bool,
   pub overlapping: bool,
   pub src_align: u8,
   pub target_align: u8,
@@ -63,6 +64,7 @@ pub fn parse_vcopy(pickle: &PickleInstruction, ws: &[u8]) -> VCOPY {
   let target_align = alignment(memory_flags & 0x03);
   let src_align = alignment((memory_flags >> 2) & 0x03);
   let overlapping = (memory_flags & 0x10) == 0;
+  let volatile = (memory_flags & (1 << 5)) != 0;
 
   let countbit = memflags & 0x80;
 
@@ -87,6 +89,7 @@ pub fn parse_vcopy(pickle: &PickleInstruction, ws: &[u8]) -> VCOPY {
     src_align,
     target_align,
     overlapping,
+    volatile,
   }
 }
 

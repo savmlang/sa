@@ -26,6 +26,8 @@ pub mod compiler_thread;
 #[cfg(feature = "native")]
 pub mod jitmem;
 #[cfg(feature = "native")]
+pub mod polyfills;
+#[cfg(feature = "native")]
 use jitmem::JITMemoryManager;
 
 enum ProcessResult {

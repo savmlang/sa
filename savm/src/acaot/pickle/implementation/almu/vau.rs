@@ -2,55 +2,57 @@ use crate::{
   acaot::pickle::{
     def::PickleInstruction,
     implementation::WorkingSet,
-    reader::au::{DIVLIKE, parse_divlike},
+    reader::au::{ARITH, DIVLIKE, parse_arith, parse_divlike},
   },
-  arrcastint,
   ints::{IIntImpl, WideningMul},
   resolve_location_src,
 };
 use sart::{ctr::VMTaskState, structures::QuadPackedData};
 use std::ptr::{self, addr_of_mut};
 
-macro_rules! arithprelude {
-    ($ws:ident, $task:ident) => {
-      {
-      // [<type tag (4 bits)>] [Src1 (4-bits)] [Src2 (4-bits)] [Target1 (4-bits)] (16b)
-      // [<Carry/Sigflow bit>] [<saturation bit>] [Padding] (16b)
-      let flags = arrcastint!($ws, start = 0, stop = 4, u32);
+#[inline(always)]
+fn arithprelude(
+  ws: *mut WorkingSet,
+  task: *mut VMTaskState,
+) -> (
+  u16,
+  u8,
+  u32,
+  *mut QuadPackedData,
+  *mut QuadPackedData,
+  *mut QuadPackedData,
+  i32,
+  i32,
+  i32,
+) {
+  let ARITH {
+    datatype,
+    count,
+    instdefined,
+    src1,
+    of_src1,
+    src2,
+    of_src2,
+    tgt,
+    of_tgt,
+  } = parse_arith(unsafe { (*ws).arr });
 
-      let instdefined = flags as u16;
+  let src1 = { resolve_location_src!(task => src1) };
+  let src2 = { resolve_location_src!(task => src2) };
+  let target = { resolve_location_src!(task => tgt) };
 
-      let topflags = (flags >> 16) as u16;
-      let typetag = (topflags >> 12) as u8;
-
-      let count = arrcastint!($ws, start = 4, stop = 8, u32);
-
-      let offset1 = arrcastint!($ws, start = 8, stop = 12, i32);
-      let offset2 = arrcastint!($ws, start = 12, stop = 16, i32);
-      let offset3 = arrcastint!($ws, start = 16, stop = 20, i32);
-
-      let src1 = {
-        let src = (topflags >> 8 as u8) & 0x0F;
-
-        resolve_location_src!($task => src)
-      };
-
-      let src2 = {
-        let src = (topflags as u8) >> 4;
-
-        resolve_location_src!($task => src)
-      };
-
-      let target = {
-        let src = (topflags as u8) & 0x0F;
-
-        resolve_location_src!($task => src)
-      };
-
-      (instdefined, typetag, count, src1, src2, target, offset1, offset2, offset3)
-      }
-    };
-  }
+  (
+    instdefined,
+    datatype,
+    count,
+    src1,
+    src2,
+    target,
+    of_src1,
+    of_src2,
+    of_tgt,
+  )
+}
 
 macro_rules! intop {
   (($c:ident $t:ty) $target:ident = $s1:ident $op:ident $s2:ident { $t1:ident, $t2:ident, $t3:ident }) => {
@@ -130,7 +132,7 @@ macro_rules! intop_carry {
 
 #[inline(always)]
 pub fn call_vadd(_: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
-  let (instdefined, typetag, count, src1, src2, target, t1, t2, t3) = arithprelude!(ws, taskstate);
+  let (instdefined, typetag, count, src1, src2, target, t1, t2, t3) = arithprelude(ws, taskstate);
 
   // [<Carry/Sigflow bit>] [<saturation bit>] [Padding (14bits)] (16b)
   let carry = (instdefined >> 15) == 1; // gets the last bit
@@ -197,7 +199,7 @@ pub fn call_vadd(_: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMT
 
 #[inline(always)]
 pub fn call_vsub(_: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
-  let (instdefined, typetag, count, src1, src2, target, t1, t2, t3) = arithprelude!(ws, taskstate);
+  let (instdefined, typetag, count, src1, src2, target, t1, t2, t3) = arithprelude(ws, taskstate);
 
   // [<Carry/Sigflow  [SBB]>] [<saturation bit>] [Padding (14bits)] (16b)
   let carry = (instdefined >> 15) == 1; // gets the last bit
@@ -264,7 +266,7 @@ pub fn call_vsub(_: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMT
 
 #[inline(always)]
 pub fn call_vmul(_: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
-  let (instdefined, typetag, count, src1, src2, target, t1, t2, t3) = arithprelude!(ws, taskstate);
+  let (instdefined, typetag, count, src1, src2, target, t1, t2, t3) = arithprelude(ws, taskstate);
 
   // [<Extended Flags (2 bits)>] [Padding (14 bits)]
   // The extended flags:

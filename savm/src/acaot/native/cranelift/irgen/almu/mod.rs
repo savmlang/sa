@@ -11,7 +11,7 @@ use crate::acaot::{
   },
   pickle::{
     def::PickleInstruction,
-    reader::au::{DIVLIKE, parse_divlike},
+    reader::au::{ARITH, DIVLIKE, parse_arith, parse_divlike},
   },
 };
 use cranelift::{codegen::ir::Endianness, prelude::*};
@@ -105,51 +105,48 @@ pub fn hwnd_rem(builder: &mut FunctionBuilder, meta: &mut CompilerMeta, pickle: 
   target.synchronize(builder, meta);
 }
 
-#[macro_export]
-macro_rules! arithprelude {
-  ( $meta:ident, $builder:ident) => {{
-    let flags = readws!($meta, start = 0, stop = 4, u32);
+#[inline(always)]
+fn arithprelude(
+  meta: &mut CompilerMeta,
+  builder: &mut FunctionBuilder,
+) -> (
+  u16,
+  u32,
+  TypeOrWidth,
+  Box<[Value]>,
+  Box<[Value]>,
+  (StoreResolver, u8, i32),
+) {
+  let ARITH {
+    datatype,
+    count,
+    instdefined,
+    src1,
+    of_src1,
+    src2,
+    of_src2,
+    tgt,
+    of_tgt,
+  } = parse_arith(&meta.ws);
 
-    let instdefined = flags as u16;
+  let typ = TypeOrWidth::Type(datatype);
+  let src1 =
+    { resolve_location_src_load(builder, meta, typ, src1 as u8, None, of_src1 as _, count) };
+  let src2 =
+    { resolve_location_src_load(builder, meta, typ, src2 as u8, None, of_src2 as _, count) };
+  let target = {
+    (
+      resolve_location_src_store(builder, meta, typ, tgt as u8, None, of_tgt as _, count),
+      tgt,
+      of_tgt,
+    )
+  };
 
-    let topflags = (flags >> 16) as u16;
-
-    let typ = TypeOrWidth::Type((topflags >> 12) as u8);
-
-    let count = readws!($meta, start = 4, stop = 8, u32);
-
-    let ofset1 = readws!($meta, start = 8, stop = 12, i32);
-    let ofset2 = readws!($meta, start = 12, stop = 16, i32);
-    let ofset3 = readws!($meta, start = 16, stop = 20, i32);
-
-    let src1 = {
-      let src = (topflags >> 8 as u8) & 0x0F;
-
-      resolve_location_src_load($builder, $meta, typ, src as u8, None, ofset1, count)
-    };
-
-    let src2 = {
-      let src = (topflags as u8) >> 4;
-
-      resolve_location_src_load($builder, $meta, typ, src as u8, None, ofset2, count)
-    };
-
-    let target = {
-      let src = (topflags as u8) & 0x0F;
-
-      (
-        resolve_location_src_store($builder, $meta, typ, src as u8, None, ofset3, count),
-        src,
-        ofset3,
-      )
-    };
-
-    (instdefined, count, typ, src1, src2, target)
-  }};
+  (instdefined, count, typ, src1, src2, target)
 }
 
 pub fn hwnd_vadd(builder: &mut FunctionBuilder, meta: &mut CompilerMeta, _: PickleInstruction) {
-  let (instdefined, count, typ, src1, src2, (mut target, _, _)) = arithprelude!(meta, builder);
+  let (instdefined, count, typ, src1, src2, (mut target, _, _)) = arithprelude(meta, builder);
 
   // [<Carry/Sigflow bit>] [<saturation bit>] [Padding (14bits)] (16b)
   let carry = (instdefined >> 15) == 1; // gets the last bit
@@ -223,7 +220,7 @@ pub fn hwnd_vadd(builder: &mut FunctionBuilder, meta: &mut CompilerMeta, _: Pick
 }
 
 pub fn hwnd_vsub(builder: &mut FunctionBuilder, meta: &mut CompilerMeta, _: PickleInstruction) {
-  let (instdefined, count, typ, src1, src2, (mut target, _, _)) = arithprelude!(meta, builder);
+  let (instdefined, count, typ, src1, src2, (mut target, _, _)) = arithprelude(meta, builder);
 
   // [<borrow bit>] [<saturation bit>] [Padding (14bits)] (16b)
   let borrow = (instdefined >> 15) == 1; // gets the last bit
@@ -301,16 +298,16 @@ pub fn hwnd_vsub(builder: &mut FunctionBuilder, meta: &mut CompilerMeta, _: Pick
 const _VMUL_SANITY: () = assert!(!COUNTSPILLER_USES_SIMD);
 
 pub fn hwnd_vmul(builder: &mut FunctionBuilder, meta: &mut CompilerMeta, _: PickleInstruction) {
-  let (instdefined, _, typ, src1, src2, target) = arithprelude!(meta, builder);
+  let (instdefined, count, typ, src1, src2, target) = arithprelude(meta, builder);
 
-  let (mut target, _, _) = target;
+  let (mut target, t, of_t) = target;
 
   // [<Extended Flags (2 bits)>] [Padding (14 bits)]
   // The extended flags:
-  // - x0: Output the 1st 32-bits (i.e. low bits)
-  // - x1: Output the 2nd 32-bit (i.e. high bits)
   // - 1x: we use Wide Multiplication (target must be able to store upto 2x the count)
   // - 0x: we use Lossy Multiplication (this is only time the other bit is read)
+  // - 00: Output the 1st 32-bits (i.e. low bits)
+  // - 01: Output the 2nd 32-bit (i.e. high bits)
   let eflags = (instdefined >> 14) as u8;
 
   let wide = (eflags & 0x03) == 1;
@@ -319,6 +316,8 @@ pub fn hwnd_vmul(builder: &mut FunctionBuilder, meta: &mut CompilerMeta, _: Pick
   let clif = typ.clif_mapping();
 
   if wide {
+    target = resolve_location_src_store(builder, meta, typ, t, None, of_t, 2 * count);
+
     src1
       .into_iter()
       .zip(src2.into_iter())

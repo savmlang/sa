@@ -47,3 +47,47 @@ pub fn parse_divlike(pickle: &PickleInstruction, ws: &[u8]) -> DIVLIKE {
     of_tgt,
   }
 }
+
+pub struct ARITH {
+  pub datatype: u8,
+  pub count: u32,
+
+  pub instdefined: u16,
+
+  pub src1: u8,
+  pub of_src1: i32,
+  pub src2: u8,
+  pub of_src2: i32,
+  pub tgt: u8,
+  pub of_tgt: i32,
+}
+
+pub fn parse_arith(ws: &[u8]) -> ARITH {
+  let flags = wspickle!(ws, start = 0, stop = 4, u32);
+
+  let instdefined = flags as u16;
+
+  let topflags = (flags >> 16) as u16;
+
+  let datatype = (topflags >> 12) as u8;
+  let count = wspickle!(ws, start = 4, stop = 8, u32);
+  let of_src1 = wspickle!(ws, start = 8, stop = 12, i32);
+  let of_src2 = wspickle!(ws, start = 12, stop = 16, i32);
+  let of_tgt = wspickle!(ws, start = 16, stop = 20, i32);
+
+  let src1 = ((topflags >> 8) & 0x0F) as u8;
+  let src2 = (topflags as u8) >> 4;
+  let tgt = (topflags as u8) & 0x0F;
+
+  ARITH {
+    datatype,
+    count,
+    instdefined,
+    src1,
+    of_src1,
+    src2,
+    of_src2,
+    tgt,
+    of_tgt,
+  }
+}

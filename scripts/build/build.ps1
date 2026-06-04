@@ -37,8 +37,7 @@ foreach ($tech in $iter) {
           $env:BUNDLE_ARCH = "ppc64le"
         }
         "riscv64gc" {
-          $env:BUNDLE_ARCH = ""
-          Write-Warning "(${curr}/${total}) riscv64 should land soon"
+          $env:BUNDLE_ARCH = "riscv64"
         }
         "x86_64" {
           $env:BUNDLE_ARCH = "amd64"
