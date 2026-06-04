@@ -518,13 +518,17 @@ jobs:
 
       - name: Setup GoLang
         uses: actions/setup-go@v6
+        with:
+          go-version: stable
+          cache: false
+
+      - name: Install nFPM
+        run: go install github.com/savmlang/nfpm/v2/cmd/nfpm@main
 
       - name: Download & Build Installers
         shell: pwsh
         run: |
           gh run download ${{ github.run_id }} --dir release
-
-          go install github.com/savmlang/nfpm/v2/cmd/nfpm@main
 
           ./extract.ps1
           ./build.ps1
