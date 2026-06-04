@@ -2,16 +2,16 @@ use std::mem::zeroed;
 #[cfg(feature = "native")]
 use std::{sync::Arc, time::Instant};
 
-use crate::ExpectedOutput;
-#[cfg(feature = "native")]
 use crate::jitmem::JITMemData;
+use crate::ExpectedOutput;
+use crate::ExpectedOutput;
 use console::Style;
 #[cfg(feature = "native")]
 use savm::{
-  CacheData, CacheLevel, acaot::pickle::def::PickleInstruction,
-  management::jitmem::calculate_relocation_abs,
+ ckleInstruction, management::jitmem::ca CacheLevel, CacheData,
+  CacheLevel,
 };
-use savm::{VM, sync::VMSTAT};
+use savm::{::VMSTAT, VM, VM};
 
 pub fn test_vm_interpreter(vm: &VM, out: &ExpectedOutput, sectionid: u64, fail: &mut bool) {
   println!(
@@ -43,7 +43,7 @@ pub fn test_jits(
   use crate::err;
   use savm::{
     SymbolMapTable,
-    acaot::{native::testing_compiler_infra, pickle::PickleWorker},
+    SymbolMapTable,
   };
 
   let mut worker = PickleWorker {
@@ -88,16 +88,18 @@ pub fn test_jits(
       savm::CacheData::JITCache {
         level,
         binary,
-        reloc,
+        reloc: _reloc,
       } => match level {
+        #[cfg(feature = "cranelift")]
         CacheLevel::CraneliftCrafter => {
-          let reloc = calculate_relocation_abs(&reloc);
+          let reloc = calculate_relocation_abs(&_reloc);
 
           let exec = jitdata.mem().write_quick(&binary, &reloc);
           jitdata.ptrstore.insert((sectionid, *name), (exec as _, tf));
 
           exec
         }
+        #[cfg(feature = "llvm")]
         CacheLevel::LLVMCinder | CacheLevel::LLVMCrater => jitdata
           .mem()
           .write_llvm(&binary, |_x| {
