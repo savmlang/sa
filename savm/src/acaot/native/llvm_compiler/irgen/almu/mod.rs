@@ -34,9 +34,11 @@ use llvm_sys::{
 pub mod fp;
 pub mod vfma;
 pub use vfma::*;
+pub mod vfop;
 pub mod vsh;
 pub use fp::*;
 use sart::ctr::VMTaskState;
+pub use vfop::*;
 pub use vsh::*;
 
 #[macro_export]

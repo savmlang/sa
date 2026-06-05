@@ -99,6 +99,10 @@ umask: 0o002
 scripts:
   postinstall: ./linux/postinstall.sh
 
+# Most builds are selfcontained and GLIBC dependent only
+depends: []
+
+# MUSL ones have extra dependencies
 overrides:
   ipk:
     depends:
@@ -106,7 +110,7 @@ overrides:
       - libgcc
       - zlib
       - zstd-libs
-      - sqlite
+      - libstdc++
 
   apk:
     depends:
@@ -114,7 +118,7 @@ overrides:
       - libgcc
       - zlib
       - zstd-libs
-      - sqlite
+      - libstdc++
 
 # The Below is a preprocessor entry
 # On non-release build, we want to strip it entirely

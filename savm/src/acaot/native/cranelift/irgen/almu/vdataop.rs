@@ -1,45 +1,42 @@
-use cranelift::prelude::{FunctionBuilder, InstBuilder};
-
-use crate::{
-  acaot::{
-    native::cranelift::{
-      CompilerMeta,
-      irgen::reg::{TypeOrWidth, resolve_location_src_load, resolve_location_src_store},
-    },
-    pickle::def::PickleInstruction,
-  },
-  readws,
+use cranelift::{
+  codegen::ir::Value,
+  prelude::{FunctionBuilder, InstBuilder},
 };
 
-macro_rules! handle_vdata_op {
-  ($pickle:ident, $builder:ident, $meta:ident) => {{
-    let f1 = $pickle.u1;
-    let f2 = $pickle.u2;
+use crate::acaot::{
+  native::cranelift::{
+    CompilerMeta,
+    irgen::reg::{
+      StoreResolver, TypeOrWidth, resolve_location_src_load, resolve_location_src_store,
+    },
+  },
+  pickle::{
+    def::PickleInstruction,
+    reader::vfop::{VDATAOP, parse_vdataop},
+  },
+};
 
-    let flags = u16::from_ne_bytes([f1, f2]);
+fn handle_vdata_op(
+  pickle: &PickleInstruction,
+  builder: &mut FunctionBuilder,
+  meta: &mut CompilerMeta,
+) -> (TypeOrWidth, Box<[Value]>, StoreResolver) {
+  let VDATAOP {
+    datatype,
+    count,
+    src1,
+    of_src1,
+    tgt,
+    of_tgt,
+  } = parse_vdataop(pickle, meta.ws.as_ref());
 
-    let dtype = (flags >> 12) as u8;
-    let typ = TypeOrWidth::Type(dtype);
+  let typ = TypeOrWidth::Type(datatype);
 
-    let count = readws!($meta, start = 0, stop = 4, u32);
+  let src1 = { resolve_location_src_load(builder, meta, typ, src1 as u8, None, of_src1, count) };
 
-    let ofset1 = readws!($meta, start = 4, stop = 8, i32);
-    let ofset2 = readws!($meta, start = 12, stop = 16, i32);
+  let target = { resolve_location_src_store(builder, meta, typ, tgt as u8, None, of_tgt, count) };
 
-    let src1 = {
-      let src = (flags >> 8) as u8 & 0x0F;
-
-      resolve_location_src_load($builder, $meta, typ, src as u8, None, ofset1, count)
-    };
-
-    let target = {
-      let src = (flags as u8) >> 4;
-
-      resolve_location_src_store($builder, $meta, typ, src as u8, None, ofset2, count)
-    };
-
-    (flags, typ, src1, target)
-  }};
+  (typ, src1, target)
 }
 
 pub fn hwnd_vabs(
@@ -47,7 +44,7 @@ pub fn hwnd_vabs(
   meta: &mut CompilerMeta,
   pickle: PickleInstruction,
 ) {
-  let (_, typ, src, mut target) = handle_vdata_op!(pickle, builder, meta);
+  let (typ, src, mut target) = handle_vdata_op(&pickle, builder, meta);
 
   let clif = typ.clif_mapping();
 
@@ -70,7 +67,7 @@ pub fn hwnd_vneg(
   meta: &mut CompilerMeta,
   pickle: PickleInstruction,
 ) {
-  let (_, typ, src, mut target) = handle_vdata_op!(pickle, builder, meta);
+  let (typ, src, mut target) = handle_vdata_op(&pickle, builder, meta);
 
   let clif = typ.clif_mapping();
 

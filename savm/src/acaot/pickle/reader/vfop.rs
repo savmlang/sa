@@ -1,5 +1,48 @@
 use crate::{acaot::pickle::def::PickleInstruction, constdef, wspickle};
 
+pub struct VDATAOP {
+  pub datatype: u8,
+  pub count: u32,
+
+  pub src1: u8,
+  pub of_src1: i32,
+
+  pub tgt: u8,
+  pub of_tgt: i32,
+}
+
+pub fn parse_vdataop(pickle: &PickleInstruction, meta: &[u8]) -> VDATAOP {
+  let f1 = pickle.u1;
+  let f2 = pickle.u2;
+  let flags = u16::from_ne_bytes([f1, f2]);
+
+  let datatype = (flags >> 12) as u8;
+  let count = wspickle!(meta, start = 0, stop = 4, u32);
+  let of_src1 = wspickle!(meta, start = 4, stop = 8, i32);
+  let of_tgt = wspickle!(meta, start = 12, stop = 16, i32);
+
+  let src1 = {
+    let src = (flags >> 8) as u8 & 0x0F;
+
+    src
+  };
+
+  let tgt = {
+    let src = (flags as u8) >> 4;
+
+    src
+  };
+
+  VDATAOP {
+    datatype,
+    count,
+    src1,
+    of_src1,
+    tgt,
+    of_tgt,
+  }
+}
+
 pub struct VFOP {
   pub src: u8,
   pub target: u8,

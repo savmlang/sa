@@ -2,15 +2,16 @@ use crate::acaot::{
   native::llvm_compiler::{
     CompilerMeta,
     irgen::almu::{
-      handle_add, handle_div, handle_mov, handle_mul, handle_rem, handle_sub, handle_vfadd,
-      handle_vfdiv, handle_vfma, handle_vfmul, handle_vfsub, handle_vsh,
+      handle_add, handle_div, handle_mov, handle_mul, handle_rem, handle_sub, handle_vabs,
+      handle_vfadd, handle_vfdiv, handle_vfma, handle_vfmul, handle_vfsub, handle_vneg, handle_vsh,
     },
   },
   pickle::def::{
     PICKLE_OPCODE_DIV, PICKLE_OPCODE_HINT, PICKLE_OPCODE_MARK, PICKLE_OPCODE_MOV,
-    PICKLE_OPCODE_REG, PICKLE_OPCODE_REM, PICKLE_OPCODE_VADD, PICKLE_OPCODE_VADDF,
-    PICKLE_OPCODE_VDIVF, PICKLE_OPCODE_VFMA, PICKLE_OPCODE_VMUL, PICKLE_OPCODE_VMULF,
-    PICKLE_OPCODE_VSH, PICKLE_OPCODE_VSUB, PICKLE_OPCODE_VSUBF, PICKLE_OPCODE_WS_PUT,
+    PICKLE_OPCODE_REG, PICKLE_OPCODE_REM, PICKLE_OPCODE_VABS, PICKLE_OPCODE_VADD,
+    PICKLE_OPCODE_VADDF, PICKLE_OPCODE_VDIVF, PICKLE_OPCODE_VFMA, PICKLE_OPCODE_VMUL,
+    PICKLE_OPCODE_VMULF, PICKLE_OPCODE_VNEG, PICKLE_OPCODE_VSH, PICKLE_OPCODE_VSUB,
+    PICKLE_OPCODE_VSUBF, PICKLE_OPCODE_WS_PUT,
   },
 };
 use llvm_sys::core::{LLVMBuildBr, LLVMConstInt, LLVMPositionBuilderAtEnd};
@@ -88,6 +89,8 @@ pub unsafe fn compile_pickle(meta: &mut CompilerMeta) {
         PICKLE_OPCODE_VSH => handle_vsh(pickle, meta),
 
         PICKLE_OPCODE_VFMA => handle_vfma(pickle, meta),
+        PICKLE_OPCODE_VABS => handle_vabs(pickle, meta),
+        PICKLE_OPCODE_VNEG => handle_vneg(pickle, meta),
 
         _ => {}
       }
