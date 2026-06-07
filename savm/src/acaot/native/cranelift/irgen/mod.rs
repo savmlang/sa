@@ -84,7 +84,6 @@ pub fn compile(
         let reg = op.u1;
         let marker = u64::from_ne_bytes(meta.ws[0..8].try_into().unwrap());
 
-        // After this `JMP` we are required to create a whole new block
         let val = builder.ins().iconst(I64, marker.cast_signed());
         let var = reg::resolve_reg(builder, meta, reg);
 
@@ -117,7 +116,6 @@ pub fn compile(
 
         let (then, other) = if intent == 0 {
           // Jump If Zero
-          // brif(src, next_code, [], target_block, [])
           (newblock, userblock)
         } else {
           (userblock, newblock)

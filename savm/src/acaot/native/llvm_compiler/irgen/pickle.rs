@@ -1,20 +1,32 @@
 use crate::acaot::{
   native::llvm_compiler::{
-    CompilerMeta,
-    irgen::almu::{
-      handle_add, handle_div, handle_mov, handle_mul, handle_rem, handle_sub, handle_vabs,
-      handle_vfadd, handle_vfdiv, handle_vfma, handle_vfmul, handle_vfsub, handle_vneg, handle_vsh,
+    CompilerMeta, LLVM_VAR_NAME,
+    irgen::{
+      almu::{
+        handle_add, handle_div, handle_mov, handle_mul, handle_rem, handle_sub, handle_vabs,
+        handle_vcmp, handle_vfadd, handle_vfdiv, handle_vfma, handle_vfmul, handle_vfsub,
+        handle_vneg, handle_vsh,
+      },
+      reg::{LLVMTypeOrWidth, llvmresolve_location_src_load},
     },
   },
   pickle::def::{
-    PICKLE_OPCODE_DIV, PICKLE_OPCODE_HINT, PICKLE_OPCODE_MARK, PICKLE_OPCODE_MOV,
-    PICKLE_OPCODE_REG, PICKLE_OPCODE_REM, PICKLE_OPCODE_VABS, PICKLE_OPCODE_VADD,
-    PICKLE_OPCODE_VADDF, PICKLE_OPCODE_VDIVF, PICKLE_OPCODE_VFMA, PICKLE_OPCODE_VMUL,
-    PICKLE_OPCODE_VMULF, PICKLE_OPCODE_VNEG, PICKLE_OPCODE_VSH, PICKLE_OPCODE_VSUB,
-    PICKLE_OPCODE_VSUBF, PICKLE_OPCODE_WS_PUT,
+    PICKLE_OPCODE_DIV, PICKLE_OPCODE_HINT, PICKLE_OPCODE_JIF, PICKLE_OPCODE_JMP,
+    PICKLE_OPCODE_MARK, PICKLE_OPCODE_MOV, PICKLE_OPCODE_REG, PICKLE_OPCODE_REM,
+    PICKLE_OPCODE_VABS, PICKLE_OPCODE_VADD, PICKLE_OPCODE_VADDF, PICKLE_OPCODE_VCMP,
+    PICKLE_OPCODE_VDIVF, PICKLE_OPCODE_VFMA, PICKLE_OPCODE_VMUL, PICKLE_OPCODE_VMULF,
+    PICKLE_OPCODE_VNEG, PICKLE_OPCODE_VSH, PICKLE_OPCODE_VSUB, PICKLE_OPCODE_VSUBF,
+    PICKLE_OPCODE_WS_PUT,
   },
 };
-use llvm_sys::core::{LLVMBuildBr, LLVMConstInt, LLVMPositionBuilderAtEnd};
+use llvm_sys::{
+  LLVMIntPredicate,
+  core::{
+    LLVMAppendBasicBlockInContext, LLVMBuildBr, LLVMBuildCondBr, LLVMBuildICmp,
+    LLVMClearInsertionPosition, LLVMConstInt, LLVMConstNull, LLVMCreateBasicBlockInContext,
+    LLVMGetInsertBlock, LLVMPositionBuilderAtEnd,
+  },
+};
 use std::ptr::copy_nonoverlapping;
 
 pub unsafe fn compile_pickle(meta: &mut CompilerMeta) {
@@ -32,6 +44,7 @@ pub unsafe fn compile_pickle(meta: &mut CompilerMeta) {
       }
 
       let pickle = &pickles[idx];
+      let current_block = LLVMGetInsertBlock(builder);
 
       match pickle.opcode {
         // A NO-OP
@@ -57,40 +70,94 @@ pub unsafe fn compile_pickle(meta: &mut CompilerMeta) {
           let marker = u64::from_ne_bytes(meta.ws[0..8].try_into().unwrap());
 
           let newblock = meta.blockmap.get(&marker).unwrap().current;
-          LLVMBuildBr(builder, newblock);
+
+          if !current_block.is_null() {
+            LLVMBuildBr(builder, newblock);
+          }
 
           LLVMPositionBuilderAtEnd(builder, newblock);
-          meta.regmnt.newblock(newblock);
         }
 
-        // AU
-        PICKLE_OPCODE_VADD => handle_add(pickle, meta),
-        PICKLE_OPCODE_VSUB => handle_sub(pickle, meta),
-        PICKLE_OPCODE_VMUL => handle_mul(pickle, meta),
-        PICKLE_OPCODE_DIV => handle_div(pickle, meta),
-        PICKLE_OPCODE_REM => handle_rem(pickle, meta),
+        op if !current_block.is_null() => match op {
+          // AU
+          PICKLE_OPCODE_VADD => handle_add(pickle, meta),
+          PICKLE_OPCODE_VSUB => handle_sub(pickle, meta),
+          PICKLE_OPCODE_VMUL => handle_mul(pickle, meta),
+          PICKLE_OPCODE_DIV => handle_div(pickle, meta),
+          PICKLE_OPCODE_REM => handle_rem(pickle, meta),
 
-        PICKLE_OPCODE_VADDF => handle_vfadd(pickle, meta),
-        PICKLE_OPCODE_VSUBF => handle_vfsub(pickle, meta),
-        PICKLE_OPCODE_VMULF => handle_vfmul(pickle, meta),
-        PICKLE_OPCODE_VDIVF => handle_vfdiv(pickle, meta),
+          // FAU
+          PICKLE_OPCODE_VADDF => handle_vfadd(pickle, meta),
+          PICKLE_OPCODE_VSUBF => handle_vfsub(pickle, meta),
+          PICKLE_OPCODE_VMULF => handle_vfmul(pickle, meta),
+          PICKLE_OPCODE_VDIVF => handle_vfdiv(pickle, meta),
 
-        PICKLE_OPCODE_MOV => handle_mov(pickle, meta),
-        PICKLE_OPCODE_REG => {
-          let reg = pickle.u1;
-          let marker = u64::from_ne_bytes(meta.ws[0..8].try_into().unwrap());
+          // CU, LU
+          PICKLE_OPCODE_MOV => handle_mov(pickle, meta),
+          PICKLE_OPCODE_VCMP => handle_vcmp(pickle, meta),
+          PICKLE_OPCODE_JIF => {
+            let intent = pickle.u1;
+            let relocation_src = pickle.u2;
+            let width = pickle.u3;
 
-          let cint = LLVMConstInt(meta.i64, marker, 0);
-          let meta_ptr = meta as *mut CompilerMeta;
+            let offset = i32::from_ne_bytes(unsafe { meta.ws[0..4].try_into().unwrap_unchecked() });
+            let marker =
+              u64::from_ne_bytes(unsafe { meta.ws[4..12].try_into().unwrap_unchecked() });
 
-          (*meta_ptr).regmnt.setreg(reg as _, cint, meta_ptr);
-        }
+            let typ = LLVMTypeOrWidth::Width(width);
+            let r#type = typ.r#type();
 
-        PICKLE_OPCODE_VSH => handle_vsh(pickle, meta),
+            let src = llvmresolve_location_src_load(meta, typ, relocation_src, None, offset, 1);
 
-        PICKLE_OPCODE_VFMA => handle_vfma(pickle, meta),
-        PICKLE_OPCODE_VABS => handle_vabs(pickle, meta),
-        PICKLE_OPCODE_VNEG => handle_vneg(pickle, meta),
+            let ifzero = LLVMBuildICmp(
+              meta.builder,
+              LLVMIntPredicate::LLVMIntNE,
+              src,
+              LLVMConstNull(r#type.x1),
+              LLVM_VAR_NAME.0,
+            );
+
+            let contd =
+              LLVMAppendBasicBlockInContext(meta.llvmctx, meta.llvmfn, c"jmp_target".as_ptr());
+            let jmpblock = meta.blockmap.get(&marker).unwrap().current;
+
+            let (then, other) = if intent == 0 {
+              // Jump If Zero
+              (contd, jmpblock)
+            } else {
+              (jmpblock, contd)
+            };
+
+            LLVMBuildCondBr(meta.builder, ifzero, then, other);
+
+            LLVMPositionBuilderAtEnd(meta.builder, contd);
+          }
+          PICKLE_OPCODE_REG => {
+            let reg = pickle.u1;
+            let marker = u64::from_ne_bytes(meta.ws[0..8].try_into().unwrap());
+
+            let cint = LLVMConstInt(meta.i64, marker, 0);
+            let meta_ptr = meta as *mut CompilerMeta;
+
+            (*meta_ptr).regmnt.setreg(reg as _, cint);
+          }
+          PICKLE_OPCODE_JMP => {
+            let marker = u64::from_ne_bytes(meta.ws[0..8].try_into().unwrap());
+
+            let jmpaddr = meta.blockmap.get(&marker).unwrap().current;
+            LLVMBuildBr(builder, jmpaddr);
+
+            LLVMClearInsertionPosition(builder);
+          }
+
+          // AU-Pt-II
+          PICKLE_OPCODE_VSH => handle_vsh(pickle, meta),
+          PICKLE_OPCODE_VFMA => handle_vfma(pickle, meta),
+          PICKLE_OPCODE_VABS => handle_vabs(pickle, meta),
+          PICKLE_OPCODE_VNEG => handle_vneg(pickle, meta),
+
+          _ => {}
+        },
 
         _ => {}
       }
@@ -99,6 +166,10 @@ pub unsafe fn compile_pickle(meta: &mut CompilerMeta) {
     }
 
     // Jump to epilogue (normal)
-    LLVMBuildBr(builder, meta.epilogue);
+    // Unless its a spin loop (though why would one write one??)
+    let final_block = LLVMGetInsertBlock(builder);
+    if !final_block.is_null() {
+      LLVMBuildBr(builder, meta.epilogue);
+    }
   }
 }

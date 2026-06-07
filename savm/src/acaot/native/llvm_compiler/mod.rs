@@ -42,9 +42,11 @@ use crate::{
     native::{
       NativeCompiler,
       llvm_compiler::{
-        dispose::{LLVMBuffer, LLVMCtx, LLVMMsg, Module, OpaqueMachine, OpaqueTargetData},
+        dispose::{
+          IRBuilder, LLVMBuffer, LLVMCtx, LLVMMsg, Module, OpaqueMachine, OpaqueTargetData,
+        },
         irgen::compile,
-        ssaupdater::VMRegManager,
+        ssaupdater::{ReducedCompilerMeta, VMRegManager},
       },
     },
     pickle::def::PickleInstruction,
@@ -222,7 +224,7 @@ impl SaVMLLVMBuilder {
   pub fn create_cinder() -> Box<dyn NativeCompiler> {
     Box::new(
       Self::create(
-        LLVMCodeGenOptLevel::LLVMCodeGenLevelLess,
+        LLVMCodeGenOptLevel::LLVMCodeGenLevelNone,
         LLVMRelocMode::LLVMRelocStatic,
         LLVMCodeModel::LLVMCodeModelLarge,
         CacheLevel::LLVMCinder,
@@ -278,12 +280,13 @@ impl NativeCompiler for SaVMLLVM {
       let function_val = LLVMAddFunction(module, fnname, func_ty);
 
       {
-        let prologue = LLVMAppendBasicBlockInContext(ctx, function_val, globalname);
+        let prologue = LLVMAppendBasicBlockInContext(ctx, function_val, c"prologue".as_ptr());
 
         let mut itr = jmps
           .into_iter()
           .map(|(marker, _)| {
-            let blk = LLVMAppendBasicBlockInContext(ctx, function_val, globalname);
+            let blk = format!("blockid_marker_{}\0", *marker);
+            let blk = LLVMAppendBasicBlockInContext(ctx, function_val, blk.as_ptr() as _);
 
             (*marker, blk)
           })
@@ -305,7 +308,8 @@ impl NativeCompiler for SaVMLLVM {
 
         let vmctx = LLVMGetParam(function_val, 0);
 
-        let builder = LLVMCreateBuilderInContext(ctx);
+        let builder_raii = IRBuilder(LLVMCreateBuilderInContext(ctx));
+        let builder = builder_raii.0;
 
         LLVMPositionBuilderAtEnd(builder, prologue);
 
@@ -319,22 +323,35 @@ impl NativeCompiler for SaVMLLVM {
           vmctx,
           llvmctx: ctx,
           llvmmodule: module,
+          llvmfn: function_val,
           rel: matches!(self.cache, CacheLevel::LLVMCinder | CacheLevel::LLVMCrater),
           ws: [0; 20],
           prologue,
-          trap: LLVMAppendBasicBlockInContext(ctx, function_val, globalname),
-          async_epilogue: LLVMAppendBasicBlockInContext(ctx, function_val, globalname),
-          blockv0: LLVMAppendBasicBlockInContext(ctx, function_val, globalname),
-          epilogue: LLVMAppendBasicBlockInContext(ctx, function_val, globalname),
-          jumpresolver: LLVMAppendBasicBlockInContext(ctx, function_val, globalname),
+          trap: LLVMAppendBasicBlockInContext(ctx, function_val, c"trap".as_ptr()),
+          async_epilogue: LLVMAppendBasicBlockInContext(
+            ctx,
+            function_val,
+            c"async_epilogue".as_ptr(),
+          ),
+          blockv0: LLVMAppendBasicBlockInContext(ctx, function_val, c"blockv0".as_ptr()),
+          epilogue: LLVMAppendBasicBlockInContext(ctx, function_val, c"epilogue".as_ptr()),
+          jumpresolver: LLVMAppendBasicBlockInContext(ctx, function_val, c"jumpresolver".as_ptr()),
           blockmap,
 
-          regspill: LLVMBuildAlloca(builder, i64x16, globalname),
-          scratchpad: LLVMBuildAlloca(builder, i64x24, globalname),
+          regspill: LLVMBuildAlloca(builder, i64x16, c"regspill".as_ptr()),
+          scratchpad: LLVMBuildAlloca(builder, i64x24, c"scratchpad".as_ptr()),
 
           scratchpad_ptr: null_mut(),
 
-          regmnt: VMRegManager::new(prologue),
+          regmnt: VMRegManager::new(ReducedCompilerMeta {
+            builder,
+            prologue,
+            ctx,
+            vmctx,
+            fnval: function_val,
+            i64: LLVMInt64TypeInContext(ctx),
+            ptr: LLVMPointerTypeInContext(ctx, 0),
+          }),
 
           i32: LLVMInt32TypeInContext(ctx),
           i64: LLVMInt64TypeInContext(ctx),
@@ -346,13 +363,15 @@ impl NativeCompiler for SaVMLLVM {
         LLVMSetAlignment(compilermeta.scratchpad, 64);
 
         compile(&mut compilermeta);
+
+        drop(builder_raii);
       }
 
       // Print Module
-      // #[cfg(not(feature = "sendback"))]
+      #[cfg(not(feature = "sendback"))]
       let module = LLVMMsg({ LLVMPrintModuleToString(module) });
 
-      // #[cfg(not(feature = "sendback"))]
+      #[cfg(not(feature = "sendback"))]
       println!("{}", module.to_str().unwrap());
 
       // Verify pipeline
@@ -426,6 +445,7 @@ pub struct CompilerMeta<'a> {
   pub builder: LLVMBuilderRef,
   pub llvmctx: LLVMContextRef,
   pub llvmmodule: LLVMModuleRef,
+  pub llvmfn: LLVMValueRef,
 
   // Main Blocks
   pub prologue: LLVMBasicBlockRef,

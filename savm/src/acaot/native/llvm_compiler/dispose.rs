@@ -2,10 +2,10 @@ use core::slice;
 use llvm_sys::{
   LLVMContext, LLVMModule,
   core::{
-    LLVMContextDispose, LLVMDisposeMemoryBuffer, LLVMDisposeMessage, LLVMDisposeModule,
-    LLVMGetBufferSize, LLVMGetBufferStart,
+    LLVMContextDispose, LLVMDisposeBuilder, LLVMDisposeMemoryBuffer, LLVMDisposeMessage,
+    LLVMDisposeModule, LLVMGetBufferSize, LLVMGetBufferStart,
   },
-  prelude::LLVMMemoryBufferRef,
+  prelude::{LLVMBuilderRef, LLVMMemoryBufferRef},
   target::{LLVMDisposeTargetData, LLVMTargetDataRef},
   target_machine::{LLVMDisposeTargetMachine, LLVMOpaqueTargetMachine},
 };
@@ -52,7 +52,8 @@ llvmdispose! {
   OpaqueMachine(*mut LLVMOpaqueTargetMachine, LLVMDisposeTargetMachine),
   OpaqueTargetData(LLVMTargetDataRef, LLVMDisposeTargetData),
   LLVMMsg(*mut c_char, LLVMDisposeMessage),
-  LLVMBuffer(LLVMMemoryBufferRef, LLVMDisposeMemoryBuffer)
+  LLVMBuffer(LLVMMemoryBufferRef, LLVMDisposeMemoryBuffer),
+  IRBuilder(LLVMBuilderRef, LLVMDisposeBuilder)
 }
 
 impl Deref for LLVMMsg {

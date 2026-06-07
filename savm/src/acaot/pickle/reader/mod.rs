@@ -7,6 +7,7 @@ pub mod cast;
 pub mod corevm;
 pub mod fp;
 pub mod spawn;
+pub mod vcmp;
 pub mod vfop;
 pub mod vminimax;
 pub mod vsh;

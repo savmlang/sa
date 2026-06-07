@@ -20,9 +20,12 @@ use sart::{
   structures::QuadPackedData,
 };
 
-use crate::acaot::pickle::def::{
-  PICKLE_DISPATCH_TABLE, PICKLE_OPCODE_JIF, PICKLE_OPCODE_JMP, PICKLE_OPCODE_MARK,
-  PICKLE_OPCODE_VADD, PICKLE_OPCODE_VCMP, PickleInstruction,
+use crate::acaot::pickle::{
+  def::{
+    PICKLE_DISPATCH_TABLE, PICKLE_OPCODE_JIF, PICKLE_OPCODE_JMP, PICKLE_OPCODE_MARK,
+    PICKLE_OPCODE_VADD, PICKLE_OPCODE_VCMP, PickleInstruction,
+  },
+  reader::vcmp::{VCMP, parse_vcmp},
 };
 
 pub const SIZE_128KB: usize = 128 * 1024 / size_of::<QuadPackedData>();
@@ -404,20 +407,19 @@ macro_rules! arrcastint {
 
 #[inline(always)]
 pub fn call_vcmp(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
-  let op = pickle.u1;
-  let width = pickle.u2;
+  let VCMP {
+    datawdt: width,
+    cmpop,
+    count,
+    src1: _src1,
+    src2: _src2,
+    tgt: _target,
+    of_src1: offset1,
+    of_src2: offset2,
+    of_tgt: offset3,
+  } = parse_vcmp(pickle, unsafe { (*ws).arr });
 
-  let srcflags = arrcastint!(ws, start = 0, stop = 2, u16);
-
-  let _src1 = (srcflags >> 12) as u8 & 0xF;
-  let _src2 = ((srcflags >> 8) & 0xF) as u8;
-  let _target = ((srcflags >> 4) & 0xF) as u8;
-
-  let count = arrcastint!(ws, start = 2, stop = 6, u32);
-
-  let offset1 = arrcastint!(ws, start = 6, stop = 10, i32);
-  let offset2 = arrcastint!(ws, start = 10, stop = 14, i32);
-  let offset3 = arrcastint!(ws, start = 14, stop = 18, i32);
+  let op = cmpop.to_classical();
 
   let src1 = { resolve_location_src!(taskstate => _src1) };
   let src2 = { resolve_location_src!(taskstate => _src2) };

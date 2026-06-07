@@ -56,7 +56,7 @@ fn llvm_config(args: &[&str]) -> String {
 fn build_ssaupdater() {
   use cc::Build;
 
-  println!("cargo::rerun-if-changed=ssaupdater");
+  println!("cargo::rerun-if-changed=srcxx");
 
   let include_llvm = llvm_config(&["--includedir"]);
 
@@ -65,16 +65,15 @@ fn build_ssaupdater() {
   build
     .cpp(true)
     .std("c++20")
-    .file("./ssaupdater/updater.cpp")
-    .include("ssaupdater")
+    .file("./srcxx/blockpreds.cpp")
+    .include("srcxx")
     .include(include_llvm.trim());
 
   let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
 
-  if target_os == "linux" || target_os == "darwin" || target_os == "macos"
-  {
+  if target_os == "linux" || target_os == "darwin" || target_os == "macos" {
     build.flag("-fno-rtti");
   }
 
-  build.compile("ssaupdater");
+  build.compile("srcxx");
 }

@@ -44,11 +44,7 @@ where
 pub fn handle_vneg(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
   handle_vdataop(pickle, meta, |ty, count, meta, src1| {
     let extllvm = ty.r#type();
-    let basety = if count == 1 {
-      extllvm.x1
-    } else {
-      unsafe { LLVMVectorType(extllvm.x1, count) }
-    };
+    let basety = unsafe { LLVMTypeOf(src1) };
 
     if extllvm.float {
       meta.call_intrinsic("llvm.fneg", &mut [basety], &mut [src1])
@@ -65,11 +61,7 @@ pub fn handle_vneg(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
 pub fn handle_vabs(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
   handle_vdataop(pickle, meta, |ty, count, meta, src1| {
     let extllvm = ty.r#type();
-    let basety = if count == 1 {
-      extllvm.x1
-    } else {
-      unsafe { LLVMVectorType(extllvm.x1, count) }
-    };
+    let basety = unsafe { LLVMTypeOf(src1) };
 
     meta.call_intrinsic(
       if extllvm.float {

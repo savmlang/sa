@@ -42,7 +42,7 @@ pub fn llvmresolve_location_src_load(
 
         let regsvalue = out
           .regstouched
-          .map(|x| (*meta_ptr).regmnt.usereg(x as usize, meta_ptr))
+          .map(|x| (*meta_ptr).regmnt.usereg(x as usize))
           .collect::<Box<[_]>>();
 
         load_all_vectored(
@@ -68,7 +68,7 @@ pub fn llvmresolve_location_src_load(
       // Largepad
       9 => {
         let ty = typ.vect(count as _);
-        let val = (*meta_ptr).regmnt.usereg(LARGEPAD, meta_ptr);
+        let val = (*meta_ptr).regmnt.usereg(LARGEPAD);
 
         offsetload(
           meta.builder,
@@ -81,7 +81,7 @@ pub fn llvmresolve_location_src_load(
       // Read pointer through r2
       10 => {
         let ty = typ.vect(count as _);
-        let val = (*meta_ptr).regmnt.usereg(REG_R2, meta_ptr);
+        let val = (*meta_ptr).regmnt.usereg(REG_R2);
 
         offsetload(
           meta.builder,
@@ -120,7 +120,7 @@ pub fn llvmresolve_location_src_store(
         let regsvalue = out
           .regstouched
           .clone()
-          .map(|x| (*meta_ptr).regmnt.usereg(x as usize, meta_ptr))
+          .map(|x| (*meta_ptr).regmnt.usereg(x as usize))
           .collect::<Box<[_]>>();
 
         StoreResolver::RegMapOut(typemap, regsvalue, out)
@@ -129,13 +129,13 @@ pub fn llvmresolve_location_src_store(
       8 => StoreResolver::Ptr(meta.scratchpad, offsetbytes),
       // Largepad
       9 => {
-        let val = (*meta_ptr).regmnt.usereg(LARGEPAD, meta_ptr);
+        let val = (*meta_ptr).regmnt.usereg(LARGEPAD);
 
         StoreResolver::Ptr(val, offsetbytes)
       }
       // Read pointer through r2
       10 => {
-        let val = (*meta_ptr).regmnt.usereg(REG_R2, meta_ptr);
+        let val = (*meta_ptr).regmnt.usereg(REG_R2);
 
         StoreResolver::Ptr(val, offsetbytes)
       }
@@ -176,7 +176,7 @@ impl StoreResolver {
                 regval
               };
 
-              (*meta_ptr).regmnt.setreg(regid as _, regval, meta_ptr);
+              (*meta_ptr).regmnt.setreg(regid as _, regval);
             }
             return;
           }
@@ -206,7 +206,7 @@ impl StoreResolver {
           let meta_ptr = meta as *mut CompilerMeta;
           for (regval, regid) in regvals.into_iter().zip(regmap.regstouched) {
             let regval = LLVMBuildBitCast(meta.builder, regval, meta.i64, LLVM_VAR_NAME.0);
-            (*meta_ptr).regmnt.setreg(regid as _, regval, meta_ptr);
+            (*meta_ptr).regmnt.setreg(regid as _, regval);
           }
         }
         Self::Ptr(ptr, offset) => {
@@ -302,7 +302,6 @@ impl LLVMTypeOrWidth {
       LLVMTypeMapping {
         width: width_bytes,
         x1: element_type,
-        x1i: element_type,
         xreg,
         signed,
         float,
@@ -315,7 +314,6 @@ impl LLVMTypeOrWidth {
 pub struct LLVMTypeMapping {
   pub width: u8,
   pub x1: LLVMTypeRef,
-  pub x1i: LLVMTypeRef,
   pub xreg: LLVMTypeRef,
   pub signed: bool,
   pub float: bool,

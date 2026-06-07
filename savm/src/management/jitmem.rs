@@ -115,9 +115,11 @@ impl JITMemoryManager {
   {
     use sajit::LLVMDryRun;
 
-    let size_needed = MemoryExecutable::sizecalc(data).unwrap().get() as usize;
-
-    println!("Needed : {size_needed}");
+    let size_needed = MemoryExecutable::sizecalc_jitlink(&self.symbpool, data)
+      .unwrap_or_else(|| {
+        MemoryExecutable::sizecalc(data).expect("Unable to at all calculate size needed!")
+      })
+      .get() as usize;
 
     let mut jitwrite = |mexec: &mut MemoryExecutable, symbpool: &LLVMSymbolPool| {
       let resolver_full = |d: *const str| match unsafe { &*d } {
@@ -154,14 +156,12 @@ impl JITMemoryManager {
       let out = jitwrite(mexec, &self.symbpool);
       let new = mexec.cursor();
 
-      println!("Written really : {}", new - old);
+      assert!((new - old) <= size_needed);
 
       out
     } else {
       todo!();
     }?;
-
-    println!("Calculated: {size_needed}");
 
     out.get("compiledlib").map(|x| *x).ok_or_else(|| {
       Cow::Borrowed(
@@ -173,21 +173,24 @@ impl JITMemoryManager {
 
 #[rustfmt::skip]
 fn prefer_jitlink() -> bool {
-  false
-  // cfg!(
-  //   any(
-  //     all(
-  //       target_os = "linux", 
-  //       any(
-  //         target_arch = "x86_64",
-  //         target_arch = "aarch64",
-  //         target_arch = "riscv64",
-  //         target_arch = "powerpc64"
-  //       )
-  //     ),
-  //     target_os = "macos"
-  //   )
-  // )
+  cfg!(
+    any(
+      all(
+        target_os = "windows",
+        target_arch = "x86_64"
+      ),
+      all(
+        target_os = "linux", 
+        any(
+          target_arch = "x86_64",
+          target_arch = "aarch64",
+          target_arch = "riscv64",
+          target_arch = "powerpc64"
+        )
+      ),
+      target_os = "macos"
+    )
+  )
 }
 
 impl Drop for JITMemoryManager {

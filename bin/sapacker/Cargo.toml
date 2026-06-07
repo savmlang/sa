@@ -8,6 +8,6 @@ edition = "2024"
 console = "^0.16"
 
 postcard = { version = "^1", default-features = false, features = ["alloc"] }
-rusqlite = { version = "^0.39", features = ["bundled", "blob"] }
+rusqlite = { version = "^0.40", features = ["bundled", "blob"] }
 
 sart = { path = "../../sart" }

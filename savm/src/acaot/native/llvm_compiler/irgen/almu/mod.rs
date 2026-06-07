@@ -1,10 +1,11 @@
 // Arithmatic Logic Memory Unit
 
-use std::mem::offset_of;
+use std::{ffi::CStr, mem::offset_of, ops::Deref};
 
 use crate::acaot::{
   native::llvm_compiler::{
     CompilerMeta, LLVM_VAR_NAME,
+    dispose::LLVMMsg,
     irgen::{
       OffsetBytes, offsetload,
       reg::{
@@ -16,17 +17,23 @@ use crate::acaot::{
   },
   pickle::{
     def::PickleInstruction,
-    reader::au::{ARITH, DIVLIKE, parse_arith, parse_divlike},
+    reader::{
+      au::{ARITH, DIVLIKE, parse_arith, parse_divlike},
+      vcmp::{CMPOp, FloatOP, IntOP, VCMP, parse_vcmp},
+    },
   },
 };
 use llvm_sys::{
+  LLVMIntPredicate,
   LLVMOpcode::LLVMInsertElement,
+  LLVMRealPredicate,
   core::{
     LLVMBuildAShr, LLVMBuildAdd, LLVMBuildBitCast, LLVMBuildCall2, LLVMBuildExtractValue,
-    LLVMBuildInsertElement, LLVMBuildLShr, LLVMBuildMul, LLVMBuildSDiv, LLVMBuildSExt,
-    LLVMBuildSRem, LLVMBuildSub, LLVMBuildTrunc, LLVMBuildUDiv, LLVMBuildURem, LLVMBuildZExt,
-    LLVMBuildZExtOrBitCast, LLVMConstInt, LLVMConstVector, LLVMGetIntrinsicDeclaration,
-    LLVMGetUndef, LLVMGlobalGetValueType, LLVMIntTypeInContext, LLVMLookupIntrinsicID,
+    LLVMBuildFCmp, LLVMBuildICmp, LLVMBuildInsertElement, LLVMBuildLShr, LLVMBuildMul,
+    LLVMBuildSDiv, LLVMBuildSExt, LLVMBuildSRem, LLVMBuildSub, LLVMBuildTrunc, LLVMBuildUDiv,
+    LLVMBuildURem, LLVMBuildZExt, LLVMBuildZExtOrBitCast, LLVMConstInt, LLVMConstVector,
+    LLVMGetBasicBlockName, LLVMGetInsertBlock, LLVMGetIntrinsicDeclaration, LLVMGetUndef,
+    LLVMGlobalGetValueType, LLVMIntTypeInContext, LLVMLookupIntrinsicID, LLVMTypeOf,
     LLVMVectorType,
   },
   prelude::LLVMValueRef,
@@ -46,6 +53,75 @@ macro_rules! llvmreadws {
   ($meta:expr, start = $start:expr, stop = $stop:expr, $t:ty) => {
     <$t>::from_ne_bytes($meta.ws[$start..$stop].try_into().unwrap())
   };
+}
+
+pub fn handle_vcmp(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
+  let VCMP {
+    datawdt,
+    cmpop,
+    count,
+    src1,
+    src2,
+    tgt,
+    of_src1,
+    of_src2,
+    of_tgt,
+  } = parse_vcmp(pickle, meta.ws.as_ref());
+
+  let typ = LLVMTypeOrWidth::Width(datawdt);
+  let r#type = typ.r#type();
+
+  let src1 = llvmresolve_location_src_load(meta, typ, src1, None, of_src1, count);
+  let src2 = llvmresolve_location_src_load(meta, typ, src2, None, of_src2, count);
+  let tgt = llvmresolve_location_src_store(meta, typ, tgt, None, of_tgt, count);
+
+  let value = match cmpop {
+    CMPOp::IntOp(i) => unsafe {
+      let op = match i {
+        IntOP::Equal => LLVMIntPredicate::LLVMIntEQ,
+        IntOP::NotEqual => LLVMIntPredicate::LLVMIntNE,
+        IntOP::SignedGreaterThan => LLVMIntPredicate::LLVMIntSGT,
+        IntOP::SignedGreaterThanOrEqual => LLVMIntPredicate::LLVMIntSGE,
+        IntOP::SignedLessThan => LLVMIntPredicate::LLVMIntSLT,
+        IntOP::SignedLessThanOrEqual => LLVMIntPredicate::LLVMIntSLE,
+        IntOP::UnsignedGreaterThan => LLVMIntPredicate::LLVMIntUGT,
+        IntOP::UnsignedGreaterThanOrEqual => LLVMIntPredicate::LLVMIntUGE,
+        IntOP::UnsignedLessThan => LLVMIntPredicate::LLVMIntULT,
+        IntOP::UnsignedLessThanOrEqual => LLVMIntPredicate::LLVMIntULE,
+      };
+      LLVMBuildICmp(meta.builder, op, src1, src2, LLVM_VAR_NAME.0)
+    },
+    CMPOp::FloatOp(f) => unsafe {
+      let op = match f {
+        FloatOP::Equal => LLVMRealPredicate::LLVMRealOEQ,
+        FloatOP::GreaterThan => LLVMRealPredicate::LLVMRealOGT,
+        FloatOP::GreaterThanOrEqual => LLVMRealPredicate::LLVMRealOGE,
+        FloatOP::LessThan => LLVMRealPredicate::LLVMRealOLT,
+        FloatOP::LessThanOrEqual => LLVMRealPredicate::LLVMRealOLE,
+        FloatOP::NotEqual => LLVMRealPredicate::LLVMRealONE,
+        FloatOP::Ordered => LLVMRealPredicate::LLVMRealORD,
+        FloatOP::OrderedNotEqual => LLVMRealPredicate::LLVMRealONE,
+        FloatOP::Unordered => LLVMRealPredicate::LLVMRealUNO,
+        FloatOP::UnorderedOrEqual => LLVMRealPredicate::LLVMRealUEQ,
+        FloatOP::UnorderedOrGreaterThan => LLVMRealPredicate::LLVMRealUGT,
+        FloatOP::UnorderedOrGreaterThanOrEqual => LLVMRealPredicate::LLVMRealUGE,
+        FloatOP::UnorderedOrLessThan => LLVMRealPredicate::LLVMRealULT,
+        FloatOP::UnorderedOrLessThanOrEqual => LLVMRealPredicate::LLVMRealULE,
+      };
+
+      LLVMBuildFCmp(meta.builder, op, src1, src2, LLVM_VAR_NAME.0)
+    },
+  };
+
+  let val = unsafe {
+    if count == 1 {
+      LLVMBuildZExt(meta.builder, value, LLVMTypeOf(src1), LLVM_VAR_NAME.0)
+    } else {
+      LLVMBuildSExt(meta.builder, value, LLVMTypeOf(src1), LLVM_VAR_NAME.0)
+    }
+  };
+
+  tgt.synchronize(meta, val);
 }
 
 #[inline(always)]
@@ -68,11 +144,11 @@ pub fn handle_mov(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
         _ => unreachable!(),
       };
 
-      (*meta_ptr).regmnt.setreg(REG_R1, val, meta_ptr);
+      (*meta_ptr).regmnt.setreg(REG_R1, val);
     } else {
-      let src = (*meta_ptr).regmnt.usereg(source as _, meta_ptr);
+      let src = (*meta_ptr).regmnt.usereg(source as _);
 
-      (*meta_ptr).regmnt.setreg(target as _, src, meta_ptr);
+      (*meta_ptr).regmnt.setreg(target as _, src);
     }
   }
 }
@@ -197,7 +273,7 @@ pub fn handle_add(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
           LLVMBuildZExtOrBitCast(meta.builder, v, meta.i64, LLVM_VAR_NAME.0)
         };
         let meta_ptr = meta as *mut CompilerMeta;
-        (*meta_ptr).regmnt.setreg(REG_R5, oflow, meta_ptr);
+        (*meta_ptr).regmnt.setreg(REG_R5, oflow);
 
         sum
       } else if saturate {
@@ -207,14 +283,13 @@ pub fn handle_add(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
           "llvm.uadd.sat"
         };
 
-        let mut typearg = if count == 1 {
-          [r#type.x1]
-        } else {
-          [LLVMVectorType(r#type.x1, count)]
-        };
+        let mut typearg = [LLVMTypeOf(src1)];
 
         meta.call_intrinsic(saturate, &mut typearg, &mut [src1, src2])
       } else {
+        let blk = LLVMGetInsertBlock(meta.builder);
+        let name = CStr::from_ptr(LLVMGetBasicBlockName(blk));
+
         LLVMBuildAdd(meta.builder, src1, src2, LLVM_VAR_NAME.0)
       }
     },
@@ -241,11 +316,7 @@ pub fn handle_sub(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
         } else {
           "llvm.usub.with.overflow"
         };
-        let mut typearg = if count == 1 {
-          [r#type.x1]
-        } else {
-          [LLVMVectorType(r#type.x1, count)]
-        };
+        let mut typearg = [LLVMTypeOf(src1)];
 
         let valvect = meta.call_intrinsic(saturate, &mut typearg, &mut [src1, src2]);
 
@@ -256,7 +327,7 @@ pub fn handle_sub(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
           LLVMBuildZExtOrBitCast(meta.builder, v, meta.i64, LLVM_VAR_NAME.0)
         };
         let meta_ptr = meta as *mut CompilerMeta;
-        (*meta_ptr).regmnt.setreg(REG_R5, oflow, meta_ptr);
+        (*meta_ptr).regmnt.setreg(REG_R5, oflow);
 
         sum
       } else if saturate {
@@ -266,11 +337,7 @@ pub fn handle_sub(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
           "llvm.usub.sat"
         };
 
-        let mut typearg = if count == 1 {
-          [r#type.x1]
-        } else {
-          [LLVMVectorType(r#type.x1, count)]
-        };
+        let mut typearg = [LLVMTypeOf(src1)];
 
         meta.call_intrinsic(saturate, &mut typearg, &mut [src1, src2])
       } else {
@@ -299,11 +366,7 @@ pub fn handle_mul(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
       if wide || !lowbits {
         let bit_width = r#type.width * 8;
         let wide_elem_type = LLVMIntTypeInContext(meta.llvmctx, (bit_width * 2) as _);
-        let wide_vector_type = if count == 1 {
-          wide_elem_type
-        } else {
-          LLVMVectorType(wide_elem_type, count)
-        };
+        let wide_vector_type = LLVMTypeOf(src1);
 
         let (w_src1, w_src2) = if r#type.signed {
           (
@@ -333,11 +396,7 @@ pub fn handle_mul(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
             LLVMBuildLShr(meta.builder, wide_mul, shift_vector, LLVM_VAR_NAME.0)
           };
 
-          let original_vector_type = if count == 1 {
-            r#type.x1
-          } else {
-            LLVMVectorType(r#type.x1, count)
-          };
+          let original_vector_type = LLVMTypeOf(src1);
 
           return LLVMBuildTrunc(meta.builder, shifted, original_vector_type, LLVM_VAR_NAME.0);
         } else {

@@ -41,11 +41,7 @@ pub fn handle_vfma(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
   let target = llvmresolve_location_src_store(meta, datatype, tgt, None, of_tgt as _, count);
 
   let val = unsafe {
-    let mut params = [if count == 1 {
-      typdata.x1
-    } else {
-      LLVMVectorType(typdata.x1, count)
-    }];
+    let mut params = [LLVMTypeOf(src1)];
 
     meta.call_intrinsic("llvm.fma", &mut params, &mut [src1, src2, src3])
   };

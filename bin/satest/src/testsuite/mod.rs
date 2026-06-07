@@ -2,16 +2,16 @@ use std::mem::zeroed;
 #[cfg(feature = "native")]
 use std::{sync::Arc, time::Instant};
 
+use crate::ExpectedOutput;
 #[cfg(feature = "native")]
 use crate::jitmem::JITMemData;
-use crate::ExpectedOutput;
 use console::Style;
 #[cfg(feature = "native")]
 use savm::{
-  acaot::pickle::def::PickleInstruction, management::jitmem::calculate_relocation_abs, CacheData,
-  CacheLevel,
+  CacheData, CacheLevel, acaot::pickle::def::PickleInstruction,
+  management::jitmem::calculate_relocation_abs,
 };
-use savm::{sync::VMSTAT, VM};
+use savm::{VM, sync::VMSTAT};
 
 pub fn test_vm_interpreter(vm: &VM, out: &ExpectedOutput, sectionid: u64, fail: &mut bool) {
   println!(
@@ -42,8 +42,8 @@ pub fn test_jits(
 ) {
   use crate::err;
   use savm::{
-    acaot::{native::testing_compiler_infra, pickle::PickleWorker},
     SymbolMapTable,
+    acaot::{native::testing_compiler_infra, pickle::PickleWorker},
   };
 
   let mut worker = PickleWorker {
@@ -94,10 +94,7 @@ pub fn test_jits(
         CacheLevel::CraneliftCrafter => {
           let reloc = calculate_relocation_abs(&_reloc);
 
-          let exec = jitdata.mem().write_quick(&binary, &reloc);
-          jitdata.ptrstore.insert((sectionid, *name), (exec as _, tf));
-
-          exec
+          jitdata.mem().write_quick(&binary, &reloc)
         }
         #[cfg(feature = "llvm")]
         CacheLevel::LLVMCinder | CacheLevel::LLVMCrater => jitdata
@@ -111,6 +108,7 @@ pub fn test_jits(
       _ => err("Unsupported Compiler Output"),
     };
 
+    jitdata.ptrstore.insert((sectionid, *name), (exec as _, tf));
     vm.exec_jit(exec);
 
     let localfailure = assertchecks(out, fail);

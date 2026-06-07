@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 ahash = "^0.8"
 dashmap = "^6"
-rusqlite = { version = "^0.39", features = ["bundled", "blob", "backup"] }
+rusqlite = { version = "^0.40", features = ["bundled", "blob", "backup"] }
 
 blake3 = "^1"
 
