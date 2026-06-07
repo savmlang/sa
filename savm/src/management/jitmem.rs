@@ -176,10 +176,6 @@ fn prefer_jitlink() -> bool {
   cfg!(
     any(
       all(
-        target_os = "windows",
-        target_arch = "x86_64"
-      ),
-      all(
         target_os = "linux", 
         any(
           target_arch = "x86_64",
@@ -188,7 +184,10 @@ fn prefer_jitlink() -> bool {
           target_arch = "powerpc64"
         )
       ),
-      target_os = "macos"
+      all(
+        target_os = "macos",
+        target_arch = "aarch64"
+      )
     )
   )
 }

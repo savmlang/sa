@@ -224,7 +224,7 @@ impl SaVMLLVMBuilder {
   pub fn create_cinder() -> Box<dyn NativeCompiler> {
     Box::new(
       Self::create(
-        LLVMCodeGenOptLevel::LLVMCodeGenLevelNone,
+        LLVMCodeGenOptLevel::LLVMCodeGenLevelLess,
         LLVMRelocMode::LLVMRelocStatic,
         LLVMCodeModel::LLVMCodeModelLarge,
         CacheLevel::LLVMCinder,
