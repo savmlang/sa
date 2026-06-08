@@ -7,10 +7,7 @@ use crate::ExpectedOutput;
 use crate::jitmem::JITMemData;
 use console::Style;
 #[cfg(feature = "native")]
-use savm::{
-  CacheData, CacheLevel, acaot::pickle::def::PickleInstruction,
-  management::jitmem::calculate_relocation_abs,
-};
+use savm::{CacheData, CacheLevel, acaot::pickle::def::PickleInstruction};
 use savm::{VM, sync::VMSTAT};
 
 pub fn test_vm_interpreter(vm: &VM, out: &ExpectedOutput, sectionid: u64, fail: &mut bool) {
@@ -92,6 +89,8 @@ pub fn test_jits(
       } => match level {
         #[cfg(feature = "cranelift")]
         CacheLevel::CraneliftCrafter => {
+          use savm::management::jitmem::calculate_relocation_abs;
+
           let reloc = calculate_relocation_abs(&_reloc);
 
           jitdata.mem().write_quick(&binary, &reloc)

@@ -8,6 +8,7 @@ use llvm_sys::{
   prelude::{LLVMBuilderRef, LLVMMemoryBufferRef},
   target::{LLVMDisposeTargetData, LLVMTargetDataRef},
   target_machine::{LLVMDisposeTargetMachine, LLVMOpaqueTargetMachine},
+  transforms::pass_builder::{LLVMDisposePassBuilderOptions, LLVMPassBuilderOptionsRef},
 };
 use std::{
   ffi::{CStr, c_char},
@@ -53,7 +54,8 @@ llvmdispose! {
   OpaqueTargetData(LLVMTargetDataRef, LLVMDisposeTargetData),
   LLVMMsg(*mut c_char, LLVMDisposeMessage),
   LLVMBuffer(LLVMMemoryBufferRef, LLVMDisposeMemoryBuffer),
-  IRBuilder(LLVMBuilderRef, LLVMDisposeBuilder)
+  IRBuilder(LLVMBuilderRef, LLVMDisposeBuilder),
+  PassBuilderOptions(LLVMPassBuilderOptionsRef, LLVMDisposePassBuilderOptions)
 }
 
 impl Deref for LLVMMsg {

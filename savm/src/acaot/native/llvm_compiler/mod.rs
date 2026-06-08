@@ -22,6 +22,7 @@ use llvm_sys::{
     LLVMPointerTypeInContext, LLVMPositionBuilderAtEnd, LLVMPrintModuleToString, LLVMSetAlignment,
     LLVMSetDataLayout, LLVMSetTarget, LLVMVoidTypeInContext,
   },
+  error::{LLVMConsumeError, LLVMDisposeErrorMessage},
   prelude::{
     LLVMBasicBlockRef, LLVMBuilderRef, LLVMContextRef, LLVMMemoryBufferRef, LLVMModuleRef,
     LLVMTypeRef, LLVMValueRef,
@@ -32,6 +33,9 @@ use llvm_sys::{
     LLVMCreateTargetMachine, LLVMGetDefaultTargetTriple, LLVMGetHostCPUFeatures,
     LLVMGetHostCPUName, LLVMGetTargetFromTriple, LLVMRelocMode,
     LLVMTargetMachineEmitToMemoryBuffer,
+  },
+  transforms::pass_builder::{
+    LLVMCreatePassBuilderOptions, LLVMPassBuilderOptionsRef, LLVMRunPasses,
   },
 };
 
@@ -44,6 +48,7 @@ use crate::{
       llvm_compiler::{
         dispose::{
           IRBuilder, LLVMBuffer, LLVMCtx, LLVMMsg, Module, OpaqueMachine, OpaqueTargetData,
+          PassBuilderOptions,
         },
         irgen::compile,
         ssaupdater::{ReducedCompilerMeta, VMRegManager},
@@ -155,6 +160,8 @@ thread_local! {
   static LLVM_CTX: LLVMCtx = unsafe {
     LLVMCtx(LLVMContextCreate())
   };
+
+  static PASS_BUILDER_OPT: PassBuilderOptions = unsafe { PassBuilderOptions(LLVMCreatePassBuilderOptions()) };
 }
 
 pub struct SaVMLLVM {
@@ -163,6 +170,7 @@ pub struct SaVMLLVM {
   layout: OpaqueTargetData,
   ctx: LLVMContextRef,
   cache: CacheLevel,
+  passes: *const c_char,
   _dep: PhantomData<LLVMCtx>,
 }
 
@@ -174,6 +182,7 @@ impl SaVMLLVMBuilder {
     reloc: LLVMRelocMode,
     codemodel: LLVMCodeModel,
     cache: CacheLevel,
+    passes: *const c_char,
   ) -> Result<SaVMLLVM, Cow<'static, str>> {
     unsafe {
       black_box({
@@ -216,6 +225,7 @@ impl SaVMLLVMBuilder {
         layout,
         ctx,
         cache,
+        passes,
         _dep: PhantomData,
       })
     }
@@ -228,6 +238,7 @@ impl SaVMLLVMBuilder {
         LLVMRelocMode::LLVMRelocStatic,
         LLVMCodeModel::LLVMCodeModelLarge,
         CacheLevel::LLVMCinder,
+        c"default<O1>".as_ptr(),
       )
       .expect("Unable to initialize LLVM"),
     )
@@ -240,6 +251,7 @@ impl SaVMLLVMBuilder {
         LLVMRelocMode::LLVMRelocStatic,
         LLVMCodeModel::LLVMCodeModelLarge,
         CacheLevel::LLVMCrater,
+        c"default<O2>".as_ptr(),
       )
       .expect("Unable to initialize LLVM"),
     )
@@ -252,6 +264,7 @@ impl SaVMLLVMBuilder {
         LLVMRelocMode::LLVMRelocPIC,
         LLVMCodeModel::LLVMCodeModelMedium,
         CacheLevel::LLVMEpitome,
+        c"default<O3>".as_ptr(),
       )
       .expect("Unable to initialize LLVM"),
     )
@@ -367,13 +380,6 @@ impl NativeCompiler for SaVMLLVM {
         drop(builder_raii);
       }
 
-      // Print Module
-      #[cfg(not(feature = "sendback"))]
-      let module = LLVMMsg({ LLVMPrintModuleToString(module) });
-
-      #[cfg(not(feature = "sendback"))]
-      println!("{}", module.to_str().unwrap());
-
       // Verify pipeline
       {
         let mut err: *mut c_char = null_mut();
@@ -394,6 +400,29 @@ impl NativeCompiler for SaVMLLVM {
             return CacheData::None;
           }
         }
+      }
+
+      // Passes
+      {
+        let e = LLVMRunPasses(
+          module,
+          self.passes,
+          self.machine.0,
+          PASS_BUILDER_OPT.with(|x| x.0),
+        );
+
+        if !e.is_null() {
+          println!("UNABLE TO RUN PASSES");
+          LLVMConsumeError(e);
+        }
+      }
+
+      // Print Module
+      #[cfg(debug_assertions)]
+      {
+        let module = LLVMMsg({ LLVMPrintModuleToString(module) });
+
+        println!("{}", module.to_str().unwrap());
       }
 
       // Compile Pipeline

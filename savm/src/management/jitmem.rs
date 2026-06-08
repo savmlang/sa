@@ -139,7 +139,6 @@ impl JITMemoryManager {
 
       #[cfg(all(windows, target_arch = "x86"))]
       return (|| {
-        println!("Using X86 linker");
         use sajit::coffr::loader::I686COFFRelocator;
         use std::collections::HashMap;
 
