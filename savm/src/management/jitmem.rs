@@ -45,11 +45,24 @@ impl JITMemoryManager {
     }
   }
 
-  pub fn alloc_quick_new(&mut self) {
-    self
-      .quick
-      // Since its more slabs - use None i.e. default quanta = 16MiB
-      .push(Box::pin(MemoryExecutable::new_slab(None)));
+  // Reserve a 1KB space for SaVM CoreData
+  const SAVM_COREDATA: usize = 1 * 1024;
+  fn alloc_sized(
+    quick: &mut Vec<Pin<Box<MemoryExecutable>>>,
+    size: usize,
+  ) -> &mut Pin<Box<MemoryExecutable>> {
+    let alc = (size + Self::SAVM_COREDATA).next_multiple_of(MemoryExecutable::DEFAULT_SLAB_SIZE);
+    let amt = alc / MemoryExecutable::DEFAULT_SLAB_SIZE;
+
+    if amt > u8::MAX as usize {
+      panic!("SaVM [CRITICAL] : This codebase is not possible to be correctly handled!");
+    }
+
+    let m = MemoryExecutable::new_slab(Some(NonZeroU8::new(amt as u8).unwrap()));
+
+    quick.push(Box::pin(m));
+
+    quick.last_mut().expect("Infallible")
   }
 
   // Max executable JIT blob is ~<32MB (for sanity)
@@ -81,26 +94,16 @@ impl JITMemoryManager {
     if data.len() > Self::MAX_EXEC_SIZE {
       let size = data.len();
 
-      let alc = size.next_multiple_of(MemoryExecutable::DEFAULT_SLAB_SIZE);
-      let amt = alc / MemoryExecutable::DEFAULT_SLAB_SIZE;
-
-      if amt > u8::MAX as usize {
-        panic!("SaVM [CRITICAL] : This codebase is not possible to be correctly handled!");
-      }
-
-      let mut m = MemoryExecutable::new_slab(Some(NonZeroU8::new(amt as u8).unwrap()));
+      let m = Self::alloc_sized(&mut self.quick, size);
 
       let out = match m.write_fn(data, relocs, &RELCAR_BASIC) {
         WriteFnResult::Executable(ex) => ex,
         _ => panic!("Reached a position where calculation is not idompotent"),
       };
 
-      self.quick.push(Box::pin(m));
-
       return out;
     }
 
-    self.alloc_quick_new();
     return self.write_quick(data, relocs);
   }
 
@@ -115,33 +118,65 @@ impl JITMemoryManager {
   {
     use sajit::LLVMDryRun;
 
-    let size_needed = MemoryExecutable::sizecalc_jitlink(&self.symbpool, data)
-      .unwrap_or_else(|| {
-        MemoryExecutable::sizecalc(data).expect("Unable to at all calculate size needed!")
-      })
-      .get() as usize;
+    let guaranteed =
+      || MemoryExecutable::sizecalc(data).expect("Unable to at all calculate size needed!");
 
-    let mut jitwrite = |mexec: &mut MemoryExecutable, symbpool: &LLVMSymbolPool| {
-      let resolver_full = |d: *const str| match unsafe { &*d } {
+    let size_needed = if prefer_jitlink() {
+      MemoryExecutable::sizecalc_jitlink(&self.symbpool, data)
+        .unwrap_or_else(guaranteed)
+        .get() as usize
+    } else {
+      guaranteed().get() as _
+    };
+
+    let mut jitwrite = |mexec: &mut MemoryExecutable, _symbpool: &LLVMSymbolPool| {
+      #[allow(unused_mut)]
+      let mut resolver_full = |d: *const str| match unsafe { &*d } {
         "fmaf" => (llvm::fmaf as *const ()).addr(),
         "fma" => (llvm::fma as *const ()).addr(),
         _ => resolver(d),
       };
 
-      if prefer_jitlink() {
-        use sajit::LLVMJITLink;
+      #[cfg(all(windows, target_arch = "x86"))]
+      return (|| {
+        println!("Using X86 linker");
+        use sajit::coffr::loader::I686COFFRelocator;
+        use std::collections::HashMap;
 
-        mexec.write_jitlink(symbpool, data, resolver_full)
-      } else {
-        use sajit::LLVMRTDyld;
-        use std::borrow::Cow;
+        let mut out = HashMap::new();
 
-        mexec.write_rtdyld(data, resolver_full).map_err(|_| {
-          Cow::Borrowed(
-            &[Cow::Borrowed("RTDyld was unable to relocate!")] as &'static [Cow<'static, str>]
-          )
-        })
-      }
+        unsafe {
+          I686COFFRelocator::load(&data, mexec).map_err(|_| {
+            Cow::Borrowed(&[Cow::Borrowed("Unable to parse COFF")] as &'static [Cow<'static, str>])
+          })?.prepare(|d| {
+            resolver_full(d) as u32
+          }, |name, ptr| {
+            use std::mem::transmute;
+
+            _ = out.insert(Box::from(name) as Box<str>, transmute::<_, *const Executable>(ptr as usize));
+          });
+        };
+
+        Ok(out)
+      })();
+
+      #[cfg(not(all(windows, target_arch = "x86")))]
+      return (|| {
+        if prefer_jitlink() {
+          use sajit::LLVMJITLink;
+
+          mexec.write_jitlink(_symbpool, data, resolver_full)
+        } else {
+          use sajit::LLVMRTDyld;
+          use std::borrow::Cow;
+
+          mexec.write_rtdyld(data, resolver_full).map_err(|_| {
+            Cow::Borrowed(
+              &[Cow::Borrowed("RTDyld was unable to relocate!")] as &'static [Cow<'static, str>]
+            )
+          })
+        }
+      })();
     };
 
     let memexec = self
@@ -149,25 +184,36 @@ impl JITMemoryManager {
       .iter_mut()
       .find(|x| x.under_size(size_needed).unwrap_or(false));
 
-    let out = if let Some(mexec) = memexec {
+    let mexec = match memexec {
+      Some(m) => m,
+      None => Self::alloc_sized(&mut self.quick, size_needed),
+    };
+
+    let out = {
       use sajit::MemorySizeInfo;
 
       let old = mexec.cursor();
-      let out = jitwrite(mexec, &self.symbpool);
+      let out: Result<
+        std::collections::HashMap<Box<str>, *const Executable>,
+        Cow<'_, [Cow<'static, str>]>,
+      > = jitwrite(mexec, &self.symbpool);
       let new = mexec.cursor();
 
       assert!((new - old) <= size_needed);
 
       out
-    } else {
-      todo!();
     }?;
 
-    out.get("compiledlib").map(|x| *x).ok_or_else(|| {
-      Cow::Borrowed(
-        &[Cow::Borrowed("Could now get @compiledlib symbol")] as &'static [Cow<'static, str>]
-      )
-    })
+    let paths = ["compiledlib", "@compiledlib", "_compiledlib"];
+
+    paths
+      .iter()
+      .find_map(|&name| out.get(name).map(|x| *x))
+      .ok_or_else(|| {
+        Cow::Borrowed(
+          &[Cow::Borrowed("Could now get @compiledlib symbol")] as &'static [Cow<'static, str>]
+        )
+      })
   }
 }
 
