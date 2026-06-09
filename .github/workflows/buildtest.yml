@@ -68,8 +68,6 @@ jobs:
         shell: pwsh
         continue-on-error: true
         working-directory: bin/satest
-        env:
-          QEMU_CPU: max
         run: |
           ${{ github.workspace }}/target/${{ matrix.target }}/release/satest
 
@@ -269,6 +267,7 @@ jobs:
           bash ./scripts/savm/testing.sh
         env:
           TARGET: ${{ matrix.target.rust }}
+          QEMU_CPU: max
 
       - name: Package
         shell: pwsh
