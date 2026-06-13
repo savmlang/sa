@@ -14,9 +14,43 @@ use crate::acaot::{
   },
   pickle::{
     def::PickleInstruction,
-    reader::vfop::{VDATAOP, parse_vdataop},
+    reader::vfop::{
+      FOP_CEIL, FOP_FLOOR, FOP_ROUND, FOP_SQRT, FOP_TRUNC, VDATAOP, VFOP, parse_vdataop, parse_vfop,
+    },
   },
 };
+
+pub fn handle_vfop(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
+  let VFOP {
+    src,
+    target,
+    subop,
+    offset_src,
+    offset_target,
+    count,
+    typetag,
+  } = parse_vfop(pickle, meta.ws.as_ref());
+
+  let typ = LLVMTypeOrWidth::Type(typetag);
+
+  let src = llvmresolve_location_src_load(meta, typ, src, None, offset_src, count);
+  let target = llvmresolve_location_src_store(meta, typ, target, None, offset_target, count);
+
+  unsafe {
+    let mut params = [LLVMTypeOf(src)];
+    let name = match subop {
+      FOP_CEIL => "llvm.ceil",
+      FOP_FLOOR => "llvm.floor",
+      FOP_ROUND => "llvm.round",
+      FOP_SQRT => "llvm.sqrt",
+      FOP_TRUNC => "llvm.trunc",
+      _ => unreachable!(),
+    };
+
+    let vect = meta.call_intrinsic(name, &mut params, &mut [src]);
+    target.synchronize(meta, vect);
+  }
+}
 
 pub fn handle_vdataop<F>(pickle: &PickleInstruction, meta: &mut CompilerMeta, process: F)
 where

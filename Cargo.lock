@@ -217,6 +217,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d52eff69cd5e647efe296129160853a42795992097e8af39800e1060caeea9b"
 
 [[package]]
+name = "cprelude"
+version = "0.0.1"
+dependencies = [
+ "pastey",
+]
+
+[[package]]
 name = "cpufeatures"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1467,6 +1474,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
 
 [[package]]
+name = "sabin_spec"
+version = "0.1.0"
+
+[[package]]
 name = "safe_arch"
 version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1482,10 +1493,6 @@ dependencies = [
  "salloc-sys",
  "tokio",
 ]
-
-[[package]]
-name = "saffic"
-version = "0.1.0"
 
 [[package]]
 name = "sajit"
@@ -1545,6 +1552,10 @@ dependencies = [
 [[package]]
 name = "sasmc"
 version = "0.1.0"
+dependencies = [
+ "cprelude",
+ "sasm",
+]
 
 [[package]]
 name = "satest"
@@ -1583,12 +1594,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "savm_easyc"
-version = "0.1.0"
-
-[[package]]
 name = "savmc"
 version = "0.1.0"
+dependencies = [
+ "cprelude",
+ "postcard",
+ "savm",
+]
 
 [[package]]
 name = "savmimgrun"
@@ -1622,6 +1634,19 @@ dependencies = [
 [[package]]
 name = "savmruncore"
 version = "0.1.0"
+dependencies = [
+ "ahash",
+ "blake3",
+ "dashmap",
+ "lexical-core",
+ "libc",
+ "parking_lot",
+ "postcard",
+ "rusqlite",
+ "savm",
+ "sysinfo",
+ "windows",
+]
 
 [[package]]
 name = "scoped-tls"

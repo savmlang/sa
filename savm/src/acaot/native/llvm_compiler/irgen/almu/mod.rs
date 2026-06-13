@@ -38,13 +38,17 @@ use llvm_sys::{
   },
   prelude::LLVMValueRef,
 };
+use sart::ctr::VMTaskState;
+
 pub mod fp;
+pub mod vbit;
 pub mod vfma;
-pub use vfma::*;
 pub mod vfop;
 pub mod vsh;
+
 pub use fp::*;
-use sart::ctr::VMTaskState;
+pub use vbit::*;
+pub use vfma::*;
 pub use vfop::*;
 pub use vsh::*;
 

@@ -18,12 +18,13 @@ serde_json = "^1"
 
 toml = "^1"
 
+
 [features]
 nano = []
 standard = ["native", "cranelift"]
 pro = ["native", "llvm"]
-pro_standard = ["native", "standard", "pro"]
+pro_standard = ["standard", "pro"]
 
-native = []
-cranelift = ["native", "savm/cranelift", "savm/sendback"]
-llvm = ["native", "savm/llvm", "savm/sendback"]
+native = ["savm/sendback"]
+cranelift = ["native", "savm/cranelift"]
+llvm = ["native", "savm/llvm"]

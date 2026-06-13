@@ -206,21 +206,25 @@ jobs:
             clang: riscv64-linux-gnu
             feature: nano
             arch: riscv64
+            cpu: rv64
 
           - rust: riscv64gc-unknown-linux-gnu
             clang: riscv64-linux-gnu
             feature: standard
             arch: riscv64
+            cpu: rv64
 
           - rust: riscv64gc-unknown-linux-gnu
             clang: riscv64-linux-gnu
             feature: pro
             arch: riscv64
+            cpu: rv64
 
           - rust: riscv64gc-unknown-linux-gnu
             clang: riscv64-linux-gnu
             feature: pro_standard
             arch: riscv64
+            cpu: rv64
 
     steps:
       - name: Checkout
@@ -233,7 +237,7 @@ jobs:
         with:
           node-version: ">=24"
 
-      - name: Setup Rust (Full)
+      - name: Setup Rustup
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rust-src,rustfmt
@@ -267,7 +271,7 @@ jobs:
           bash ./scripts/savm/testing.sh
         env:
           TARGET: ${{ matrix.target.rust }}
-          QEMU_CPU: max
+          QEMU_CPU: ${{ matrix.target.cpu }}
 
       - name: Package
         shell: pwsh
@@ -276,6 +280,9 @@ jobs:
           TARGET: ${{ matrix.target.rust }}
         continue-on-error: true
         run: |
+          cargo install --force cargo-expand
+          cargo install --force cbindgen
+
           ./package.ps1
 
       - name: Upload Artifact
@@ -370,6 +377,12 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Setup Rustup
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rust-src,rustfmt
+          toolchain: nightly
+
       - name: Install Podman + QEMU
         run: |
           sudo apt update
@@ -398,6 +411,9 @@ jobs:
           TARGET: ""
         continue-on-error: true
         run: |
+          cargo install --force cargo-expand
+          cargo install --force cbindgen
+
           ./package.ps1
 
       - name: Upload Artifact

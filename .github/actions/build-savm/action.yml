@@ -140,6 +140,9 @@ runs:
         TARGET: ${{ inputs.rusttarget }}
       continue-on-error: true
       run: |
+        cargo install --force cargo-expand
+        cargo install --force cbindgen
+
         ./package.ps1
 
     - name: Upload Artifact

@@ -35,13 +35,17 @@ members = [
   # Dynamic Linkable AND Static Linkable
   # Depends on the C ABI (musl, glibc, msvc, libSystem)
   "libs/savmc",
-  "libs/savm_easyc",
   "libs/sasmc",
-  "libs/saffic",
+
+  # C Prelude Glue (DRY)
+  "libs/cprelude",
 
   # Mixed Radix
   "mixedradix",
   "mixedradix/macros",
+
+  # SaBin Spec
+  "libs/sabin_spec",
 ]
 resolver = "3"
 

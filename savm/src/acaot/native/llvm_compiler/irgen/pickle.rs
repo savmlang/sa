@@ -4,8 +4,8 @@ use crate::acaot::{
     irgen::{
       almu::{
         handle_add, handle_div, handle_mov, handle_mul, handle_rem, handle_sub, handle_vabs,
-        handle_vcmp, handle_vfadd, handle_vfdiv, handle_vfma, handle_vfmul, handle_vfsub,
-        handle_vneg, handle_vsh,
+        handle_vbit, handle_vcmp, handle_vfadd, handle_vfdiv, handle_vfma, handle_vfmul,
+        handle_vfop, handle_vfsub, handle_vneg, handle_vrot, handle_vsh,
       },
       reg::{LLVMTypeOrWidth, llvmresolve_location_src_load},
     },
@@ -13,10 +13,10 @@ use crate::acaot::{
   pickle::def::{
     PICKLE_OPCODE_DIV, PICKLE_OPCODE_HINT, PICKLE_OPCODE_JIF, PICKLE_OPCODE_JMP,
     PICKLE_OPCODE_MARK, PICKLE_OPCODE_MOV, PICKLE_OPCODE_REG, PICKLE_OPCODE_REM,
-    PICKLE_OPCODE_VABS, PICKLE_OPCODE_VADD, PICKLE_OPCODE_VADDF, PICKLE_OPCODE_VCMP,
-    PICKLE_OPCODE_VDIVF, PICKLE_OPCODE_VFMA, PICKLE_OPCODE_VMUL, PICKLE_OPCODE_VMULF,
-    PICKLE_OPCODE_VNEG, PICKLE_OPCODE_VSH, PICKLE_OPCODE_VSUB, PICKLE_OPCODE_VSUBF,
-    PICKLE_OPCODE_WS_PUT,
+    PICKLE_OPCODE_VABS, PICKLE_OPCODE_VADD, PICKLE_OPCODE_VADDF, PICKLE_OPCODE_VBIT,
+    PICKLE_OPCODE_VCMP, PICKLE_OPCODE_VDIVF, PICKLE_OPCODE_VFMA, PICKLE_OPCODE_VFOP,
+    PICKLE_OPCODE_VMUL, PICKLE_OPCODE_VMULF, PICKLE_OPCODE_VNEG, PICKLE_OPCODE_VROT,
+    PICKLE_OPCODE_VSH, PICKLE_OPCODE_VSUB, PICKLE_OPCODE_VSUBF, PICKLE_OPCODE_WS_PUT,
   },
 };
 use llvm_sys::{
@@ -156,6 +156,9 @@ pub unsafe fn compile_pickle(meta: &mut CompilerMeta) {
           PICKLE_OPCODE_VABS => handle_vabs(pickle, meta),
           PICKLE_OPCODE_VNEG => handle_vneg(pickle, meta),
 
+          PICKLE_OPCODE_VFOP => handle_vfop(pickle, meta),
+          PICKLE_OPCODE_VBIT => handle_vbit(pickle, meta),
+          PICKLE_OPCODE_VROT => handle_vrot(pickle, meta),
           _ => {}
         },
 

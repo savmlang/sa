@@ -76,4 +76,6 @@ fn build_ssaupdater() {
   }
 
   build.compile("srcxx");
+
+  println!("cargo:rustc-link-lib=static=srcxx");
 }

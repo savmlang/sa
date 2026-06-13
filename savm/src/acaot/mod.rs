@@ -32,6 +32,7 @@ pub mod acdag;
 pub mod native;
 pub mod pickle;
 
+#[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum LocSrc {
   VCopyNoAlias,
@@ -50,6 +51,7 @@ pub enum LocSrc {
   CLIRLibCall(ClirLC),
 }
 
+#[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum ClirLC {
   Ceil32,
@@ -64,6 +66,7 @@ pub enum ClirLC {
   Nearest64,
 }
 
+#[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum SigStore {
   VCopyCommon,
@@ -81,6 +84,7 @@ pub enum SigStore {
   LibDefined(u64),
 }
 
+#[repr(C)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JITReloc {
   pub addend: i64,

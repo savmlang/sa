@@ -39,6 +39,7 @@ pub enum SymbolMapTable<T> {
   MixedSizedBytecode { bytecode: T },
 }
 
+#[repr(C)]
 pub enum SymbolMapTableInfo {
   NativePointer,
   MixedSizedBytecode,
@@ -67,6 +68,7 @@ pub enum CacheData {
 unsafe impl Send for CacheData {}
 unsafe impl Sync for CacheData {}
 
+#[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub enum CacheLevel {
   Pickle,
@@ -198,7 +200,7 @@ pub(crate) static CODE_CACHE: LazyLock<
 });
 
 #[cfg(feature = "native")]
-use sajit::Executable;
+pub use sajit::Executable;
 
 #[cfg(feature = "native")]
 use evmap::handles::ReadHandle;
