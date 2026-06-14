@@ -47,7 +47,7 @@ usize_is_size_t = true
 [export]
 include = []
 exclude = []
-# prefix = "CAPI_"
+prefix = "SAVM_TOOLKIT_"
 item_types = []
 renaming_overrides_prefixing = false
 

@@ -36,6 +36,7 @@ members = [
   # Depends on the C ABI (musl, glibc, msvc, libSystem)
   "libs/savmc",
   "libs/sasmc",
+  "libs/sabinc",
 
   # C Prelude Glue (DRY)
   "libs/cprelude",

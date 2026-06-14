@@ -4,7 +4,7 @@ This repository is the SaVM toolkit consisting of
 
 - Packer (sapacker)
 - Assembler (sasm)
-- Runner (savmrun)
+- Runner (savmrun, savmimgrun, savmrt)
 - File Testing + Benchmark Suite (satest)
 - JIT Memory Manager (sajit)
 - Runtime Layer (sart)

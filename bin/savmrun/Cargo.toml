@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+savmruncore = { path = "../savmruncore" }
+
 ahash = "^0.8"
 dashmap = "^6"
 rusqlite = { version = "^0.40", features = ["bundled", "blob", "backup"] }
@@ -16,10 +18,6 @@ parking_lot = "^0.12"
 lexical-core = "^1"
 postcard = { version = "^1", default-features = false, features = ["alloc"] }
 
-[target.'cfg(unix)'.dependencies]
-libc = "^0.2"
-sysinfo = "^0.39"
-
 [target.'cfg(windows)'.dependencies]
 windows = { version = "^0.62", features = [
   "Win32_System_LibraryLoader",
@@ -28,20 +26,3 @@ windows = { version = "^0.62", features = [
   "Win32_Storage",
   "Win32_Storage_FileSystem",
 ] }
-
-[features]
-default = []
-
-# SaVM Run VM Flavours!!
-pro_standard = ["pro", "standard"]
-pro = ["interpreter", "jit", "savm/llvm"]
-standard = ["interpreter", "jit", "savm/cranelift"]
-nano = ["interpreter"]
-
-interpreter = []
-jit = ["savm/native"]
-
-# Only possible for `interpreter` mode
-#
-# NOTE: The savmcache folder is still created, but not written to
-nocache = []

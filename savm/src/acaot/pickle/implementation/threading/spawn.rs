@@ -7,7 +7,7 @@ use std::{
 use sart::ctr::VMTaskState;
 
 use crate::{
-  GLOBAL_RUNTIME, ThreadSafe, VM,
+  BytecodeResolver, GLOBAL_RUNTIME, ThreadSafe, VM,
   acaot::pickle::{
     def::PickleInstruction,
     implementation::WorkingSet,
@@ -16,7 +16,7 @@ use crate::{
   resolve_location_src,
 };
 
-pub extern "C" fn savm_spawn(
+pub extern "C" fn savm_spawn<T: BytecodeResolver + Send + Sync + 'static>(
   taskstate: *mut VMTaskState,
   section: u64,
   launch_async: bool,
@@ -24,7 +24,7 @@ pub extern "C" fn savm_spawn(
 ) -> *mut c_void {
   unsafe {
     let safe_taskstate = ThreadSafe(taskstate);
-    let vm = ThreadSafe((*taskstate).engine_or_pt.pt as *mut VM);
+    let vm = ThreadSafe((*taskstate).engine_or_pt.pt as *mut VM<T>);
 
     if launch_async {
       let tokiort = GLOBAL_RUNTIME.spawn(async move {
@@ -65,7 +65,11 @@ pub extern "C" fn savm_spawn(
   null_mut()
 }
 
-pub fn call_spawn(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
+pub fn call_spawn<T: BytecodeResolver + Send + Sync + 'static>(
+  pickle: &PickleInstruction,
+  ws: *mut WorkingSet,
+  taskstate: *mut VMTaskState,
+) {
   unsafe {
     let SPAWN {
       launch_as_async,
@@ -76,7 +80,7 @@ pub fn call_spawn(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *m
 
     let hwnd = resolve_location_src!(taskstate => out_loc);
 
-    let newhwnd = savm_spawn(taskstate, section, launch_as_async, return_hwnd);
+    let newhwnd = savm_spawn::<T>(taskstate, section, launch_as_async, return_hwnd);
 
     if !newhwnd.is_null() {
       ptr::write(hwnd as *mut *mut c_void, newhwnd);

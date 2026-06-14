@@ -6,11 +6,16 @@ use crate::ExpectedOutput;
 #[cfg(feature = "native")]
 use crate::jitmem::JITMemData;
 use console::Style;
+use savm::{BytecodeResolver, VM, sync::VMSTAT};
 #[cfg(feature = "native")]
 use savm::{CacheData, CacheLevel, acaot::pickle::def::PickleInstruction};
-use savm::{VM, sync::VMSTAT};
 
-pub fn test_vm_interpreter(vm: &VM, out: &ExpectedOutput, sectionid: u64, fail: &mut bool) {
+pub fn test_vm_interpreter<T: BytecodeResolver + Send + Sync + 'static>(
+  vm: &VM<T>,
+  out: &ExpectedOutput,
+  sectionid: u64,
+  fail: &mut bool,
+) {
   println!(
     "{:>14} Start TestID #{sectionid} (Chocolate - Interpreter)",
     Style::new().yellow().apply_to("Test")
@@ -30,8 +35,8 @@ pub fn test_vm_interpreter(vm: &VM, out: &ExpectedOutput, sectionid: u64, fail: 
 }
 
 #[cfg(feature = "native")]
-pub fn test_jits(
-  vm: &VM,
+pub fn test_jits<T: BytecodeResolver + Send + Sync + 'static>(
+  vm: &VM<T>,
   jitdata: &mut JITMemData,
   out: &ExpectedOutput,
   sectionid: u64,

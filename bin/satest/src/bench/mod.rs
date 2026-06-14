@@ -1,7 +1,7 @@
 use console::Style;
-use savm::VM;
 #[cfg(feature = "native")]
 use savm::acaot::native::testing_compiler_infra;
+use savm::{BytecodeResolver, VM};
 use statrs::statistics::{Data, Distribution, OrderStatistics};
 use std::time::Instant;
 
@@ -26,7 +26,11 @@ fn bench_report(median: &str, p75: &str, p99: &str, sd: &str, compile: Option<&s
   println!();
 }
 
-pub fn interpreter_benchmark(vm: &VM, sectionid: u64, rounds: u64) {
+pub fn interpreter_benchmark<T: BytecodeResolver + Send + Sync + 'static>(
+  vm: &VM<T>,
+  sectionid: u64,
+  rounds: u64,
+) {
   let mut store = Vec::with_capacity(rounds as usize);
   for _ in 0..rounds {
     let t0 = Instant::now();
@@ -50,7 +54,12 @@ pub fn interpreter_benchmark(vm: &VM, sectionid: u64, rounds: u64) {
 }
 
 #[cfg(feature = "native")]
-pub fn jit_benchmark(vm: &VM, jit: &mut JITMemData, sectionid: u64, rounds: u64) {
+pub fn jit_benchmark<T: BytecodeResolver + Send + Sync + 'static>(
+  vm: &VM<T>,
+  jit: &mut JITMemData,
+  sectionid: u64,
+  rounds: u64,
+) {
   let mut store = Vec::with_capacity(rounds as usize);
 
   for (name, _) in testing_compiler_infra() {

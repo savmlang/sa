@@ -1,7 +1,5 @@
 use console::Style;
-use savm::{
-  BytecodeResolver, CacheData, CacheLevel, ResolvedData, SymbolMapTable, SymbolMapTableInfo, VM,
-};
+use savm::{BytecodeResolver, CacheData, CacheLevel, SymbolMapTable, SymbolMapTableInfo, VM};
 use serde::{Deserialize, Serialize};
 use std::{
   borrow::Cow,
@@ -58,6 +56,8 @@ pub(crate) struct Resolver {
 }
 
 impl BytecodeResolver for Resolver {
+  type T<'a> = File;
+
   fn learn_data(&self, _: u64) -> SymbolMapTableInfo {
     SymbolMapTableInfo::MixedSizedBytecode
   }
@@ -89,9 +89,9 @@ impl BytecodeResolver for Resolver {
   fn last_section_id(&self) -> u64 {
     (self.total - 1) as _
   }
-  fn resolve_data(&self, section: u64) -> SymbolMapTable<Box<dyn ResolvedData>> {
+  fn resolve_data(&self, section: u64) -> SymbolMapTable<File> {
     SymbolMapTable::MixedSizedBytecode {
-      bytecode: Box::new(File::open(format!("./{}/dist/{section}", self.root)).unwrap()),
+      bytecode: File::open(format!("./{}/dist/{section}", self.root)).unwrap(),
     }
   }
 }
@@ -128,7 +128,7 @@ fn main() {
     store: Default::default(),
   };
 
-  let savm = unsafe { VM::new_unsafe::<_, false>(resolver) };
+  let savm = unsafe { VM::new_unsafe::<false>(resolver) };
 
   #[cfg(feature = "native")]
   let mut jitdata = jitmem::default();

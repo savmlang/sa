@@ -66,23 +66,6 @@ pub fn load_sabin(path: &str) -> Connection {
   conn
 }
 
-#[cfg(feature = "nocache")]
-pub fn vm_cache(_: &str, _: &mut PathBuf, hash: &[u8]) -> Connection {
-  let db = Connection::open_in_memory().expect("Unable to open a memory sqlite");
-
-  db.execute_batch(SQL_CACHE_PRELUDE).expect("Prelude failed");
-  db.execute(
-    "INSERT INTO Metadata (prim, valhash) VALUES (?1, ?2)",
-    rusqlite::params![1i64, hash],
-  )
-  .expect("Intertion failed!");
-  db.execute_batch(SQL_CACHE_CONNFLAG)
-    .expect("SQL Load failed");
-
-  db
-}
-
-#[cfg(not(feature = "nocache"))]
 pub fn vm_cache(path: &str, tmp: &mut PathBuf, hash: &[u8]) -> Connection {
   // Copy if exists
   if let Some(db) = maybeload(path, tmp, hash) {
@@ -113,7 +96,6 @@ pub fn vm_cache(path: &str, tmp: &mut PathBuf, hash: &[u8]) -> Connection {
   c
 }
 
-#[cfg(not(feature = "nocache"))]
 pub fn maybeload(path: &str, tmp: &mut PathBuf, hash: &[u8]) -> Option<Connection> {
   if fs::exists(path).unwrap_or(false) {
     tmp.push("savmcache.sdb");
@@ -147,10 +129,6 @@ pub fn maybeload(path: &str, tmp: &mut PathBuf, hash: &[u8]) -> Option<Connectio
   None
 }
 
-#[cfg(feature = "nocache")]
-pub fn savm_backup(_: &str, _: &str) {}
-
-#[cfg(not(feature = "nocache"))]
 pub fn savm_backup(cache: &str, master: &str) {
   let tmp = path::absolute(format!("{master}/../master.{}", id()))
     .expect("Severe error")

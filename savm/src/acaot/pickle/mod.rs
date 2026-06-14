@@ -1,7 +1,4 @@
-use std::{
-  collections::HashMap,
-  io::{Read, Seek},
-};
+use std::{collections::HashMap, io::Read};
 
 use ahash::HashSet;
 use sart::ctr::*;
@@ -13,7 +10,7 @@ pub mod reader;
 
 pub mod implementation;
 
-pub struct PickleWorker<T: Seek + Read> {
+pub struct PickleWorker<T: Read> {
   pub bytecode: T,
   pub out: Vec<PickleInstruction>,
   pub libcalls: HashSet<u64>,
@@ -49,7 +46,7 @@ impl<const N: usize> ToNE for [u8; N] {
 
 impl<T: Read + Sized> Extract for T {}
 
-impl<T: Seek + Read> PickleWorker<T> {
+impl<T: Read> PickleWorker<T> {
   pub fn pass1(&mut self) {
     while let Ok([opcode]) = self.bytecode.extract_result::<1>() {
       match opcode {

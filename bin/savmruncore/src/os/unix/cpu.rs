@@ -1,7 +1,7 @@
 use sysinfo::{CpuRefreshKind, RefreshKind, System};
 
 pub fn get_cpuname() -> Vec<u8> {
-  let mut s = System::new_with_specifics(RefreshKind::nothing().with_cpu(CpuRefreshKind::everything()));
+  let s = System::new_with_specifics(RefreshKind::nothing().with_cpu(CpuRefreshKind::everything()));
 
   s.cpus()
     .first()

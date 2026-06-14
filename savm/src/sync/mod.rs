@@ -2,7 +2,7 @@ use std::{
   cell::UnsafeCell,
   hint::cold_path,
   mem::zeroed,
-  ptr::{self, addr_of_mut, null_mut},
+  ptr::{self, addr_of_mut, null, null_mut},
   sync::{
     Arc, OnceLock,
     atomic::{Ordering, compiler_fence},
@@ -14,11 +14,14 @@ use sajit::Executable;
 use sart::{ctr::VMTaskState, salloc, structures::QuadPackedData};
 
 use crate::{
-  CODE_CACHE, SymbolMapTable, VM,
+  BytecodeResolver, CODE_CACHE, SymbolMapTable, VM,
   acaot::pickle::{
     PickleWorker,
-    def::{PICKLE_DISPATCH_TABLE, PICKLE_OPCODE_HINT, PICKLE_OPCODE_MARK, PickleInstruction},
-    implementation::{SIZE_128KB, WorkingSet},
+    def::{
+      DISPATCH_TOTAL_ITEMS, PICKLE_OPCODE_HINT, PICKLE_OPCODE_MARK, PickleInstruction,
+      pickle_generate_table,
+    },
+    implementation::{ResolveFn, SIZE_128KB, WorkingSet},
   },
 };
 
@@ -54,6 +57,7 @@ thread_local! {
   pub static VMSTAT: UnsafeCell<VMState> = UnsafeCell::new(VMState {
     ws: WorkingSet {
       arr: &[],
+      dispatch: null(),
       largepad: unsafe { salloc::aligned_malloc(SIZE_128KB, 8) as _ },
       largepad_cursor: 0,
       ame: null_mut(),
@@ -75,7 +79,9 @@ thread_local! {
   });
 }
 
-impl VM {
+impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
+  const PICKLE_DISPATCH_TABLE: [ResolveFn; DISPATCH_TOTAL_ITEMS] = pickle_generate_table::<E>();
+
   pub fn fncall(&self, sectionid: u64, oldtsk: *mut VMTaskState) -> [QuadPackedData; 2] {
     VMSTAT.with(|p| {
       let p = p.get();
@@ -121,6 +127,7 @@ impl VM {
     VMSTAT.with(|x| unsafe {
       let t = x.get();
 
+      (*t).ws.dispatch = Self::PICKLE_DISPATCH_TABLE.as_ptr();
       (*t).ws.jmp = (0, jumps.get(&0).map(|x| *x).unwrap_or_default());
       (*t).ws.relocmap = jumps;
 
@@ -191,7 +198,7 @@ impl VM {
 
           // Ensure the state's reflected
           compiler_fence(Ordering::SeqCst);
-          (PICKLE_DISPATCH_TABLE.get_unchecked(pickle.opcode as usize))(
+          (Self::PICKLE_DISPATCH_TABLE.get_unchecked(pickle.opcode as usize))(
             pickle,
             addr_of_mut!((*t).ws),
             ts,
@@ -252,7 +259,7 @@ impl VM {
       {
         let task = &mut *curr_taskstate;
 
-        task.engine_or_pt.pt = self as *const _ as *mut VM as _;
+        task.engine_or_pt.pt = self as *const _ as *mut Self as _;
         task.ws_or_pt2.pt = &mut (*vmstate).ws as *mut _ as _;
       }
 
@@ -262,7 +269,7 @@ impl VM {
     });
   }
 
-  fn pickle_section(&self, sectionid: u64, dispatch: fn(vm: &VM, sectionid: u64) -> ()) {
+  fn pickle_section(&self, sectionid: u64, dispatch: fn(vm: &Self, sectionid: u64) -> ()) {
     // Compile
     let SymbolMapTable::MixedSizedBytecode { bytecode } = self.resolve.resolve_data(sectionid)
     else {

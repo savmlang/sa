@@ -15,9 +15,7 @@ use std::{
 
 use dashmap::DashMap;
 use rusqlite::{Connection, Row};
-use savm::{
-  BytecodeResolver, CacheData, CacheLevel, ResolvedData, SymbolMapTable, SymbolMapTableInfo,
-};
+use savm::{BytecodeResolver, CacheData, CacheLevel, SymbolMapTable, SymbolMapTableInfo};
 
 use crate::os::OSLibrary;
 
@@ -119,6 +117,8 @@ impl ApplicationManager {
 }
 
 impl BytecodeResolver for ApplicationManager {
+  type T<'a> = Cursor<Box<[u8]>>;
+
   fn last_section_id(&self) -> u64 {
     self.last_section
   }
@@ -152,7 +152,7 @@ impl BytecodeResolver for ApplicationManager {
     [self.pgo[0].as_ref(), self.pgo[1].as_ref()]
   }
 
-  fn resolve_data(&self, section: u64) -> SymbolMapTable<Box<dyn ResolvedData>> {
+  fn resolve_data<'a>(&'a self, section: u64) -> SymbolMapTable<Self::T<'a>> {
     let conn = self.bytecodedata.lock();
     let (assetid, bindata): (i64, Box<[u8]>) = conn
       .query_one(
@@ -169,7 +169,7 @@ impl BytecodeResolver for ApplicationManager {
 
     match assetid {
       0 => SymbolMapTable::MixedSizedBytecode {
-        bytecode: Box::new(Cursor::new(bindata)),
+        bytecode: Cursor::new(bindata),
       },
       // bits 0..64 = lib id
       // bits 64.. = func id

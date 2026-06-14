@@ -1,4 +1,4 @@
-pub(crate) mod ports;
+pub(crate) use savmruncore::ports::VectoredWrite;
 
 use blake3::Hasher;
 use parking_lot::Mutex;
@@ -15,42 +15,22 @@ use std::{
 };
 
 use crate::{
-  os::cpu::get_cpuname,
-  ports::VectoredWrite,
   resolver::{ApplicationManager, DylibMapBox},
   sql::{SQL_CACHE_VERSION, clear_savm_tmp, load_sabin, savm_backup, savm_tmp, vm_cache},
 };
 
-pub(crate) mod os;
-pub(crate) mod reader;
+pub(crate) use savmruncore::os;
 pub(crate) mod sql;
 
+use savmruncore::os::cpu::get_cpuname;
+
 mod resolver;
-mod sallocator;
 
 #[global_allocator]
-static SALLOC: sallocator::SaAllocator = sallocator::SaAllocator;
+static SALLOC: savmruncore::sallocator::SaAllocator = savmruncore::sallocator::SaAllocator;
 
 fn main() {
-  #[cfg(windows)]
-  unsafe {
-    use std::env::current_exe;
-
-    use windows::{
-      Win32::System::LibraryLoader::{
-        AddDllDirectory, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS, SetDefaultDllDirectories,
-      },
-      core::HSTRING,
-    };
-
-    let mut pth = current_exe().expect("Unable to load Win32 Process Directory");
-    pth.pop();
-
-    let dir = HSTRING::from(pth.to_str().expect("Cannot coerce to &str"));
-
-    SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_DEFAULT_DIRS).expect("Could not instruct dirs");
-    AddDllDirectory(&dir);
-  }
+  savmruncore::osprelude();
 
   let mut argv = args();
   _ = argv.next();

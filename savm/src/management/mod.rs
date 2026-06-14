@@ -125,9 +125,9 @@ pub fn schedule<
   }
 }
 
-pub fn management_main(
+pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(
   #[cfg(feature = "native")] mut evmap: WriteHandle<u64, SafeSwappableCodeStore>,
-  resolve: Arc<dyn BytecodeResolver + Send + Sync + 'static>,
+  resolve: Arc<T>,
 ) {
   let last = resolve.as_ref().last_section_id();
 
@@ -358,8 +358,8 @@ pub fn management_main(
 }
 
 #[cfg(feature = "native")]
-fn process_jit(
-  resolver: &dyn BytecodeResolver,
+fn process_jit<T: BytecodeResolver + Send + Sync + 'static>(
+  resolver: &T,
   sajit: &mut JITMemoryManager,
   evmap: &mut WriteHandle<u64, SafeSwappableCodeStore>,
   moduleid: u64,

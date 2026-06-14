@@ -1,4 +1,4 @@
-use crate::acaot::pickle::implementation::*;
+use crate::{BytecodeResolver, acaot::pickle::implementation::*};
 
 /// Pickle is our own internal NE implementation
 /// for converting variable width bytecode into pickle
@@ -14,7 +14,7 @@ pub struct PickleInstruction {
 macro_rules! opcodes {
   (
     $(
-      $id:expr => $opcode:ident
+      $id:expr => $opcode:ident $($generic:ident)?
     ),*
   ) => {
     pastey::paste! {
@@ -22,7 +22,7 @@ macro_rules! opcodes {
         pub const [<PICKLE_OPCODE_ $opcode>]: u8 = $id;
       )*
 
-      const TOTAL_ITEMS: usize = $(
+      pub const DISPATCH_TOTAL_ITEMS: usize = $(
         data(stringify!($opcode)) +
       )* 0;
 
@@ -30,11 +30,13 @@ macro_rules! opcodes {
         1
       }
 
-      pub(crate) const PICKLE_DISPATCH_TABLE: [ResolveFn; TOTAL_ITEMS] = [
-        $(
-          [<call_ $opcode:lower>]
-        ),*
-      ];
+      pub(crate) const fn pickle_generate_table<T: BytecodeResolver + Send + Sync + 'static>() -> [ResolveFn; DISPATCH_TOTAL_ITEMS] {
+        [
+          $(
+            [<call_ $opcode:lower>]$(::<$generic>)?
+          ),*
+        ]
+      }
     }
   };
 }
@@ -96,9 +98,9 @@ opcodes! {
   27 => VCNT,
   28 => VMINIMAX,
   29 => VFMA,
-  30 => SYNCCALL,
+  30 => SYNCCALL T,
   31 => ASYNCCALL,
-  32 => SPAWN,
+  32 => SPAWN T,
   33 => TASK,
   34 => ATOMIC
 }

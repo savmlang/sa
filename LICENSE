@@ -2,14 +2,17 @@ Copyright (C) 2026-Present Akshanabha Chakraborty and Open Source Contributors
 
 Additional permission under the GNU Affero GPL version 3 section 7:
 
-  If you modify this Program, or any covered work, by linking or combining 
-it with other code, such other code is not for that reason alone subject to 
-any of the requirements of the GNU Affero GPL version 3.
+  If you modify this Program, or any covered work, by linking or
+combining it with other code, such other code is not for that reason
+alone subject to any of the requirements of the GNU Affero GPL version 3.
 
-  For the avoidance of doubt, merely using, linking to (statically or dynamically), or targeting this 
-Program or covered works (including through compilers, toolchains, or by expressing or executing programs
-in its bytecode) does not, by itself, create a work subject to the terms of the GNU Affero General Public
-License version 3.
+  For the avoidance of doubt, merely using, linking to (statically or
+dynamically), or targeting this Program or covered works (including
+through compilers, toolchains, runtime generated data, or by expressing
+or executing programs in its bytecode) does not, by itself, create a
+work subject to the terms of the GNU Affero General Public License
+version 3.
+
 
   This exception shall be referred to as "SaVM Linking Exception"
 

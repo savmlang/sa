@@ -5,7 +5,7 @@ pub use ahash;
 use std::{
   any::Any,
   hash::Hash,
-  io::{Read, Seek},
+  io::Read,
   sync::{Arc, LazyLock, OnceLock},
   thread::{self, available_parallelism},
   time::Duration,
@@ -106,11 +106,15 @@ impl CacheLevel {
   }
 }
 
-pub trait ResolvedData: Read + Seek {}
+pub trait ResolvedData: Read {}
 
-impl<T: Read + Seek> ResolvedData for T {}
+impl<T: Read> ResolvedData for T {}
 
 pub trait BytecodeResolver: Any {
+  type T<'a>: ResolvedData
+  where
+    Self: 'a;
+
   /// Return the id of the LAST VALID section
   /// We use this to prevent unnecessary [u64] allocation
   fn last_section_id(&self) -> u64;
@@ -122,10 +126,10 @@ pub trait BytecodeResolver: Any {
   ///
   /// Cluster 2 (idx = 1)
   /// - Priority over other modules
-  fn heuristic_pgo(&self) -> [&[u64]; 2];
+  fn heuristic_pgo<'a>(&'a self) -> [&'a [u64]; 2];
 
   /// Resolve the symbol map table
-  fn resolve_data(&self, section: u64) -> SymbolMapTable<Box<dyn ResolvedData>>;
+  fn resolve_data<'a>(&'a self, section: u64) -> SymbolMapTable<Self::T<'a>>;
 
   /// Learn about the data present
   fn learn_data(&self, section: u64) -> SymbolMapTableInfo;
@@ -145,40 +149,6 @@ pub trait BytecodeResolver: Any {
   ///
   /// eg. we hope it does not replace Pickle code with Cranelift code as that'll lead to performance losses next round
   fn update_cache(&self, section: u64, cache: CacheData);
-}
-
-impl BytecodeResolver for Box<dyn BytecodeResolver + Send + Sync + 'static> {
-  fn get_best_cache(&self, section: u64) -> CacheData {
-    BytecodeResolver::get_best_cache(self.as_ref(), section)
-  }
-
-  fn heuristic_pgo(&self) -> [&[u64]; 2] {
-    BytecodeResolver::heuristic_pgo(self.as_ref())
-  }
-
-  fn get_libcalls(&self, section: u64) -> Option<Arc<HashSet<u64>>> {
-    BytecodeResolver::get_libcalls(self.as_ref(), section)
-  }
-
-  fn resolve_data(&self, section: u64) -> SymbolMapTable<Box<dyn ResolvedData>> {
-    BytecodeResolver::resolve_data(self.as_ref(), section)
-  }
-
-  fn learn_data(&self, section: u64) -> SymbolMapTableInfo {
-    BytecodeResolver::learn_data(self.as_ref(), section)
-  }
-
-  fn last_section_id(&self) -> u64 {
-    BytecodeResolver::last_section_id(self.as_ref())
-  }
-
-  fn update_cache(&self, section: u64, cache: CacheData) {
-    BytecodeResolver::update_cache(self.as_ref(), section, cache)
-  }
-
-  fn get_cache(&self, section: u64, level: CacheLevel) -> CacheData {
-    BytecodeResolver::get_cache(self.as_ref(), section, level)
-  }
 }
 
 pub static GLOBAL_RUNTIME: LazyLock<Runtime> =
@@ -237,12 +207,12 @@ impl<T: PartialEq> PartialEq for ThreadSafe<T> {
 
 /// We create a VM for each thread executed
 #[repr(C)]
-pub struct VM {
-  pub resolve: Arc<dyn BytecodeResolver + Send + Sync + 'static>,
+pub struct VM<T: BytecodeResolver + Send + Sync + 'static> {
+  pub resolve: Arc<T>,
 }
 
-unsafe impl Send for VM {}
-unsafe impl Sync for VM {}
+unsafe impl<T: BytecodeResolver + Send + Sync + 'static> Send for VM<T> {}
+unsafe impl<T: BytecodeResolver + Send + Sync + 'static> Sync for VM<T> {}
 
 pub fn pack_u32(high_u32: u32, low_u32: u32) -> u64 {
   let high_u64 = high_u32 as u64;
@@ -268,17 +238,15 @@ pub fn unpack_u64(packed: u64) -> (u32, u32) {
   (high_u32, low_u32)
 }
 
-impl VM {
-  pub fn new<T: BytecodeResolver + Send + Sync + 'static>(data: T) -> Self {
-    unsafe { Self::new_unsafe::<T, true>(data) }
+impl<T: BytecodeResolver + Send + Sync + 'static> VM<T> {
+  pub fn new(data: T) -> Self {
+    unsafe { Self::new_unsafe::<true>(data) }
   }
   /// Please note that module id `0` represents the main module
   ///
   /// This is not really `unsafe`
   /// This is **unsafe** by intent
-  pub unsafe fn new_unsafe<T: BytecodeResolver + Send + Sync + 'static, const MGNTHTREAD: bool>(
-    data: T,
-  ) -> Self {
+  pub unsafe fn new_unsafe<const MGNTHTREAD: bool>(data: T) -> Self {
     CODE_CACHE.run_pending_tasks();
     VMMADE.set(()).expect("Each process can only have 1 VM");
 

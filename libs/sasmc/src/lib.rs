@@ -3,16 +3,16 @@ use sasm::PathInfo;
 use std::borrow::Cow;
 
 cprelude::cprelude! {
-  Sasm
+  SASM
 }
 
 #[repr(C)]
 /// This describes the Path Information used by SASM runner
 pub struct IPathInfo {
   /// The directory where assembly files are stored
-  pub bindir: Sasm_IStr,
+  pub bindir: SASM_IStr,
   /// The output directory
-  pub distdir: Sasm_IStr,
+  pub distdir: SASM_IStr,
 }
 
 #[no_mangle]
@@ -20,7 +20,7 @@ pub struct IPathInfo {
 ///
 /// Please note that this is show the terminal progressbar
 /// and other artifacts currently.
-pub unsafe extern "C" fn sasm_run(pathinfo: IPathInfo) {
+pub unsafe extern "C" fn savm_toolkit_sasm_run(pathinfo: IPathInfo) {
   unsafe {
     sasm::sasm(PathInfo {
       bindir: Cow::Borrowed(str::from_utf8_unchecked(slice::from_raw_parts(

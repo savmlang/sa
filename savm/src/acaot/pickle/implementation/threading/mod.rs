@@ -17,7 +17,8 @@ use sart::{
 };
 
 use crate::{
-  CODE_CACHE, FNCALL_DISPATCH, SymbolMapTable, SymbolMapTableInfo, ThreadSafe, VM,
+  BytecodeResolver, CODE_CACHE, FNCALL_DISPATCH, SymbolMapTable, SymbolMapTableInfo, ThreadSafe,
+  VM,
   acaot::pickle::{def::PickleInstruction, implementation::WorkingSet},
   arrcastint, resolve_location_src,
 };
@@ -35,9 +36,12 @@ thread_local! {
   pub static EXEC: NativeAsyncExecutor = NativeAsyncExecutor;
 }
 
-pub extern "C" fn ffi_synccall_sectionid(taskstate: *mut VMTaskState, sectionid: u64) {
+pub extern "C" fn ffi_synccall_sectionid<T: BytecodeResolver + Send + Sync + 'static>(
+  taskstate: *mut VMTaskState,
+  sectionid: u64,
+) {
   unsafe {
-    let vm = (*taskstate).engine_or_pt.pt as *const _ as *const VM;
+    let vm = (*taskstate).engine_or_pt.pt as *const _ as *const VM<T>;
 
     let [r7, r8] = (*vm).fncall(sectionid, taskstate);
 
@@ -55,11 +59,15 @@ pub extern "C" fn ffi_libcall_sectionid(taskstate: *mut VMTaskState, sectionid: 
   }
 }
 
-pub fn call_synccall(_: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
+pub fn call_synccall<T: BytecodeResolver + Send + Sync + 'static>(
+  _: &PickleInstruction,
+  ws: *mut WorkingSet,
+  taskstate: *mut VMTaskState,
+) {
   let sectionid = arrcastint!(ws, start = 0, stop = 8, u64);
 
   unsafe {
-    let vm = (*taskstate).engine_or_pt.pt as *const _ as *const VM;
+    let vm = (*taskstate).engine_or_pt.pt as *const _ as *const VM<T>;
 
     let tskptr = taskstate as *mut _;
 

@@ -22,8 +22,8 @@ use sart::{
 
 use crate::acaot::pickle::{
   def::{
-    PICKLE_DISPATCH_TABLE, PICKLE_OPCODE_JIF, PICKLE_OPCODE_JMP, PICKLE_OPCODE_MARK,
-    PICKLE_OPCODE_VADD, PICKLE_OPCODE_VCMP, PickleInstruction,
+    PICKLE_OPCODE_JIF, PICKLE_OPCODE_JMP, PICKLE_OPCODE_MARK, PICKLE_OPCODE_VADD,
+    PICKLE_OPCODE_VCMP, PickleInstruction,
   },
   reader::vcmp::{VCMP, parse_vcmp},
 };
@@ -35,6 +35,8 @@ pub struct WorkingSet {
   pub largepad: *mut QuadPackedData, // SIZE_128KB allocated
   pub largepad_cursor: usize,
   pub relocmap: Arc<HashMap<u64, usize, ahash::RandomState>>,
+
+  pub dispatch: *const ResolveFn,
 
   // AME
   pub ame: *mut AggressiveMatrixExtension,
@@ -254,7 +256,7 @@ pub fn call_hint(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mu
         PICKLE_OPCODE_JIF => call_jif(pkl, ws, taskstate),
         PICKLE_OPCODE_VCMP => call_vcmp(pkl, ws, taskstate),
         PICKLE_OPCODE_VADD => call_vadd(pkl, ws, taskstate),
-        _ => return PICKLE_DISPATCH_TABLE.get_unchecked(instruction as usize)(pkl, ws, taskstate),
+        _ => return (*(*ws).dispatch.add(instruction as usize))(pkl, ws, taskstate),
       }
     }
   }

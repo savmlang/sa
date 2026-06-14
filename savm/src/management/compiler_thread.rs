@@ -9,8 +9,8 @@ pub enum JITOut {
   Stopped,
 }
 
-pub fn compiler(
-  resolve: Arc<dyn BytecodeResolver + Send + Sync + 'static>,
+pub fn compiler<E: BytecodeResolver + Send + Sync + 'static>(
+  resolve: Arc<E>,
   rx: Receiver<(u64, usize, bool)>,
   tx: Sender<JITOut>,
 ) {
