@@ -55,7 +55,7 @@ exclude = ["acdagtests", "jitemission", "sajit/llvmtest"]
 
 [profile.release]
 opt-level = 3
-lto = true
+lto = false
 codegen-units = 1
 panic = "abort"
 strip = true
