@@ -53,6 +53,9 @@ resolver = "3"
 # These are testing and hence should not be directly bundled
 exclude = ["acdagtests", "jitemission", "sajit/llvmtest"]
 
+[profile.debug]
+rustflags = ["-C", "prefer-dynamic=yes"]
+
 [profile.release]
 opt-level = 3
 lto = false

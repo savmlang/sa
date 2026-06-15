@@ -6,6 +6,7 @@ if [ ! -d "./llvm" ]; then
 fi
 
 export LLVM_SYS_221_PREFIX="$(pwd)/llvm/install"
+export RUSTFLAGS="-Cprefer-dynamic"
 
 echo "✅ Your session has been loaded with SaVM Required Environment Variables"
 
