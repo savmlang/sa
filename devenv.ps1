@@ -5,7 +5,10 @@ if ($true -ne (Test-Path "./llvm")) {
 }
 
 $env:LLVM_SYS_221_PREFIX = "$(Get-Location)$([IO.Path]::DirectorySeparatorChar)llvm$([IO.Path]::DirectorySeparatorChar)install"
-$env:RUSTFLAGS = "-Cprefer-dynamic"
+  
+if ($env:CICD -ne "true") {
+  $env:RUSTFLAGS = "-Cprefer-dynamic"
+}
 
 "✅ Your session has been loaded with SaVM Required Environment Variables"
 
