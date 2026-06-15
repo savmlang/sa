@@ -131,7 +131,11 @@ runs:
 
         ${{ inputs.builder }} build ${{ inputs.argv }} --release -p salloc
 
-        ${{ inputs.builder }} build ${{ inputs.argv }} --release --workspace --no-default-features --features savmrun/${{ inputs.feature }},satest/${{ inputs.feature }}
+        if ("${{ inputs.rusttarget }}" -eq "nano") {
+          ${{ inputs.builder }} build ${{ inputs.argv }} --release --workspace --no-default-features --features savmruncore/${{ inputs.feature }},satest/${{ inputs.feature }}
+        } else {
+          ${{ inputs.builder }} build ${{ inputs.argv }} --release --workspace --no-default-features --features savmruncore/${{ inputs.feature }},satest/${{ inputs.feature }},savmc/native
+        }
 
     - name: Package
       shell: pwsh
