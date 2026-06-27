@@ -1,0 +1,28 @@
+[package]
+name = "savmrunshared"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+savmruntypes = { path = "../savmruntypes" }
+savm = { path = "../../savm", default-features = false }
+
+[features]
+default = []
+
+# SaVM Run VM Flavours!!
+pro_standard = ["pro", "standard"]
+pro = ["interpreter", "jit", "savm/llvm"]
+standard = ["interpreter", "jit", "savm/cranelift"]
+nano = ["interpreter"]
+
+interpreter = []
+jit = ["savm/native"]
+
+# Only possible for `interpreter` mode
+#
+# NOTE: The savmcache folder is still created, but not written to
+nocache = []

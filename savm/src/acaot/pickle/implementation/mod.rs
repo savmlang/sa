@@ -1,11 +1,9 @@
 #![allow(unused_unsafe)]
 
 use std::{
-  collections::HashMap,
   hint::cold_path,
   mem::{transmute_copy, zeroed},
-  ptr::read_unaligned,
-  sync::Arc,
+  ptr::{self, read_unaligned},
 };
 
 mod almu;
@@ -20,12 +18,18 @@ use sart::{
   structures::QuadPackedData,
 };
 
-use crate::acaot::pickle::{
-  def::{
-    PICKLE_OPCODE_JIF, PICKLE_OPCODE_JMP, PICKLE_OPCODE_MARK, PICKLE_OPCODE_VADD,
-    PICKLE_OPCODE_VCMP, PickleInstruction,
+use crate::{
+  acaot::pickle::{
+    def::{
+      PICKLE_OPCODE_JIF, PICKLE_OPCODE_JMP, PICKLE_OPCODE_MARK, PICKLE_OPCODE_VADD,
+      PICKLE_OPCODE_VCMP, PickleInstruction,
+    },
+    reader::{
+      Immediate, REG, parse_reg,
+      vcmp::{VCMP, parse_vcmp},
+    },
   },
-  reader::vcmp::{VCMP, parse_vcmp},
+  kvwrap::{SaVMJumpWrap, SaVMJumpWrapImpl},
 };
 
 pub const SIZE_128KB: usize = 128 * 1024 / size_of::<QuadPackedData>();
@@ -34,7 +38,7 @@ pub struct WorkingSet {
   pub arr: &'static [u8],
   pub largepad: *mut QuadPackedData, // SIZE_128KB allocated
   pub largepad_cursor: usize,
-  pub relocmap: Arc<HashMap<u64, usize, ahash::RandomState>>,
+  pub relocmap: SaVMJumpWrap,
 
   pub dispatch: *const ResolveFn,
 
@@ -205,6 +209,8 @@ macro_rules! resolve_location_src {
       9 => (*$task).largepad,
       #[allow(unused_unsafe)]
       10 => unsafe { (*$task).r2.selfref },
+      #[allow(unused_unsafe)]
+      11 => unsafe { (*$task).r3.selfref },
       $(
         _con => $e,
       )?
@@ -310,13 +316,31 @@ pub fn call_mov(pickle: &PickleInstruction, _ws: *mut WorkingSet, taskstate: *mu
 
 #[inline(always)]
 pub fn call_reg(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
-  let reg = pickle.u1;
+  let REG {
+    src,
+    offset,
+    immediate,
+    ..
+  } = parse_reg(pickle, unsafe { (*ws).arr });
 
-  let mut filled = [0u8; 8];
-  unsafe { filled[0..8].copy_from_slice(&(&(*ws).arr)[0..8]) };
-  let data = u64::from_ne_bytes(filled);
+  unsafe {
+    let src = resolve_location_src!(taskstate => src);
 
-  unsafe { *resolve_ptr!(taskstate => reg) = QuadPackedData { u64: data } };
+    match immediate {
+      Immediate::U64(u64) => {
+        ptr::write_unaligned((src as *mut u64).add(offset as _), u64);
+      }
+      Immediate::U32(u32) => {
+        ptr::write_unaligned((src as *mut u32).add(offset as _), u32);
+      }
+      Immediate::U16(u16) => {
+        ptr::write_unaligned((src as *mut u16).add(offset as _), u16);
+      }
+      Immediate::U8(u8) => {
+        ptr::write_unaligned((src as *mut u8).add(offset as _), u8);
+      }
+    }
+  }
 }
 
 #[inline(always)]
@@ -332,7 +356,7 @@ pub fn call_jmp(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut
       return;
     }
 
-    let cr = *(*ws).relocmap.get(&data).unwrap_unchecked();
+    let cr = (*ws).relocmap.get(&data).unwrap_unchecked();
 
     (*ws).jmp = (data, cr);
     (*taskstate).curline_or_resume.usi = cr;
@@ -391,7 +415,7 @@ pub fn call_jif(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut
         return;
       }
 
-      let cr = *(*ws).relocmap.get(&marker).unwrap_unchecked();
+      let cr = (*ws).relocmap.get(&marker).unwrap_unchecked();
 
       (*ws).jmp = (marker, cr);
       (*taskstate).curline_or_resume.usi = cr;

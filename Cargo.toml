@@ -25,18 +25,19 @@ members = [
   "bin/sapacker",
   "bin/sasm",
   "bin/satest",
-  "bin/savmruncore",
-  "bin/savmrun",
   "bin/savmimgrun",
   "bin/savmrt",
   "bin/savmrtcache",
+  "bin/savmrun",
+  "bin/savmruncore",
+  "bin/savmrunshared",
+  "bin/savmruntypes",
 
   # SaVM C Compatible Libraries (Future Experiments currently)
   # Dynamic Linkable AND Static Linkable
   # Depends on the C ABI (musl, glibc, msvc, libSystem)
   "libs/savmc",
   "libs/sasmc",
-  "libs/sabinc",
 
   # C Prelude Glue (DRY)
   "libs/cprelude",
@@ -47,11 +48,16 @@ members = [
 
   # SaBin Spec
   "libs/sabin_spec",
+
+  # A sane way to compile SaVM Bytecode
+  # 
+  # This is the SaVM IR Generator
+  "libs/sair",
 ]
 resolver = "3"
 
 # These are testing and hence should not be directly bundled
-exclude = ["acdagtests", "jitemission", "sajit/llvmtest"]
+exclude = ["acdagtests", "sajit/llvmtest"]
 
 [profile.release]
 opt-level = 3

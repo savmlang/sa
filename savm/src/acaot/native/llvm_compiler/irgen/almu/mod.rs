@@ -18,7 +18,9 @@ use crate::acaot::{
   pickle::{
     def::PickleInstruction,
     reader::{
+      Immediate, REG,
       au::{ARITH, DIVLIKE, parse_arith, parse_divlike},
+      parse_reg,
       vcmp::{CMPOp, FloatOP, IntOP, VCMP, parse_vcmp},
     },
   },
@@ -33,21 +35,29 @@ use llvm_sys::{
     LLVMBuildSDiv, LLVMBuildSExt, LLVMBuildSRem, LLVMBuildSub, LLVMBuildTrunc, LLVMBuildUDiv,
     LLVMBuildURem, LLVMBuildZExt, LLVMBuildZExtOrBitCast, LLVMConstInt, LLVMConstVector,
     LLVMGetBasicBlockName, LLVMGetInsertBlock, LLVMGetIntrinsicDeclaration, LLVMGetUndef,
-    LLVMGlobalGetValueType, LLVMIntTypeInContext, LLVMLookupIntrinsicID, LLVMTypeOf,
-    LLVMVectorType,
+    LLVMGlobalGetValueType, LLVMInt8TypeInContext, LLVMInt16TypeInContext, LLVMIntTypeInContext,
+    LLVMLookupIntrinsicID, LLVMTypeOf, LLVMVectorType,
   },
   prelude::LLVMValueRef,
 };
 use sart::ctr::VMTaskState;
 
+pub mod atomic;
+pub mod cast;
 pub mod fp;
 pub mod vbit;
+pub mod vcnt;
+pub mod vcopy;
 pub mod vfma;
 pub mod vfop;
 pub mod vsh;
 
+pub use atomic::*;
+pub use cast::*;
 pub use fp::*;
 pub use vbit::*;
+pub use vcnt::*;
+pub use vcopy::*;
 pub use vfma::*;
 pub use vfop::*;
 pub use vsh::*;
@@ -59,6 +69,28 @@ macro_rules! llvmreadws {
   };
 }
 
+pub fn handle_reg(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
+  let REG {
+    src,
+    offset,
+    width,
+    immediate,
+  } = parse_reg(pickle, meta.ws.as_ref());
+
+  let typ = LLVMTypeOrWidth::Width(width);
+  let store = llvmresolve_location_src_store(meta, typ, src, None, offset as _, 1);
+
+  let immediate = unsafe {
+    match immediate {
+      Immediate::U64(x) => LLVMConstInt(meta.i64, x, 0),
+      Immediate::U32(x) => LLVMConstInt(meta.i32, x as _, 0),
+      Immediate::U16(x) => LLVMConstInt(LLVMInt16TypeInContext(meta.llvmctx), x as _, 0),
+      Immediate::U8(x) => LLVMConstInt(LLVMInt8TypeInContext(meta.llvmctx), x as _, 0),
+    }
+  };
+
+  store.synchronize(meta, immediate);
+}
 pub fn handle_vcmp(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
   let VCMP {
     datawdt,

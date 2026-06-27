@@ -1,11 +1,12 @@
 use super::{JITReloc, LocSrc, SigStore};
 use crate::{
-  CacheData, CacheLevel,
+  CacheData, CacheLevel, PickleJumpData,
   acaot::{
     ClirLC,
     native::{NativeCompiler, cranelift::irgen::compile},
     pickle::def::PickleInstruction,
   },
+  kvwrap::SaVMJumpWrapRef,
 };
 use ahash::{HashMap, HashMapExt};
 use cranelift::{
@@ -76,7 +77,7 @@ impl SaVMCranelift {
     }
   }
 
-  pub fn create_abs8() -> Box<dyn NativeCompiler>
+  pub fn create_abs8<const T: bool>() -> Box<dyn NativeCompiler<T>>
   where
     Self: Sized,
   {
@@ -88,7 +89,7 @@ impl SaVMCranelift {
     return Box::new(Self::new(false));
   }
 
-  pub fn create_rel_optimized() -> Box<dyn NativeCompiler>
+  pub fn create_rel_optimized<const T: bool>() -> Box<dyn NativeCompiler<T>>
   where
     Self: Sized,
   {
@@ -99,12 +100,8 @@ impl SaVMCranelift {
   }
 }
 
-impl NativeCompiler for SaVMCranelift {
-  fn compile(
-    &mut self,
-    pickle: &[PickleInstruction],
-    jmps: &std::collections::HashMap<u64, usize, ahash::RandomState>,
-  ) -> crate::CacheData {
+impl<const T: bool> NativeCompiler<T> for SaVMCranelift {
+  fn compile(&mut self, pickle: &[PickleInstruction], jmps: SaVMJumpWrapRef) -> crate::CacheData {
     let isa = self.isa.as_ref();
 
     let mainsig = {
@@ -130,7 +127,6 @@ impl NativeCompiler for SaVMCranelift {
 
     // Data structures
     let pickle = pickle;
-    let jumps = jmps;
 
     let mut ws = {
       let mut h = HashMap::new();
@@ -149,7 +145,7 @@ impl NativeCompiler for SaVMCranelift {
 
         let largepad_imm = builder.ins().load(
           isa.pointer_type(),
-          MemFlags::trusted(),
+          MemFlagsData::trusted(),
           glob,
           offset_of!(VMTaskState, largepad) as i32,
         );
@@ -157,7 +153,7 @@ impl NativeCompiler for SaVMCranelift {
 
         let flags = builder.ins().load(
           isa.pointer_type(),
-          MemFlags::trusted(),
+          MemFlagsData::trusted(),
           glob,
           offset_of!(VMTaskState, flags) as i32,
         );
@@ -172,12 +168,10 @@ impl NativeCompiler for SaVMCranelift {
         (glob, largepad)
       };
 
-      let mut jmps = jumps.iter().collect::<Vec<_>>();
-      jmps.sort_by(|(_, a), (_, b)| a.cmp(b));
-
       let mut itr = jmps
+        .0
         .into_iter()
-        .map(|(marker, _)| {
+        .map(|PickleJumpData { marker, .. }| {
           let blk = builder.create_block();
 
           (*marker, blk)
@@ -242,7 +236,7 @@ impl NativeCompiler for SaVMCranelift {
       }
     };
 
-    compile(&mut builder, &mut ws, pickle.as_ref(), isa);
+    compile::<T>(&mut builder, &mut ws, pickle.as_ref(), isa);
 
     // Compile
     builder.finalize();

@@ -25,6 +25,6 @@ standard = ["native", "cranelift"]
 pro = ["native", "llvm"]
 pro_standard = ["standard", "pro"]
 
-native = ["savm/sendback"]
+native = []
 cranelift = ["native", "savm/cranelift"]
 llvm = ["native", "savm/llvm"]

@@ -133,9 +133,9 @@ runs:
         ${{ inputs.builder }} build ${{ inputs.argv }} --release -p salloc
 
         if ("${{ inputs.rusttarget }}" -eq "nano") {
-          ${{ inputs.builder }} build ${{ inputs.argv }} --release --workspace --no-default-features --features savmruncore/${{ inputs.feature }},satest/${{ inputs.feature }}
+          ${{ inputs.builder }} build ${{ inputs.argv }} --release --workspace --no-default-features --features savmrunshared/${{ inputs.feature }},satest/${{ inputs.feature }}
         } else {
-          ${{ inputs.builder }} build ${{ inputs.argv }} --release --workspace --no-default-features --features savmruncore/${{ inputs.feature }},satest/${{ inputs.feature }},savmc/native
+          ${{ inputs.builder }} build ${{ inputs.argv }} --release --workspace --no-default-features --features savmrunshared/${{ inputs.feature }},satest/${{ inputs.feature }},savmc/native
         }
 
     - name: Package

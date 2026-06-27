@@ -23,6 +23,7 @@ use crate::{
     },
     implementation::{ResolveFn, SIZE_128KB, WorkingSet},
   },
+  kvwrap::{SaVMJumpWrap, SaVMJumpWrapImpl},
 };
 
 pub static GLOBAL_DATA: OnceLock<UnSafePtr<u8>> = OnceLock::new();
@@ -63,7 +64,7 @@ thread_local! {
       ame: null_mut(),
       ame_free: true,
       jmp: (0, 0),
-      relocmap: Default::default()
+      relocmap: SaVMJumpWrap(Default::default())
     },
     ts: unsafe {
       let mut ts: [VMTaskState; 50] = zeroed();
@@ -127,9 +128,11 @@ impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
     VMSTAT.with(|x| unsafe {
       let t = x.get();
 
+      let wrapped = SaVMJumpWrap(jumps);
+
       (*t).ws.dispatch = Self::PICKLE_DISPATCH_TABLE.as_ptr();
-      (*t).ws.jmp = (0, jumps.get(&0).map(|x| *x).unwrap_or_default());
-      (*t).ws.relocmap = jumps;
+      (*t).ws.jmp = (0, wrapped.get(&0).unwrap_or_default());
+      (*t).ws.relocmap = wrapped;
 
       let ts = (*t).ts.as_mut_ptr().add((*t).cindex as usize);
 
@@ -286,7 +289,7 @@ impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
 
     let out: Arc<[PickleInstruction]> = Arc::from(worker.out.into_boxed_slice());
 
-    CODE_CACHE.insert(sectionid, (out, Arc::new(worker.jump)));
+    CODE_CACHE.insert(sectionid, (out, Arc::from(worker.jump)));
     CODE_CACHE.run_pending_tasks();
 
     // TODO: Replace with `become`

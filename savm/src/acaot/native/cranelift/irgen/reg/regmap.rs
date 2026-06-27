@@ -1,6 +1,6 @@
 use std::ops::{Range, Rem};
 
-use cranelift::prelude::{MemFlags, Type};
+use cranelift::prelude::{MemFlagsData as MemFlags, Type};
 
 use crate::acaot::native::cranelift::irgen::reg::{ClifTypeMapping, break_simd_waterfall};
 

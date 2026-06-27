@@ -2,6 +2,7 @@ pub mod acaot;
 pub mod ints;
 
 pub use ahash;
+use serde::{Deserialize, Serialize};
 use std::{
   any::Any,
   hash::Hash,
@@ -11,7 +12,7 @@ use std::{
   time::Duration,
 };
 
-use ahash::{HashMap, HashSet};
+use ahash::HashMap;
 use moka::sync::{CacheBuilder, SegmentedCache};
 #[cfg(feature = "native")]
 use sart::code::SwappableCodeStore;
@@ -26,6 +27,7 @@ use crate::{
 };
 
 pub mod executor;
+pub mod kvwrap;
 pub mod management;
 pub mod permute;
 pub mod sync;
@@ -45,18 +47,25 @@ pub enum SymbolMapTableInfo {
   MixedSizedBytecode,
 }
 
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct PickleJumpData {
+  pub marker: u64,
+  pub loc: usize,
+}
+
 pub type JITRelocs = Arc<[JITReloc]>;
-pub type LibCalls = HashSet<u64>;
-pub type SaVMJumps = HashMap<u64, usize>;
+pub type LibCalls = Arc<[u64]>;
+pub type SaVMJumps = Arc<[PickleJumpData]>;
 
 #[derive(Debug, Clone)]
 pub enum CacheData {
   None,
   Pickle {
     out: Arc<[PickleInstruction]>,
-    jumps: Arc<SaVMJumps>,
+    jumps: SaVMJumps,
     /// This should be None for returned CacheData
-    libcalls: Option<Arc<LibCalls>>,
+    libcalls: Option<LibCalls>,
   },
   JITCache {
     level: CacheLevel,
@@ -115,6 +124,17 @@ pub trait BytecodeResolver: Any {
   where
     Self: 'a;
 
+  /// Read Only data - this is the part of SaVM Global Data
+  /// that is loaded as READ-ONLY
+  fn rodata(&self) -> &[u8];
+
+  /// Read Write data - this is the part of SaVM Global Data
+  /// that is both readable and writable.
+  ///
+  /// These methods are expected to be zero cost
+  /// and the location of storage should NOT change
+  fn rwdata(&self) -> &mut [u8];
+
   /// Return the id of the LAST VALID section
   /// We use this to prevent unnecessary [u64] allocation
   fn last_section_id(&self) -> u64;
@@ -141,7 +161,7 @@ pub trait BytecodeResolver: Any {
   fn get_cache(&self, section: u64, level: CacheLevel) -> CacheData;
 
   /// Gets the SaVM libraries it depends on
-  fn get_libcalls(&self, section: u64) -> Option<Arc<HashSet<u64>>>;
+  fn get_libcalls(&self, section: u64) -> Option<LibCalls>;
 
   /// Updates the cache
   ///
@@ -160,7 +180,7 @@ pub(crate) static FNCALL_DISPATCH: OnceLock<HashMap<u64, (ThreadSafe<*const ()>,
 // This only and only stores Subroutine-Threaded instructions and their associated jumps
 // We dont directly store libcalls
 pub(crate) static CODE_CACHE: LazyLock<
-  SegmentedCache<u64, (Arc<[PickleInstruction]>, Arc<HashMap<u64, usize>>), ahash::RandomState>,
+  SegmentedCache<u64, (Arc<[PickleInstruction]>, SaVMJumps), ahash::RandomState>,
 > = LazyLock::new(|| {
   CacheBuilder::new(1 << 10) // 2^10 = 1024
     .segments(available_parallelism().map(|x| x.get()).unwrap_or(4))

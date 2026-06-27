@@ -1,4 +1,7 @@
-use cranelift::prelude::{FunctionBuilder, InstBuilder};
+use cranelift::{
+  codegen::ir::condcodes::FloatCC,
+  prelude::{FunctionBuilder, InstBuilder},
+};
 
 use crate::acaot::{
   native::cranelift::{
@@ -126,11 +129,17 @@ pub fn hwnd_vminimax(
     .for_each(|(idx, src1, src2)| {
       let clif = typ.clif_mapping();
       let val = if clif.float {
-        if op == 0 {
+        let x_is_nan = builder.ins().fcmp(FloatCC::OrderedNotEqual, src1, src1);
+        let y_is_nan = builder.ins().fcmp(FloatCC::OrderedNotEqual, src2, src2);
+
+        let normal = if op == 0 {
           builder.ins().fmin(src1, src2)
         } else {
           builder.ins().fmax(src1, src2)
-        }
+        };
+
+        let select_x_if_y_nan = builder.ins().select(y_is_nan, src1, normal);
+        builder.ins().select(x_is_nan, src2, select_x_if_y_nan)
       } else if clif.signed {
         if op == 0 {
           builder.ins().smin(src1, src2)
@@ -356,10 +365,22 @@ pub fn hwnd_vfcast(
   let waterfall = target.waterfall_typerating();
   src.into_iter().enumerate().for_each(|(idx, sval)| {
     let tgt_lane = waterfall[idx];
-    let val = if target_clif.signed {
-      builder.ins().fcvt_to_sint_sat(tgt_lane, sval)
-    } else {
-      builder.ins().fcvt_to_uint_sat(tgt_lane, sval)
+
+    // int->float
+    let val = if !src_clif.float {
+      if src_clif.signed {
+        builder.ins().fcvt_from_sint(tgt_lane, sval)
+      } else {
+        builder.ins().fcvt_from_uint(tgt_lane, sval)
+      }
+    }
+    // float -> int
+    else {
+      if target_clif.signed {
+        builder.ins().fcvt_to_sint_sat(tgt_lane, sval)
+      } else {
+        builder.ins().fcvt_to_uint_sat(tgt_lane, sval)
+      }
     };
 
     target.store(builder, idx, val);

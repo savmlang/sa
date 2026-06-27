@@ -20,7 +20,7 @@ pub(crate) mod almu;
 mod pickle;
 pub(crate) mod reg;
 
-pub fn compile(meta: &mut CompilerMeta) {
+pub fn compile<const SENDBACK: bool>(meta: &mut CompilerMeta) {
   unsafe {
     let builder = meta.builder;
     let ctx = meta.llvmctx;
@@ -98,13 +98,13 @@ pub fn compile(meta: &mut CompilerMeta) {
       LLVMPositionBuilderAtEnd(builder, meta.epilogue);
 
       // Sendback
-      #[cfg(feature = "sendback")]
-      let regs = [0, 1, 2, 3, 4, 5, 6, 7];
+      let regs = if SENDBACK {
+        &[0, 1, 2, 3, 4, 5, 6, 7usize] as &[usize]
+      } else {
+        &[6, 7usize] as &[usize]
+      };
 
-      #[cfg(not(feature = "sendback"))]
-      let regs = [6, 7];
-
-      regs.into_iter().for_each(|regid| {
+      regs.into_iter().for_each(|&regid| {
         if let Some(regval) = (*meta_ptr).regmnt.try_usereg(regid) {
           offsetstore(
             builder,
@@ -238,7 +238,7 @@ pub fn offsetstore_aligned(
   pointerval: LLVMValueRef,
   offset_bytes: OffsetBytes,
   align: Option<u32>,
-) {
+) -> LLVMValueRef {
   unsafe {
     let (of, signed) = offset_bytes.into();
     let offset_ptr = offsetptr(builder, ctx, pointerval, of, signed);
@@ -248,6 +248,8 @@ pub fn offsetstore_aligned(
     if let Some(align) = align {
       LLVMSetAlignment(store, align);
     }
+
+    store
   }
 }
 
@@ -257,8 +259,8 @@ pub fn offsetstore(
   val: LLVMValueRef,
   pointerval: LLVMValueRef,
   offset_bytes: OffsetBytes,
-) {
-  offsetstore_aligned(builder, ctx, val, pointerval, offset_bytes, None);
+) -> LLVMValueRef {
+  offsetstore_aligned(builder, ctx, val, pointerval, offset_bytes, None)
 }
 
 pub enum OffsetBytes {

@@ -11,10 +11,20 @@ use crate::acaot::{
   },
   pickle::{
     def::PickleInstruction,
-    reader::au::{ARITH, DIVLIKE, parse_arith, parse_divlike},
+    reader::{
+      Immediate, REG,
+      au::{ARITH, DIVLIKE, parse_arith, parse_divlike},
+      parse_reg,
+    },
   },
 };
-use cranelift::{codegen::ir::Endianness, prelude::*};
+use cranelift::{
+  codegen::ir::{
+    Endianness,
+    types::{I8, I16, I32, I64},
+  },
+  prelude::{MemFlagsData as MemFlags, *},
+};
 
 mod atomic;
 mod fp;
@@ -41,6 +51,32 @@ macro_rules! readws {
   ($meta:expr, start = $start:expr, stop = $stop:expr, $t:ty) => {
     <$t>::from_ne_bytes($meta.ws[$start..$stop].try_into().unwrap())
   };
+}
+
+pub fn handle_reg(
+  pickle: &PickleInstruction,
+  meta: &mut CompilerMeta,
+  builder: &mut FunctionBuilder,
+) {
+  let REG {
+    src,
+    offset,
+    width,
+    immediate,
+  } = parse_reg(pickle, meta.ws.as_ref());
+
+  let typ = TypeOrWidth::Width(width);
+  let mut store = resolve_location_src_store(builder, meta, typ, src, None, offset as _, 1);
+
+  let val = match immediate {
+    Immediate::U64(x) => builder.ins().iconst(I64, x.cast_signed()),
+    Immediate::U32(x) => builder.ins().iconst(I32, x as i64),
+    Immediate::U16(x) => builder.ins().iconst(I16, x as i64),
+    Immediate::U8(x) => builder.ins().iconst(I8, x as i64),
+  };
+  store.store(builder, 0, val);
+
+  store.synchronize(builder, meta);
 }
 
 pub fn divlike(

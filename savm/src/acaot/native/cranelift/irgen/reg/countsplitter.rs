@@ -2,6 +2,7 @@
 use std::arch::is_aarch64_feature_detected;
 
 use cranelift::prelude::{
+  MemFlagsData as MemFlags,
   types::{I8, I16, I32, I64},
   *,
 };

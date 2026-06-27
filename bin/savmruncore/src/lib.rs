@@ -2,8 +2,6 @@ pub mod os;
 pub mod ports;
 pub mod sallocator;
 
-pub mod savm;
-
 pub fn osprelude() {
   #[cfg(windows)]
   unsafe {

@@ -65,7 +65,7 @@ We hope ~16k versions would be more than enough.
 
 **Current Version:** 0
 
-### VerId
+### Flags
 
 `<flags (u8)>`
 
@@ -81,7 +81,7 @@ Flags is a MIXEDRADIX of following:
 
 ### Global Meta
 
-`<Total Libraries (AppId)> <Total CallDecls (AppId)> <Last Section Index (AppId)>`
+`<Total Libraries (AppId)> <Total CallDecls (AppId)> <Last Section Index (AppId)> <Total Triples (u8)>`
 
 ### RO Data
 
@@ -89,7 +89,7 @@ Flags is a MIXEDRADIX of following:
 
 ### RW Data
 
-`[Size (u32)] [Ptr (u40)]`
+`[Size (u24)] [Ptr (u40)]`
 
 ### PGO
 
@@ -123,7 +123,12 @@ This is parsed as the CallDecl as defined in `sart`
 
 ### SaTable
 
-`( SaTripleSlim (8bytes), Size (u32), Ptr (u40) )*`
+`( SaTripleSlim (8bytes) )* ( Size (u32), Ptr (u40) )*`
+
+These are two arrays where the two should be related such that
+triple[idx] and sizeptr[idx] are for the exact triple (like HashMap).
+
+Also, SaTripleSlim should be fully sorted in ascending order lexicographically. Do not sort it as LE or BE 64bit integer.
 
 This SaTable must be present on all sabin files but the `Ptr` is allowed to be NULL
 to save space.
@@ -134,7 +139,10 @@ The Ptr contains a fully ZIP-ed archive to be extracted fully.
 
 ### Libcall Definition
 
-`[Library ID (64bits)]`
+`[Library ID (16 bits)][Call Decl (AppId)]`
+
+In the extracted SaTripleSlim zip we find the library by:
+`{DLL_PREFIX}{id as string}{DLL_SUFFIX}`
 
 ---
 

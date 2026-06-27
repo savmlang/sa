@@ -40,7 +40,7 @@ use llvm_sys::{
 };
 
 use crate::{
-  CacheData, CacheLevel, ThreadSafe,
+  CacheData, CacheLevel, PickleJumpData, ThreadSafe,
   acaot::{
     JITReloc,
     native::{
@@ -56,6 +56,7 @@ use crate::{
     },
     pickle::def::PickleInstruction,
   },
+  kvwrap::SaVMJumpWrapRef,
 };
 
 pub mod dispose;
@@ -231,7 +232,7 @@ impl SaVMLLVMBuilder {
     }
   }
 
-  pub fn create_cinder() -> Box<dyn NativeCompiler> {
+  pub fn create_cinder<const T: bool>() -> Box<dyn NativeCompiler<T>> {
     Box::new(
       Self::create(
         LLVMCodeGenOptLevel::LLVMCodeGenLevelLess,
@@ -244,7 +245,7 @@ impl SaVMLLVMBuilder {
     )
   }
 
-  pub fn create_crater() -> Box<dyn NativeCompiler> {
+  pub fn create_crater<const T: bool>() -> Box<dyn NativeCompiler<T>> {
     Box::new(
       Self::create(
         LLVMCodeGenOptLevel::LLVMCodeGenLevelDefault,
@@ -257,7 +258,7 @@ impl SaVMLLVMBuilder {
     )
   }
 
-  pub fn create_epitome() -> Box<dyn NativeCompiler> {
+  pub fn create_epitome<const T: bool>() -> Box<dyn NativeCompiler<T>> {
     Box::new(
       Self::create(
         LLVMCodeGenOptLevel::LLVMCodeGenLevelAggressive,
@@ -274,11 +275,11 @@ impl SaVMLLVMBuilder {
 pub static LLVM_VAR_NAME: ThreadSafe<*const c_char> = ThreadSafe(c"".as_ptr());
 pub static LLVM_FNN_NAME: ThreadSafe<*const c_char> = ThreadSafe(c"compiledlib".as_ptr());
 
-impl NativeCompiler for SaVMLLVM {
+impl<const T: bool> NativeCompiler<T> for SaVMLLVM {
   fn compile(
     &mut self,
     pickle: &[super::pickle::def::PickleInstruction],
-    jmps: &std::collections::HashMap<u64, usize, ahash::RandomState>,
+    jmps: SaVMJumpWrapRef,
   ) -> crate::CacheData {
     unsafe {
       let ctx = self.ctx;
@@ -296,8 +297,9 @@ impl NativeCompiler for SaVMLLVM {
         let prologue = LLVMAppendBasicBlockInContext(ctx, function_val, c"prologue".as_ptr());
 
         let mut itr = jmps
+          .0
           .into_iter()
-          .map(|(marker, _)| {
+          .map(|PickleJumpData { marker, .. }| {
             let blk = format!("blockid_marker_{}\0", *marker);
             let blk = LLVMAppendBasicBlockInContext(ctx, function_val, blk.as_ptr() as _);
 
@@ -375,7 +377,7 @@ impl NativeCompiler for SaVMLLVM {
         LLVMSetAlignment(compilermeta.regspill, 64);
         LLVMSetAlignment(compilermeta.scratchpad, 64);
 
-        compile(&mut compilermeta);
+        compile::<T>(&mut compilermeta);
 
         drop(builder_raii);
       }

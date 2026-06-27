@@ -264,7 +264,7 @@ jobs:
           ARCH: ${{ matrix.target.arch }}
           TARGET: ${{ matrix.target.rust }}
           CTARGET: ${{ matrix.target.clang }}
-          EXTRA: --features savmrun/${{ matrix.target.feature }},satest/${{ matrix.target.feature }}${{ matrix.target.c }}
+          EXTRA: --features savmrunshared/${{ matrix.target.feature }},satest/${{ matrix.target.feature }}${{ matrix.target.c }}
 
           # Linker
           DYLD_LIBRARY_PATH: ${{ github.workspace }}/target/${{ matrix.target.rust }}/release
@@ -421,7 +421,7 @@ jobs:
           sudo podman build --platform "${{ matrix.config.platform }}" -t ahqrt-build-base:latest .
 
           export TARGET_PLATFORM="${{ matrix.config.platform }}"
-          export FEATURES=',savmrun/${{ matrix.feature.build }},satest/${{ matrix.feature.build }}${{ matrix.feature.c }}'
+          export FEATURES=',savmrunshared/${{ matrix.feature.build }},satest/${{ matrix.feature.build }}${{ matrix.feature.c }}'
 
           bash ./build.sh
 

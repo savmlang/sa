@@ -10,7 +10,7 @@
   #assert @flags 32
   #import *
 
-  reg $r8::u8, 0::u64
+  reg $r8::u8, 0::u8, 0::u64
 
   vadd @flags, 1::u32, 0::u32, 0::u32, 0::u32
 #end
@@ -23,13 +23,13 @@
 #end
 
 ; r1 = current number to test
-reg $r1::u8, 2::u64
+reg $r1::u8, 0::u8, 2::u64
 
 ; r7 = stores how many prime have been found!
-reg $r7::u8, 0::u64
+reg $r7::u8, 0::u8, 0::u64
 
 ; r2 = loop helper
-reg $r2::u8, 2::u64
+reg $r2::u8, 0::u8, 2::u64
 
 mark $MARK_LOOP_BEGIN::u64
   ; Remainder
@@ -43,10 +43,10 @@ mark $MARK_LOOP_BEGIN::u64
 
   ; If Remainder == 0
   ; We found a composite number, loop again
-  reg $r8::u8, 0::u64
+  reg $r8::u8, 0::u8, 0::u64
   #eq %u16[ $r8::u4 | $r3::u4 | $r3::u4 | 0::u4 ]
   
-  reg $r8::u8, 1::u64
+  reg $r8::u8, 0::u8, 1::u64
   jif %u8[ $OP_JNZ::u1 | $w64::u2 | 0::u1 | $r3::u4 ], 0::u32, $MARK_REM_0::u64
 
   ; Remainder != 0
@@ -59,13 +59,13 @@ mark $MARK_LOOP_BEGIN::u64
 ; Loop Next
 mark $LOOP_NEXT::u64
   ; Increment counter in r7
-  reg $r8::u8, 1::u64
+  reg $r8::u8, 0::u8, 1::u64
 
   ; Call our macro
   #increment %u32[ $u64::u3 | $COUNT_ABSOLUTE::u1 | $r7::u4 | $r8::u4 | $r7::u4 | 0::u1 | 0::u1 | 0::u1 | 0::u13 ]
 
   ; Check if r7==3
-  reg $r6::u8, 3::u64
+  reg $r6::u8, 0::u8, 3::u64
   #eq %u16[ $r7::u4 | $r6::u4 | $r6::u4 | 0::u4 ]
   jif %u8[ $OP_JNZ::u1 | $w64::u2 | 0::u1 | $r6::u4 ], 0::u32, $LOOP_BREAK::u64
 
@@ -76,7 +76,7 @@ mark $MARK_REM_0::u64
   ; Call our macro
   #increment %u32[ $u64::u3 | $COUNT_ABSOLUTE::u1 | $r1::u4 | $r8::u4 | $r1::u4 | 0::u1 | 0::u1 | 0::u1 | 0::u13 ]
 
-  reg $r2::u8, 2::u64
+  reg $r2::u8, 0::u8, 2::u64
 
   jmp $MARK_LOOP_BEGIN::u64
 

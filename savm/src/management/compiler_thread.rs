@@ -2,19 +2,22 @@ use std::{hint::cold_path, process::abort, sync::Arc};
 
 use crossbeam_channel::{Receiver, Sender};
 
-use crate::{BytecodeResolver, CODE_CACHE, CacheData, CacheLevel, acaot::native::compiler_infra};
+use crate::{
+  BytecodeResolver, CODE_CACHE, CacheData, CacheLevel, acaot::native::compiler_infra,
+  kvwrap::SaVMJumpWrapRef,
+};
 
 pub enum JITOut {
   JITData { moduleid: u64, jitdata: CacheData },
   Stopped,
 }
 
-pub fn compiler<E: BytecodeResolver + Send + Sync + 'static>(
+pub fn compiler<const SENDBACK: bool, E: BytecodeResolver + Send + Sync + 'static>(
   resolve: Arc<E>,
   rx: Receiver<(u64, usize, bool)>,
   tx: Sender<JITOut>,
 ) {
-  let compilers = compiler_infra();
+  let compilers = compiler_infra::<SENDBACK>();
   while let Ok((moduleid, compilerindex, stop)) = rx.recv() {
     if stop {
       _ = tx.send(JITOut::Stopped);
@@ -57,7 +60,7 @@ pub fn compiler<E: BytecodeResolver + Send + Sync + 'static>(
         CacheData::None => {
           let mut compiler = builder.get();
 
-          jitdata = compiler.compile(inst.as_ref(), jmp.as_ref());
+          jitdata = compiler.compile(inst.as_ref(), SaVMJumpWrapRef(&jmp));
         }
         e => {
           jitdata = e;

@@ -5,12 +5,12 @@ cprelude::cprelude! {
 pub mod resolvedata;
 pub mod vm;
 
-use crate::resolvedata::{SAVMC_IResolveData, SAVMC_IStream, SAVMC_IStream as IStream};
-use cprelude::Slicable;
+use crate::resolvedata::{SAVMC_IResolveData, SAVMC_IStream};
+use cprelude::{Slicable, SlicableMut};
 pub use savm::CacheLevel;
 use savm::{
   acaot::{pickle::def::PickleInstruction, JITReloc},
-  ahash, BytecodeResolver, CacheData, SymbolMapTable, SymbolMapTableInfo,
+  BytecodeResolver, CacheData, PickleJumpData, SymbolMapTable, SymbolMapTableInfo,
 };
 use std::{os::raw::c_void, sync::Arc};
 
@@ -70,8 +70,8 @@ pub enum SAVMC_ICacheData {
   Pickle {
     pickle: SAVMC_ISlice_Impl<PickleInstruction>,
 
-    libcalls: SAVMC_Maybe<SAVMC_IStream<u64>>,
-    jmps: IStream<SAVMC_ISaVMJump>,
+    libcalls: SAVMC_Maybe<SAVMC_ISlice_Impl<u64>>,
+    jmps: SAVMC_ISlice_Impl<PickleJumpData>,
   },
   JITCache {
     level: CacheLevel,
@@ -96,6 +96,18 @@ pub struct SAVMC_IBytecodeResolver {
   /// Caller stored data
   pub state: *mut c_void,
 
+  /// Fetches the ROData section
+  ///
+  /// This slice must be vvalid for the whole lifetime
+  /// of this Resolver!
+  pub get_rodata: extern "C" fn(*mut c_void) -> SAVMC_ISlice_Impl<u8>,
+
+  /// Fetches the RWData section (mutable)
+  ///
+  /// This slice must be vvalid for the whole lifetime
+  /// of this Resolver!
+  pub get_rwdata: extern "C" fn(*mut c_void) -> SAVMC_IMSlice_Impl<u8>,
+
   /// Get the last section id of the VM
   pub last_section_id_ptr: extern "C" fn(*mut c_void) -> u64,
   /// Resolve a section to [`SAVMC_ISymbolMapTable`]
@@ -107,6 +119,8 @@ pub struct SAVMC_IBytecodeResolver {
   /// Get the [`SAVMC_PGOData`]
   pub heuristic_pgo_ptr: extern "C" fn(*mut c_void) -> SAVMC_PGOData,
   /// Get the libcalls
+  ///
+  /// We allow you to give us a stream which we eagerly collect.
   pub get_libcalls_ptr: extern "C" fn(*mut c_void, section: u64) -> SAVMC_Maybe<SAVMC_IStream<u64>>,
 
   /// Gets the best cache level available, an [`SAVMC_ICacheData`]
@@ -139,16 +153,16 @@ fn map_cache(ccache: ICacheData) -> CacheData {
       jmps,
       libcalls,
     } => {
-      let jumps = jmps.map(|x| (x.marker, x.sectid)).collect::<_>();
+      let jumps = jmps.to_slice().iter().copied().collect::<_>();
 
       let libcalls = match libcalls {
-        SAVMC_Maybe::Some(x) => Some(Arc::new(x.collect::<_>())),
+        SAVMC_Maybe::Some(x) => Some(x.to_slice().iter().copied().collect::<_>()),
         _ => None,
       };
 
       CacheData::Pickle {
         out: Arc::from(pickle.to_slice()),
-        jumps: Arc::new(jumps),
+        jumps: jumps,
         libcalls,
       }
     }
@@ -166,6 +180,22 @@ fn map_cache(ccache: ICacheData) -> CacheData {
 
 impl BytecodeResolver for SAVMC_IBytecodeResolver {
   type T<'a> = SAVMC_IResolveData;
+
+  fn rodata(&self) -> &[u8] {
+    let out = unsafe { (self.get_rodata)(self.state).to_slice_raw() };
+
+    (self.clear_allocated)(self.state);
+
+    out
+  }
+
+  fn rwdata(&self) -> &mut [u8] {
+    let out = unsafe { (self.get_rwdata)(self.state).to_slice_mut() };
+
+    (self.clear_allocated)(self.state);
+
+    out
+  }
 
   fn last_section_id(&self) -> u64 {
     let output = (self.last_section_id_ptr)(self.state);
@@ -205,7 +235,6 @@ impl BytecodeResolver for SAVMC_IBytecodeResolver {
   }
 
   fn update_cache(&self, section: u64, cache: CacheData) {
-    let mut iter1 = None;
     let cache = match &cache {
       CacheData::None => ICacheData::None,
       CacheData::JITCache {
@@ -228,20 +257,16 @@ impl BytecodeResolver for SAVMC_IBytecodeResolver {
         jumps,
         libcalls,
       } => {
-        let libcalls = libcalls.as_ref().map(|x| x.iter().map(|x| *x));
-
-        let jumps = jumps.as_ref().iter().map(|x| SAVMC_ISaVMJump {
-          marker: *x.0,
-          sectid: *x.1,
+        let libcalls = libcalls.as_ref().map_or(SAVMC_Maybe::None, |x| {
+          SAVMC_Maybe::Some(SAVMC_ISlice_Impl {
+            data: x.as_ptr(),
+            len: x.len(),
+          })
         });
-        iter1 = Some((libcalls, jumps));
-
-        let (lcalls, jmps) = iter1.as_mut().unwrap();
-
-        let libcalls = lcalls.as_mut().map_or(SAVMC_Maybe::None, |x| {
-          SAVMC_Maybe::Some(IStream::create_borrowed(x))
-        });
-        let jmps = IStream::create_borrowed(jmps);
+        let jmps = SAVMC_ISlice_Impl {
+          data: jumps.as_ptr(),
+          len: jumps.len(),
+        };
 
         ICacheData::Pickle {
           pickle: SAVMC_ISlice_Impl {
@@ -257,14 +282,11 @@ impl BytecodeResolver for SAVMC_IBytecodeResolver {
     (self.update_cache_ptr)(self.state, section, cache);
 
     (self.clear_allocated)(self.state);
-
-    // Explicitly drop here!
-    drop(iter1);
   }
 
-  fn get_libcalls(&self, section: u64) -> Option<Arc<ahash::HashSet<u64>>> {
+  fn get_libcalls(&self, section: u64) -> Option<Arc<[u64]>> {
     let sol = match (self.get_libcalls_ptr)(self.state, section) {
-      SAVMC_Maybe::Some(dat) => Some(Arc::new(dat.collect())),
+      SAVMC_Maybe::Some(dat) => Some(dat.collect::<_>()),
       _ => None,
     };
 

@@ -1,5 +1,5 @@
 use crate::{
-  BytecodeResolver, CODE_CACHE, CacheData, FNCALL_DISPATCH, SymbolMapTable, ThreadSafe,
+  BytecodeResolver, CODE_CACHE, CacheData, FNCALL_DISPATCH, SaVMJumps, SymbolMapTable, ThreadSafe,
   acaot::pickle::{PickleWorker, def::PickleInstruction},
 };
 use ahash::{HashMap, HashMapExt};
@@ -31,12 +31,7 @@ pub mod polyfills;
 use jitmem::JITMemoryManager;
 
 enum ProcessResult {
-  Pickle(
-    u64,
-    Arc<[PickleInstruction]>,
-    Arc<ahash::HashMap<u64, usize>>,
-    Arc<ahash::HashSet<u64>>,
-  ),
+  Pickle(u64, Arc<[PickleInstruction]>, SaVMJumps, Arc<[u64]>),
   Native(u64, ThreadSafe<*const ()>, CallSig),
   None,
 }
@@ -59,7 +54,7 @@ pub fn schedule<
   others: &mut Peekable<I3>,
   compiler_fastlane: &mut usize,
   compiler_public: &mut usize,
-  compilers: &[&dyn NativeCompilerBuilder],
+  compilers: &[&dyn NativeCompilerBuilder<false>],
   important_s: F,
   others_iter: E,
 ) {
@@ -148,8 +143,8 @@ pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(
             worker.pass1();
 
             let out: Arc<[PickleInstruction]> = Arc::from(worker.out.into_boxed_slice());
-            let jumps = Arc::new(worker.jump);
-            let libcalls = Arc::new(worker.libcalls);
+            let jumps: Arc<[_]> = Arc::from(worker.jump);
+            let libcalls = Arc::from(worker.libcalls);
 
             CODE_CACHE.insert(id, (out.clone(), jumps.clone()));
             ProcessResult::Pickle(id, out, jumps, libcalls)
@@ -257,7 +252,7 @@ pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(
         let rb = resolve.clone();
 
         threads += 1;
-        thread::spawn(move || compiler(rb, rx, upd));
+        thread::spawn(move || compiler::<false, _>(rb, rx, upd));
 
         tx
       };
@@ -281,7 +276,7 @@ pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(
         let rb = resolve.clone();
 
         threads += 1;
-        thread::spawn(move || compiler(rb, rx, upd));
+        thread::spawn(move || compiler::<false, _>(rb, rx, upd));
 
         tx
       };
@@ -306,7 +301,7 @@ pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(
         let rb = resolve.clone();
 
         threads += 1;
-        thread::spawn(move || compiler(rb, rx, upd));
+        thread::spawn(move || compiler::<false, _>(rb, rx, upd));
 
         tx
       };

@@ -119,11 +119,19 @@ impl ApplicationManager {
 impl BytecodeResolver for ApplicationManager {
   type T<'a> = Cursor<Box<[u8]>>;
 
+  fn rodata(&self) -> &[u8] {
+    &[]
+  }
+
+  fn rwdata(&self) -> &mut [u8] {
+    &mut []
+  }
+
   fn last_section_id(&self) -> u64 {
     self.last_section
   }
 
-  fn get_libcalls(&self, section: u64) -> Option<Arc<ahash::HashSet<u64>>> {
+  fn get_libcalls(&self, section: u64) -> Option<Arc<[u64]>> {
     let mut conn_guard = self.cache.lock();
     let Some(conn) = conn_guard.as_mut() else {
       return None;
@@ -138,14 +146,14 @@ impl BytecodeResolver for ApplicationManager {
         rusqlite::params![section as i64, OPTLEVEL_PICKLE],
         |x| {
           Ok(
-            postcard::from_bytes(x.get_ref("picklelibcalls")?.as_blob()?)
+            postcard::from_bytes::<Box<[_]>>(x.get_ref("picklelibcalls")?.as_blob()?)
               .map_err(|_| rusqlite::Error::InvalidQuery)?,
           )
         },
       )
       .ok()?;
 
-    Some(Arc::new(query))
+    Some(Arc::from(query))
   }
 
   fn heuristic_pgo(&self) -> [&[u64]; 2] {
@@ -352,8 +360,8 @@ impl ApplicationManager {
           })
           .collect::<Arc<[PickleInstruction]>>();
 
-        let jumps = Arc::new(
-          postcard::from_bytes(row.get_ref("metamap")?.as_bytes()?)
+        let jumps = Arc::from(
+          postcard::from_bytes::<Box<_>>(row.get_ref("metamap")?.as_bytes()?)
             .map_err(|_| rusqlite::Error::BlobSizeError)?,
         );
 

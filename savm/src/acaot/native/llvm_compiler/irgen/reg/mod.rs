@@ -1,10 +1,10 @@
 use crate::acaot::native::llvm_compiler::{
   CompilerMeta, LLVM_CTX, LLVM_VAR_NAME,
   irgen::{
-    OffsetBytes, offsetload, offsetstore,
-    reg::regmap::{RegMapOut, load_all_vectored, regmapper},
+    OffsetBytes, offsetload, offsetload_aligned, offsetptr, offsetstore,
+    reg::regmap::{RegMapOut, RegMask, load_all_vectored, regmapper},
   },
-  ssaupdater::{LARGEPAD, REG_R2},
+  ssaupdater::{LARGEPAD, REG_R2, REG_R3},
 };
 use llvm_sys::{
   core::{
@@ -12,24 +12,22 @@ use llvm_sys::{
     LLVMDoubleTypeInContext, LLVMFloatTypeInContext, LLVMGetVectorSize, LLVMInt8TypeInContext,
     LLVMInt16TypeInContext, LLVMInt32TypeInContext, LLVMInt64TypeInContext, LLVMVectorType,
   },
-  prelude::{LLVMTypeRef, LLVMValueRef},
+  prelude::{LLVMBuilderRef, LLVMContextRef, LLVMTypeRef, LLVMValueRef},
 };
 
 pub mod regmap;
 
 pub const REGISTER_WIDTH: u8 = 8;
 
-#[inline(always)]
-pub fn llvmresolve_location_src_load(
+pub fn llvmresolve_location_src_ptr(
   meta: &mut CompilerMeta,
   typ: LLVMTypeOrWidth,
 
-  // Location-src
   locsrc: u8,
   alignment: Option<u8>,
   offset: i32,
   count: u32,
-) -> LLVMValueRef {
+) -> SrcType {
   unsafe {
     let typemap = typ.r#type();
 
@@ -45,55 +43,159 @@ pub fn llvmresolve_location_src_load(
           .map(|x| (*meta_ptr).regmnt.usereg(x as usize))
           .collect::<Box<[_]>>();
 
-        load_all_vectored(
-          meta.builder,
-          meta.llvmctx,
+        SrcType::RegMap {
+          builder: meta.builder,
+          llvmctx: meta.llvmctx,
+          vectmask: out.vectmask,
           typemap,
-          &out.vectmask,
-          &regsvalue,
-        )
+          regsvalue,
+        }
       }
       // Scratchpad
       8 => {
         let ty = typ.vect(count as _);
 
-        offsetload(
+        let pointerval = offsetptr(
           meta.builder,
           meta.llvmctx,
-          ty,
           meta.scratchpad,
-          OffsetBytes::I(offsetbytes),
-        )
+          offsetbytes.cast_unsigned(),
+          true,
+        );
+
+        SrcType::Pointer {
+          builder: meta.builder,
+          llvmctx: meta.llvmctx,
+          pointerval,
+          ty,
+          alignment,
+        }
       }
       // Largepad
       9 => {
         let ty = typ.vect(count as _);
         let val = (*meta_ptr).regmnt.usereg(LARGEPAD);
 
-        offsetload(
+        let pointerval = offsetptr(
           meta.builder,
           meta.llvmctx,
-          ty,
           val,
-          OffsetBytes::I(offsetbytes),
-        )
+          offsetbytes.cast_unsigned(),
+          true,
+        );
+        SrcType::Pointer {
+          builder: meta.builder,
+          llvmctx: meta.llvmctx,
+          pointerval,
+          ty,
+          alignment,
+        }
       }
       // Read pointer through r2
       10 => {
         let ty = typ.vect(count as _);
         let val = (*meta_ptr).regmnt.usereg(REG_R2);
 
-        offsetload(
+        let pointerval = offsetptr(
           meta.builder,
           meta.llvmctx,
-          ty,
           val,
-          OffsetBytes::I(offsetbytes),
-        )
+          offsetbytes.cast_unsigned(),
+          true,
+        );
+
+        SrcType::Pointer {
+          builder: meta.builder,
+          llvmctx: meta.llvmctx,
+          pointerval,
+          ty,
+          alignment,
+        }
+      }
+      // Read from r3
+      11 => {
+        let ty = typ.vect(count as _);
+        let val = (*meta_ptr).regmnt.usereg(REG_R3);
+
+        let pointerval = offsetptr(
+          meta.builder,
+          meta.llvmctx,
+          val,
+          offsetbytes.cast_unsigned(),
+          true,
+        );
+
+        SrcType::Pointer {
+          builder: meta.builder,
+          llvmctx: meta.llvmctx,
+          pointerval,
+          ty,
+          alignment,
+        }
       }
       _ => unreachable!(),
     }
   }
+}
+
+pub enum SrcType {
+  Pointer {
+    builder: LLVMBuilderRef,
+    llvmctx: LLVMContextRef,
+    pointerval: LLVMValueRef,
+    ty: LLVMTypeRef,
+    alignment: Option<u8>,
+  },
+  RegMap {
+    builder: LLVMBuilderRef,
+    llvmctx: LLVMContextRef,
+    vectmask: Vec<RegMask>,
+    typemap: LLVMTypeMapping,
+    regsvalue: Box<[LLVMValueRef]>,
+  },
+}
+
+#[inline(always)]
+pub fn llvmload_src(src: SrcType) -> LLVMValueRef {
+  match src {
+    SrcType::RegMap {
+      builder,
+      llvmctx,
+      typemap,
+      vectmask,
+      regsvalue,
+    } => load_all_vectored(builder, llvmctx, typemap, &vectmask, &regsvalue),
+    SrcType::Pointer {
+      builder,
+      llvmctx,
+      ty,
+      pointerval,
+      alignment,
+    } => offsetload_aligned(
+      builder,
+      llvmctx,
+      ty,
+      pointerval,
+      OffsetBytes::I(0),
+      alignment.map(|x| x as u32),
+    ),
+  }
+}
+
+#[inline(always)]
+pub fn llvmresolve_location_src_load(
+  meta: &mut CompilerMeta,
+  typ: LLVMTypeOrWidth,
+
+  // Location-src
+  locsrc: u8,
+  alignment: Option<u8>,
+  offset: i32,
+  count: u32,
+) -> LLVMValueRef {
+  llvmload_src(llvmresolve_location_src_ptr(
+    meta, typ, locsrc, alignment, offset, count,
+  ))
 }
 
 #[inline(always)]
@@ -136,6 +238,12 @@ pub fn llvmresolve_location_src_store(
       // Read pointer through r2
       10 => {
         let val = (*meta_ptr).regmnt.usereg(REG_R2);
+
+        StoreResolver::Ptr(val, offsetbytes)
+      }
+      // Read pointer through r3
+      11 => {
+        let val = (*meta_ptr).regmnt.usereg(REG_R3);
 
         StoreResolver::Ptr(val, offsetbytes)
       }

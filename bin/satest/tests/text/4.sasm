@@ -5,16 +5,16 @@
 #define MARK_LOOP_BEGIN 1::u64
 
 ; This is output
-reg $r1::u8, 1::u64
+reg $r1::u8, 0::u8, 1::u64
 
 ; Our countdown system!
-reg $r2::u8, 20::u64
+reg $r2::u8, 0::u8, 20::u64
 
 ; Lets pre-define it
-reg $r3::u8, 1::u64
+reg $r3::u8, 0::u8, 1::u64
 
 ; Set r4 to `0`
-reg $r4::u8, 0::u64
+reg $r4::u8, 0::u8, 0::u64
 
 mark $MARK_LOOP_BEGIN::u64
   ; r1 = r1*r2

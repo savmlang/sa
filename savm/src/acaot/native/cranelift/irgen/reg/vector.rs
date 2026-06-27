@@ -1,6 +1,6 @@
 use cranelift::{
   codegen::ir::Endianness,
-  prelude::{types::*, *},
+  prelude::{MemFlagsData as MemFlags, types::*, *},
 };
 
 use crate::acaot::native::cranelift::CompilerMeta;

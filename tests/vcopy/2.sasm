@@ -1,8 +1,8 @@
 #import *
 
-reg $r1::u8, 16::u64
-reg $r2::u8, 300::u64
-reg $r3::u8, 500::u64
+reg $r1::u8, 0::u8, 16::u64
+reg $r2::u8, 0::u8, 300::u64
+reg $r3::u8, 0::u8, 500::u64
 
 ; vcopy from r1,r2,r3 to r4,r5,r6
 vcopy %u8[ 0::u1 | 0::u7 ], %u8[ $r1::u4 | $r4::u4 ], 24::u32, 0::u32, 0::u32

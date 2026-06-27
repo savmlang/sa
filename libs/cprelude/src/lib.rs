@@ -40,6 +40,26 @@ macro_rules! cprelude {
         pub len: usize
       }
 
+      #[repr(C)]
+      #[allow(non_camel_case_types)]
+      /// Defines a Binary Slice that ALSO is mutable
+      ///
+      /// data : pointer to the content
+      /// len  : Total bytes
+      pub struct [<$namespace _ IMSlice_Impl>]<T>{
+        /// Pointer to the content
+        pub data: *mut T,
+        /// Total Bytes
+        pub len: usize
+      }
+
+      impl<T> cprelude::SlicableMut for [<$namespace _ IMSlice_Impl>]<T> {
+        type Output = T;
+
+        fn data_mut(&self) -> *mut T {self.data as _}
+        fn len(&self) -> usize {self.len}
+      }
+
       #[allow(non_camel_case_types)]
       pub type [<$namespace _ ISlice>] = [<$namespace _ ISlice_Impl>]<u8>;
 
@@ -58,6 +78,28 @@ macro_rules! cprelude {
       }
     }
   };
+}
+
+pub trait SlicableMut {
+  type Output;
+
+  fn data_mut(&self) -> *mut Self::Output;
+  fn len(&self) -> usize;
+
+  unsafe fn to_slice_mut<'a, 'b>(&'a self) -> &'b mut [Self::Output] {
+    unsafe { slice::from_raw_parts_mut(self.data_mut(), self.len()) }
+  }
+}
+
+impl<T: SlicableMut> Slicable for T {
+  type Output = T::Output;
+  fn data(&self) -> *const Self::Output {
+    self.data_mut() as _
+  }
+
+  fn len(&self) -> usize {
+    SlicableMut::len(self)
+  }
 }
 
 pub trait Slicable {

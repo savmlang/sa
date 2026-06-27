@@ -1,10 +1,10 @@
-use std::collections::HashMap;
-
 #[cfg(feature = "cranelift")]
 use crate::acaot::native::cranelift::SaVMCranelift;
 #[cfg(feature = "llvm")]
 use crate::acaot::native::llvm_compiler::SaVMLLVMBuilder;
-use crate::{CacheData, CacheLevel, acaot::pickle::def::PickleInstruction};
+use crate::{
+  CacheData, CacheLevel, acaot::pickle::def::PickleInstruction, kvwrap::SaVMJumpWrapRef,
+};
 
 #[cfg(feature = "cranelift")]
 pub mod cranelift;
@@ -14,34 +14,34 @@ pub mod llvm_compiler;
 
 pub use super::*;
 
-pub trait NativeCompiler {
-  fn compile(
-    &mut self,
-    pickle: &[PickleInstruction],
-    jumps: &HashMap<u64, usize, ahash::RandomState>,
-  ) -> CacheData;
+pub trait NativeCompiler<const SENDBACK: bool> {
+  fn compile(&mut self, pickle: &[PickleInstruction], jumps: SaVMJumpWrapRef) -> CacheData;
 }
 
-pub trait NativeCompilerBuilder: Send {
+pub trait NativeCompilerBuilder<const SENDBACK: bool>: Send {
   fn cache(&self) -> CacheLevel;
 
-  fn get(&self) -> Box<dyn NativeCompiler>;
+  fn get(&self) -> Box<dyn NativeCompiler<SENDBACK>>;
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct CompilerBuilder(fn() -> Box<dyn NativeCompiler>, CacheLevel);
+pub struct CompilerBuilder<const SENDBACK: bool>(
+  fn() -> Box<dyn NativeCompiler<SENDBACK>>,
+  CacheLevel,
+);
 
-impl NativeCompilerBuilder for CompilerBuilder {
+impl<const T: bool> NativeCompilerBuilder<T> for CompilerBuilder<T> {
   fn cache(&self) -> CacheLevel {
     self.1
   }
 
-  fn get(&self) -> Box<dyn NativeCompiler> {
+  fn get(&self) -> Box<dyn NativeCompiler<T>> {
     (self.0)()
   }
 }
 
-pub fn testing_compiler_infra() -> &'static [(&'static str, &'static dyn NativeCompilerBuilder)] {
+pub fn testing_compiler_infra<const SENDBACK: bool>()
+-> &'static [(&'static str, &'static dyn NativeCompilerBuilder<SENDBACK>)] {
   &[
     #[cfg(feature = "llvm")]
     (
@@ -61,8 +61,8 @@ pub fn testing_compiler_infra() -> &'static [(&'static str, &'static dyn NativeC
   ]
 }
 
-pub fn testing_epitier_compilers() -> &'static [(&'static str, &'static dyn NativeCompilerBuilder)]
-{
+pub fn testing_epitier_compilers<const SENDBACK: bool>()
+-> &'static [(&'static str, &'static dyn NativeCompilerBuilder<SENDBACK>)] {
   &[
     // #[cfg(feature = "llvm")]
     // (
@@ -80,7 +80,8 @@ pub fn testing_epitier_compilers() -> &'static [(&'static str, &'static dyn Nati
   ]
 }
 
-pub fn compiler_infra() -> &'static [&'static dyn NativeCompilerBuilder] {
+pub fn compiler_infra<const SENDBACK: bool>()
+-> &'static [&'static dyn NativeCompilerBuilder<SENDBACK>] {
   &[
     #[cfg(all(feature = "llvm", not(feature = "cranelift")))]
     &CompilerBuilder(SaVMLLVMBuilder::create_cinder, CacheLevel::LLVMCinder),
@@ -91,7 +92,7 @@ pub fn compiler_infra() -> &'static [&'static dyn NativeCompilerBuilder] {
   ]
 }
 
-pub fn epitier_compiler() -> impl NativeCompilerBuilder {
+pub fn epitier_compiler<const SENDBACK: bool>() -> impl NativeCompilerBuilder<SENDBACK> {
   #[cfg(feature = "llvm")]
   return CompilerBuilder(SaVMLLVMBuilder::create_epitome, CacheLevel::LLVMEpitome);
 

@@ -2,7 +2,7 @@
   "rust-analyzer.linkedProjects": ["./Cargo.toml"],
   "rust-analyzer.cargo.features": [
     "savm/dev",
-    "savmruncore/pro_standard",
+    "savmrunshared/pro_standard",
     "satest/pro_standard",
     "savmc/native"
   ],
@@ -42,5 +42,6 @@
       "args": ["--rcs", "${workspaceFolder}/devenv"]
     }
   },
-  "terminal.integrated.defaultProfile.osx": "SaVM Development"
+  "terminal.integrated.defaultProfile.osx": "SaVM Development",
+  "C_Cpp.default.intelliSenseMode": "windows-msvc-x64"
 }

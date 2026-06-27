@@ -1,9 +1,9 @@
-use std::{collections::HashMap, io::Read};
-
-use ahash::HashSet;
+use crate::{
+  PickleJumpData,
+  acaot::pickle::def::{PickleInstruction, *},
+};
 use sart::ctr::*;
-
-use crate::acaot::pickle::def::{PickleInstruction, *};
+use std::io::Read;
 
 pub mod def;
 pub mod reader;
@@ -13,8 +13,8 @@ pub mod implementation;
 pub struct PickleWorker<T: Read> {
   pub bytecode: T,
   pub out: Vec<PickleInstruction>,
-  pub libcalls: HashSet<u64>,
-  pub jump: HashMap<u64, usize, ahash::RandomState>,
+  pub libcalls: Vec<u64>,
+  pub jump: Vec<PickleJumpData>,
 }
 
 trait Extract: Read + Sized {
@@ -86,6 +86,18 @@ impl<T: Read> PickleWorker<T> {
         _e => unreachable!("INST: {_e}"),
       }
     }
+
+    // Sort & Dedup libcalls
+    self.libcalls.sort_unstable();
+    self.libcalls.dedup();
+
+    // Sort & Dedup Jumps
+    self
+      .jump
+      .sort_unstable_by_key(|&PickleJumpData { marker, .. }| marker);
+    self
+      .jump
+      .dedup_by_key(|&mut PickleJumpData { marker, .. }| marker);
   }
 
   // [Sub Opcode (2-bits)] [type (3-bit)] [ordering (3-bits)] [offset v0 (i8)] [offset v1 (i8)]
@@ -149,7 +161,7 @@ impl<T: Read> PickleWorker<T> {
     let sectionid = self.bytecode.extract::<8>().swap_if_be();
     let marker = self.bytecode.extract::<8>().swap_if_be();
 
-    self.libcalls.insert(u64::from_ne_bytes(sectionid));
+    self.libcalls.push(u64::from_ne_bytes(sectionid));
 
     let mut copy = [0u8; 16];
     copy[0..8].copy_from_slice(&sectionid);
@@ -170,7 +182,7 @@ impl<T: Read> PickleWorker<T> {
     let [regignore] = self.bytecode.extract::<1>();
     let sectionid = self.bytecode.extract::<8>().swap_if_be();
 
-    self.libcalls.insert(u64::from_ne_bytes(sectionid));
+    self.libcalls.push(u64::from_ne_bytes(sectionid));
 
     self.emit_copy_bytes(opcode, sectionid);
 
@@ -508,11 +520,16 @@ impl<T: Read> PickleWorker<T> {
       u3: 0,
     });
 
-    self.jump.insert(marker, self.out.len() - 1);
+    self.jump.push(PickleJumpData {
+      marker,
+      loc: self.out.len() - 1,
+    });
   }
 
   fn handle_reg(&mut self) {
     let [register] = self.bytecode.extract_result().expect("");
+
+    let offset = self.bytecode.extract_result().expect("");
 
     let data_ne: [u8; 8] =
       u64::from_le_bytes(self.bytecode.extract_result::<8>().expect("")).to_ne_bytes();
@@ -521,9 +538,9 @@ impl<T: Read> PickleWorker<T> {
 
     self.out.push(PickleInstruction {
       opcode: PICKLE_OPCODE_REG,
-      u1: register,
-      u2: 0,
-      u3: 0,
+      u1: register & 0xF,
+      u2: (register >> 2) & 0b11,
+      u3: u8::from_le_bytes(offset),
     });
   }
 

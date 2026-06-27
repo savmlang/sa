@@ -1,6 +1,7 @@
 use std::mem::offset_of;
 
 use cranelift::prelude::{
+  MemFlagsData as MemFlags,
   isa::CallConv,
   types::{F32, F64, I8, I16, I32, I64},
   *,

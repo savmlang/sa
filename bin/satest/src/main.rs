@@ -58,10 +58,16 @@ pub(crate) struct Resolver {
 impl BytecodeResolver for Resolver {
   type T<'a> = File;
 
+  fn rodata(&self) -> &[u8] {
+    &[]
+  }
+  fn rwdata(&self) -> &mut [u8] {
+    &mut []
+  }
   fn learn_data(&self, _: u64) -> SymbolMapTableInfo {
     SymbolMapTableInfo::MixedSizedBytecode
   }
-  fn get_libcalls(&self, section: u64) -> Option<Arc<savm::ahash::HashSet<u64>>> {
+  fn get_libcalls(&self, section: u64) -> Option<Arc<[u64]>> {
     match self
       .store
       .read()
@@ -149,7 +155,7 @@ fn main() {
       .filter_map(Result::ok)
       .collect::<Box<_>>();
 
-    items.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
+    items.sort_unstable_by(|a, b| a.file_name().cmp(&b.file_name()));
 
     for entry in items {
       let sectionid = entry

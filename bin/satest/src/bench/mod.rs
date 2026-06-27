@@ -62,8 +62,8 @@ pub fn jit_benchmark<T: BytecodeResolver + Send + Sync + 'static>(
 ) {
   let mut store = Vec::with_capacity(rounds as usize);
 
-  for (name, _) in testing_compiler_infra() {
-    let (exec, compile) = jit.ptrstore.get(&(sectionid, *name)).unwrap();
+  for &(name, _) in testing_compiler_infra::<true>() {
+    let (exec, compile) = jit.ptrstore.get(&(sectionid, name)).unwrap();
 
     for _ in 0..rounds {
       let t0 = Instant::now();

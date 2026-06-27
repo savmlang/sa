@@ -6,7 +6,7 @@ use crate::acaot::native::cranelift::irgen::reg::{
 use super::*;
 use cranelift::{
   codegen::ir::Endianness,
-  prelude::{types::INVALID, *},
+  prelude::{MemFlagsData as MemFlags, types::INVALID},
 };
 
 #[inline(always)]
@@ -137,6 +137,17 @@ pub fn resolve_location_src_load_assumedwdt(
       let r2 = resolve_reg(builder, meta, 1);
 
       let ptr = builder.use_var(r2);
+      let alignment = alignment.unwrap_or(1);
+
+      break_simd_waterfall(alignment, typedata, count, assumedwdt)
+        .into_iter()
+        .map(|(offset, mem, memflags)| builder.ins().load(mem, memflags, ptr, offset.cast_signed()))
+        .collect::<Box<[_]>>()
+    }
+    11 => {
+      let r3 = resolve_reg(builder, meta, 2);
+
+      let ptr = builder.use_var(r3);
       let alignment = alignment.unwrap_or(1);
 
       break_simd_waterfall(alignment, typedata, count, assumedwdt)

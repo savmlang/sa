@@ -31,7 +31,7 @@ pub fn sasm<'a>(rt: PathInfo<'a>) {
 
   let mut has_macros = false;
   // Send macros to the last element
-  files.sort_by(|a, b| {
+  files.sort_unstable_by(|a, b| {
     let a = a.file_name();
     let b = b.file_name();
     let is_a_macros = a == "defs.sasm";

@@ -47,7 +47,10 @@ extern "C" fn read_ptr(
 
     let data = (*state).fd.ptr as *const u8;
     let len = (*state).vw.u64 as usize;
-    let mut data_f = &slice::from_raw_parts(data, len)[(*state).internal1.u64 as usize..];
+    let Some(mut data_f) = slice::from_raw_parts(data, len).get((*state).internal1.u64 as usize..)
+    else {
+      return SAVMC_Maybe::None;
+    };
 
     match data_f.read(slice) {
       Err(_) => SAVMC_Maybe::None,

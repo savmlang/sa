@@ -3,7 +3,10 @@ use std::{mem::offset_of, ptr::copy_nonoverlapping};
 use crate::acaot::{
   native::cranelift::{
     CompilerMeta,
-    irgen::reg::{TypeOrWidth, break_simd_waterfall, resolve_reg},
+    irgen::{
+      almu::handle_reg,
+      reg::{TypeOrWidth, break_simd_waterfall, resolve_reg},
+    },
   },
   pickle::def::{
     PICKLE_OPCODE_ATOMIC, PICKLE_OPCODE_CAST, PICKLE_OPCODE_DIV, PICKLE_OPCODE_HINT,
@@ -19,14 +22,16 @@ use crate::acaot::{
 };
 use cranelift::{
   frontend::Switch,
-  prelude::{FunctionBuilder, InstBuilder, MemFlags, TrapCode, isa::TargetIsa, types::I64},
+  prelude::{
+    FunctionBuilder, InstBuilder, MemFlagsData as MemFlags, TrapCode, isa::TargetIsa, types::I64,
+  },
 };
 use sart::ctr::VMTaskState;
 
 mod almu;
 mod reg;
 
-pub fn compile(
+pub fn compile<const SENDBACK: bool>(
   builder: &mut FunctionBuilder,
   meta: &mut CompilerMeta,
   pickle: &[PickleInstruction],
@@ -80,15 +85,7 @@ pub fn compile(
         let newblock = builder.create_block();
         builder.switch_to_block(newblock);
       }
-      PICKLE_OPCODE_REG => {
-        let reg = op.u1;
-        let marker = u64::from_ne_bytes(meta.ws[0..8].try_into().unwrap());
-
-        let val = builder.ins().iconst(I64, marker.cast_signed());
-        let var = reg::resolve_reg(builder, meta, reg);
-
-        builder.def_var(var, val);
-      }
+      PICKLE_OPCODE_REG => handle_reg(&op, meta, builder),
       PICKLE_OPCODE_JIF => {
         let intent = op.u1;
         let relocation_src = op.u2;
@@ -284,24 +281,25 @@ pub fn compile(
   {
     builder.switch_to_block(meta.epilogue);
 
-    let vars = [
-      #[cfg(feature = "sendback")]
-      (&meta.r1, offset_of!(VMTaskState, r1) as i32),
-      #[cfg(feature = "sendback")]
-      (&meta.r2, offset_of!(VMTaskState, r2) as i32),
-      #[cfg(feature = "sendback")]
-      (&meta.r3, offset_of!(VMTaskState, r3) as i32),
-      #[cfg(feature = "sendback")]
-      (&meta.r4, offset_of!(VMTaskState, r4) as i32),
-      #[cfg(feature = "sendback")]
-      (&meta.r5, offset_of!(VMTaskState, r5) as i32),
-      #[cfg(feature = "sendback")]
-      (&meta.r6, offset_of!(VMTaskState, r6) as i32),
-      (&meta.r7, offset_of!(VMTaskState, r7) as i32),
-      (&meta.r8, offset_of!(VMTaskState, r8) as i32),
-    ];
+    let vars = if SENDBACK {
+      &[
+        (&meta.r1, offset_of!(VMTaskState, r1) as i32),
+        (&meta.r2, offset_of!(VMTaskState, r2) as i32),
+        (&meta.r3, offset_of!(VMTaskState, r3) as i32),
+        (&meta.r4, offset_of!(VMTaskState, r4) as i32),
+        (&meta.r5, offset_of!(VMTaskState, r5) as i32),
+        (&meta.r6, offset_of!(VMTaskState, r6) as i32),
+        (&meta.r7, offset_of!(VMTaskState, r7) as i32),
+        (&meta.r8, offset_of!(VMTaskState, r8) as i32),
+      ] as &[_]
+    } else {
+      &[
+        (&meta.r7, offset_of!(VMTaskState, r7) as i32),
+        (&meta.r8, offset_of!(VMTaskState, r8) as i32),
+      ]
+    };
 
-    for (var, offset) in vars {
+    for &(var, offset) in vars {
       if let Some(r) = var {
         let r_val = builder.use_var(*r);
 

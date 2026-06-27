@@ -1,6 +1,6 @@
 use cranelift::{
   codegen::ir::{AtomicRmwOp, ConstantData},
-  prelude::{FunctionBuilder, InstBuilder, IntCC, MemFlags},
+  prelude::{FunctionBuilder, InstBuilder, IntCC, MemFlagsData as MemFlags},
 };
 
 use crate::acaot::{

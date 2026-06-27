@@ -27,7 +27,7 @@ pastey = "^0.2"
 tokio = { version = "^1", features = ["rt", "rt-multi-thread", "sync", "time"] }
 
 # Sets of compiler
-cranelift = { version = "^0.132", features = [
+cranelift = { version = "^0.133", features = [
   "std",
   "native",
   "frontend",
@@ -59,7 +59,7 @@ default = []
 ffi_system = ["sart/ffi_system"]
 
 # Development mode (rust-analyzer)
-dev = ["cranelift", "llvm", "sendback"]
+dev = ["cranelift", "llvm"]
 
 llvm = ["dep:llvm-sys", "dep:cc", "native", "sajit/llvm"]
 cranelift = ["dep:cranelift", "native"]
@@ -67,7 +67,3 @@ native = ["dep:sajit", "dep:evmap", "dep:crossbeam-channel", "dag"]
 
 # AcDAG support
 dag = []
-
-# Send JIT Generated Outputs back
-# for satest mainly
-sendback = ["native"]

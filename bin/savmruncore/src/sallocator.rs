@@ -1,6 +1,6 @@
 use std::alloc::GlobalAlloc;
 
-use savm::sart::salloc;
+use sart::salloc;
 
 pub struct SaAllocator;
 

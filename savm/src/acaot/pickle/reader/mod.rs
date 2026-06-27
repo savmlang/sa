@@ -37,6 +37,44 @@ macro_rules! constdef {
   };
 }
 
+pub struct REG {
+  pub src: u8,
+  pub offset: u8,
+  pub width: u8,
+
+  pub immediate: Immediate,
+}
+
+pub enum Immediate {
+  U64(u64),
+  U32(u32),
+  U16(u16),
+  U8(u8),
+}
+
+pub fn parse_reg(pickle: &PickleInstruction, ws: &[u8]) -> REG {
+  let src = pickle.u1;
+  let width = pickle.u2;
+  let offset = pickle.u3;
+
+  let data = wspickle!(ws, start = 0, stop = 8, u64);
+
+  REG {
+    src,
+    offset,
+
+    immediate: match width {
+      0 => Immediate::U64(data),
+      1 => Immediate::U32(data as _),
+      2 => Immediate::U16(data as _),
+      3 => Immediate::U8(data as _),
+      _ => unreachable!(),
+    },
+
+    width,
+  }
+}
+
 constdef! {
   u8
 

@@ -3,20 +3,23 @@ use crate::acaot::{
     CompilerMeta, LLVM_VAR_NAME,
     irgen::{
       almu::{
-        handle_add, handle_div, handle_mov, handle_mul, handle_rem, handle_sub, handle_vabs,
-        handle_vbit, handle_vcmp, handle_vfadd, handle_vfdiv, handle_vfma, handle_vfmul,
-        handle_vfop, handle_vfsub, handle_vneg, handle_vrot, handle_vsh,
+        handle_add, handle_atomic, handle_cast, handle_div, handle_mov, handle_mul, handle_reg,
+        handle_rem, handle_sub, handle_vabs, handle_vbit, handle_vcmp, handle_vcnt, handle_vcopy,
+        handle_vfadd, handle_vfcast, handle_vfdiv, handle_vfma, handle_vfmul, handle_vfop,
+        handle_vfsub, handle_vminimax, handle_vneg, handle_vrot, handle_vsh,
       },
       reg::{LLVMTypeOrWidth, llvmresolve_location_src_load},
     },
   },
   pickle::def::{
-    PICKLE_OPCODE_DIV, PICKLE_OPCODE_HINT, PICKLE_OPCODE_JIF, PICKLE_OPCODE_JMP,
-    PICKLE_OPCODE_MARK, PICKLE_OPCODE_MOV, PICKLE_OPCODE_REG, PICKLE_OPCODE_REM,
-    PICKLE_OPCODE_VABS, PICKLE_OPCODE_VADD, PICKLE_OPCODE_VADDF, PICKLE_OPCODE_VBIT,
-    PICKLE_OPCODE_VCMP, PICKLE_OPCODE_VDIVF, PICKLE_OPCODE_VFMA, PICKLE_OPCODE_VFOP,
-    PICKLE_OPCODE_VMUL, PICKLE_OPCODE_VMULF, PICKLE_OPCODE_VNEG, PICKLE_OPCODE_VROT,
-    PICKLE_OPCODE_VSH, PICKLE_OPCODE_VSUB, PICKLE_OPCODE_VSUBF, PICKLE_OPCODE_WS_PUT,
+    PICKLE_OPCODE_ATOMIC, PICKLE_OPCODE_CAST, PICKLE_OPCODE_DIV, PICKLE_OPCODE_HINT,
+    PICKLE_OPCODE_JIF, PICKLE_OPCODE_JMP, PICKLE_OPCODE_MARK, PICKLE_OPCODE_MOV, PICKLE_OPCODE_REG,
+    PICKLE_OPCODE_REM, PICKLE_OPCODE_VABS, PICKLE_OPCODE_VADD, PICKLE_OPCODE_VADDF,
+    PICKLE_OPCODE_VBIT, PICKLE_OPCODE_VCMP, PICKLE_OPCODE_VCNT, PICKLE_OPCODE_VCOPY,
+    PICKLE_OPCODE_VDIVF, PICKLE_OPCODE_VFCAST, PICKLE_OPCODE_VFMA, PICKLE_OPCODE_VFOP,
+    PICKLE_OPCODE_VMINIMAX, PICKLE_OPCODE_VMUL, PICKLE_OPCODE_VMULF, PICKLE_OPCODE_VNEG,
+    PICKLE_OPCODE_VROT, PICKLE_OPCODE_VSH, PICKLE_OPCODE_VSUB, PICKLE_OPCODE_VSUBF,
+    PICKLE_OPCODE_WS_PUT,
   },
 };
 use llvm_sys::{
@@ -132,15 +135,7 @@ pub unsafe fn compile_pickle(meta: &mut CompilerMeta) {
 
             LLVMPositionBuilderAtEnd(meta.builder, contd);
           }
-          PICKLE_OPCODE_REG => {
-            let reg = pickle.u1;
-            let marker = u64::from_ne_bytes(meta.ws[0..8].try_into().unwrap());
-
-            let cint = LLVMConstInt(meta.i64, marker, 0);
-            let meta_ptr = meta as *mut CompilerMeta;
-
-            (*meta_ptr).regmnt.setreg(reg as _, cint);
-          }
+          PICKLE_OPCODE_REG => handle_reg(pickle, meta),
           PICKLE_OPCODE_JMP => {
             let marker = u64::from_ne_bytes(meta.ws[0..8].try_into().unwrap());
 
@@ -159,6 +154,15 @@ pub unsafe fn compile_pickle(meta: &mut CompilerMeta) {
           PICKLE_OPCODE_VFOP => handle_vfop(pickle, meta),
           PICKLE_OPCODE_VBIT => handle_vbit(pickle, meta),
           PICKLE_OPCODE_VROT => handle_vrot(pickle, meta),
+
+          PICKLE_OPCODE_VCNT => handle_vcnt(pickle, meta),
+          PICKLE_OPCODE_VMINIMAX => handle_vminimax(pickle, meta),
+
+          PICKLE_OPCODE_ATOMIC => handle_atomic(pickle, meta),
+          PICKLE_OPCODE_VCOPY => handle_vcopy(pickle, meta),
+
+          PICKLE_OPCODE_CAST => handle_cast(pickle, meta),
+          PICKLE_OPCODE_VFCAST => handle_vfcast(pickle, meta),
           _ => {}
         },
 

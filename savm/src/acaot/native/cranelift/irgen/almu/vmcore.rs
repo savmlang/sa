@@ -1,7 +1,7 @@
 use std::mem::offset_of;
 
 use cranelift::prelude::{
-  AbiParam, FunctionBuilder, InstBuilder, MemFlags, Signature, Value,
+  AbiParam, FunctionBuilder, InstBuilder, MemFlagsData as MemFlags, Signature, Value,
   types::{I8, I32, I64},
 };
 use sart::ctr::VMTaskState;

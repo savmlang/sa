@@ -8,7 +8,11 @@ use crate::jitmem::JITMemData;
 use console::Style;
 use savm::{BytecodeResolver, VM, sync::VMSTAT};
 #[cfg(feature = "native")]
-use savm::{CacheData, CacheLevel, acaot::pickle::def::PickleInstruction};
+use savm::{
+  CacheData, CacheLevel,
+  acaot::{native::NativeCompiler, pickle::def::PickleInstruction},
+  kvwrap::SaVMJumpWrapRef,
+};
 
 pub fn test_vm_interpreter<T: BytecodeResolver + Send + Sync + 'static>(
   vm: &VM<T>,
@@ -61,8 +65,8 @@ pub fn test_jits<T: BytecodeResolver + Send + Sync + 'static>(
   worker.pass1();
 
   let outarc: Arc<[PickleInstruction]> = Arc::from(worker.out.into_boxed_slice());
-  let jumps = Arc::new(worker.jump);
-  let libcalls = Arc::new(worker.libcalls);
+  let jumps: Arc<[savm::PickleJumpData]> = Arc::from(worker.jump);
+  let libcalls = Arc::from(worker.libcalls);
 
   let out2 = outarc.clone();
   let jumps2 = jumps.clone();
@@ -75,15 +79,15 @@ pub fn test_jits<T: BytecodeResolver + Send + Sync + 'static>(
     },
   );
 
-  for (name, builder) in testing_compiler_infra() {
+  for (name, builder) in testing_compiler_infra::<true>() {
     println!(
       "\n{:>14} Start TestID #{sectionid} ({name})",
       Style::new().yellow().apply_to("Test"),
     );
 
     let t0 = Instant::now();
-    let mut compiler = builder.get();
-    let compiled = compiler.compile(&out2, &jumps2);
+    let mut compiler: Box<dyn NativeCompiler<true>> = builder.get();
+    let compiled = compiler.compile(&out2, SaVMJumpWrapRef(&jumps2));
 
     let tf = t0.elapsed();
     let exec = match compiled {
