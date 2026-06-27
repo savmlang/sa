@@ -26,8 +26,7 @@ use llvm_sys::{
   LLVMIntPredicate,
   core::{
     LLVMAppendBasicBlockInContext, LLVMBuildBr, LLVMBuildCondBr, LLVMBuildICmp,
-    LLVMClearInsertionPosition, LLVMConstInt, LLVMConstNull, LLVMCreateBasicBlockInContext,
-    LLVMGetInsertBlock, LLVMPositionBuilderAtEnd,
+    LLVMClearInsertionPosition, LLVMConstNull, LLVMGetInsertBlock, LLVMPositionBuilderAtEnd,
   },
 };
 use std::ptr::copy_nonoverlapping;
@@ -57,7 +56,7 @@ pub unsafe fn compile_pickle(meta: &mut CompilerMeta) {
         PICKLE_OPCODE_HINT => {
           let bytes = pickle.u3 as usize;
 
-          unsafe {
+          {
             copy_nonoverlapping(
               // the next instruction after the OPCODE_HINT is a bytestream
               pickles.as_ptr().add(idx + 1) as *const u8,
@@ -103,9 +102,8 @@ pub unsafe fn compile_pickle(meta: &mut CompilerMeta) {
             let relocation_src = pickle.u2;
             let width = pickle.u3;
 
-            let offset = i32::from_ne_bytes(unsafe { meta.ws[0..4].try_into().unwrap_unchecked() });
-            let marker =
-              u64::from_ne_bytes(unsafe { meta.ws[4..12].try_into().unwrap_unchecked() });
+            let offset = i32::from_ne_bytes(meta.ws[0..4].try_into().unwrap_unchecked());
+            let marker = u64::from_ne_bytes(meta.ws[4..12].try_into().unwrap_unchecked());
 
             let typ = LLVMTypeOrWidth::Width(width);
             let r#type = typ.r#type();

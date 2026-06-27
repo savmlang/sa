@@ -1,24 +1,17 @@
+use std::mem::offset_of;
+
 use crate::acaot::native::llvm_compiler::{
-  CompilerMeta, LLVM_VAR_NAME,
   irgen::{OffsetBytes, offsetload},
   ssaupdater::ssavar::SsaResolver,
 };
 use llvm_sys::{
-  LLVMValue,
   core::{
-    LLVMBuildGEP2, LLVMBuildLoad2, LLVMConstInt, LLVMGetInsertBlock, LLVMGetLastInstruction,
-    LLVMInt64TypeInContext, LLVMPointerTypeInContext, LLVMPositionBuilder,
+    LLVMGetInsertBlock, LLVMGetLastInstruction, LLVMInt64TypeInContext, LLVMPointerTypeInContext,
     LLVMPositionBuilderAtEnd, LLVMPositionBuilderBefore,
   },
   prelude::{LLVMBasicBlockRef, LLVMBuilderRef, LLVMContextRef, LLVMTypeRef, LLVMValueRef},
 };
 use sart::{ctr::VMTaskState, structures::QuadPackedData};
-use std::{
-  ffi::{c_char, c_void},
-  hint::cold_path,
-  mem::offset_of,
-  ptr::NonNull,
-};
 pub mod ssavar;
 
 pub type ValueManaged = SsaResolver;
@@ -64,7 +57,7 @@ pub struct ReducedCompilerMeta {
 
 impl VMRegManager {
   pub fn new(compiler: ReducedCompilerMeta) -> Self {
-    let initreg = |regid: usize| unsafe {
+    let initreg = |regid: usize| {
       let ReducedCompilerMeta {
         prologue,
         builder,
@@ -162,7 +155,7 @@ impl VMRegManager {
   }
 
   pub fn usereg(&mut self, regid: usize) -> LLVMValueRef {
-    unsafe {
+    {
       let Some(out) = self.try_usereg(regid) else {
         unreachable!();
       };

@@ -1,7 +1,3 @@
-use std::collections::HashMap;
-
-use rapidhash::{HashMapExt, RapidHashMap};
-
 use crate::{
   StringStore,
   mir::{

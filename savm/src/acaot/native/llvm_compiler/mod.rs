@@ -1,5 +1,3 @@
-#![allow(unused)]
-use core::slice;
 use std::{
   borrow::Cow,
   ffi::c_char,
@@ -16,13 +14,13 @@ use llvm_sys::{
   analysis::{LLVMVerifierFailureAction, LLVMVerifyModule},
   core::{
     LLVMAddFunction, LLVMAppendBasicBlockInContext, LLVMArrayType2, LLVMBuildAlloca,
-    LLVMContextCreate, LLVMCreateBuilderInContext, LLVMDisposeMessage, LLVMFunctionType,
-    LLVMGetBufferSize, LLVMGetBufferStart, LLVMGetParam, LLVMInt8TypeInContext,
-    LLVMInt32TypeInContext, LLVMInt64TypeInContext, LLVMModuleCreateWithNameInContext,
-    LLVMPointerTypeInContext, LLVMPositionBuilderAtEnd, LLVMPrintModuleToString, LLVMSetAlignment,
-    LLVMSetDataLayout, LLVMSetTarget, LLVMVoidTypeInContext,
+    LLVMContextCreate, LLVMCreateBuilderInContext, LLVMFunctionType, LLVMGetParam,
+    LLVMInt8TypeInContext, LLVMInt32TypeInContext, LLVMInt64TypeInContext,
+    LLVMModuleCreateWithNameInContext, LLVMPointerTypeInContext, LLVMPositionBuilderAtEnd,
+    LLVMPrintModuleToString, LLVMSetAlignment, LLVMSetDataLayout, LLVMSetTarget,
+    LLVMVoidTypeInContext,
   },
-  error::{LLVMConsumeError, LLVMDisposeErrorMessage},
+  error::LLVMConsumeError,
   prelude::{
     LLVMBasicBlockRef, LLVMBuilderRef, LLVMContextRef, LLVMMemoryBufferRef, LLVMModuleRef,
     LLVMTypeRef, LLVMValueRef,
@@ -34,9 +32,7 @@ use llvm_sys::{
     LLVMGetHostCPUName, LLVMGetTargetFromTriple, LLVMRelocMode,
     LLVMTargetMachineEmitToMemoryBuffer,
   },
-  transforms::pass_builder::{
-    LLVMCreatePassBuilderOptions, LLVMPassBuilderOptionsRef, LLVMRunPasses,
-  },
+  transforms::pass_builder::{LLVMCreatePassBuilderOptions, LLVMRunPasses},
 };
 
 use crate::{
@@ -187,7 +183,7 @@ impl SaVMLLVMBuilder {
   ) -> Result<SaVMLLVM, Cow<'static, str>> {
     unsafe {
       black_box({
-        LLVMINIT.deref();
+        _ = LLVMINIT.deref();
       });
 
       let mut error = LLVMMsg(null_mut());
@@ -286,7 +282,6 @@ impl<const T: bool> NativeCompiler<T> for SaVMLLVM {
       let td = self.layout.0;
       let module = self.module.0;
       let fnname = LLVM_FNN_NAME.0;
-      let globalname = LLVM_VAR_NAME.0;
 
       let mut params = [LLVMPointerTypeInContext(ctx, 0)];
       let func_ty = LLVMFunctionType(LLVMVoidTypeInContext(ctx), params.as_mut_ptr(), 1, 0);
@@ -422,7 +417,7 @@ impl<const T: bool> NativeCompiler<T> for SaVMLLVM {
       // Print Module
       #[cfg(debug_assertions)]
       {
-        let module = LLVMMsg({ LLVMPrintModuleToString(module) });
+        let module = LLVMMsg(LLVMPrintModuleToString(module));
 
         println!("{}", module.to_str().unwrap());
       }
@@ -460,8 +455,6 @@ impl<const T: bool> NativeCompiler<T> for SaVMLLVM {
         binary: Arc::from(buf.deref()),
         reloc: JITRELOC_NONE.clone(),
       };
-
-      CacheData::None
     }
   }
 }

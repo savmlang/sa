@@ -233,7 +233,6 @@ atomicable! {
   i8 => AtomicI8
 }
 
-#[allow(unused)]
 fn call_store<T: Atomicable + Clone + Copy>(
   taskstate: *mut VMTaskState,
   ord: Ordering,
@@ -245,8 +244,8 @@ fn call_store<T: Atomicable + Clone + Copy>(
   of2: u8,
 ) {
   unsafe {
-    let o1 = (std::ptr::read_unaligned(resolve_location_src!(taskstate => o1).add(of1 as _)).pointer
-      as *mut T);
+    let o1 = std::ptr::read_unaligned(resolve_location_src!(taskstate => o1).add(of1 as _)).pointer
+      as *mut T;
 
     let o2 = (resolve_location_src!(taskstate => o2) as *mut T).offset(of2 as _);
 
@@ -254,7 +253,6 @@ fn call_store<T: Atomicable + Clone + Copy>(
   };
 }
 
-#[allow(unused)]
 fn call_load<T: Atomicable + Clone + Copy>(
   taskstate: *mut VMTaskState,
   ord: Ordering,
@@ -265,15 +263,14 @@ fn call_load<T: Atomicable + Clone + Copy>(
   of2: u8,
 ) {
   unsafe {
-    let o1 = (std::ptr::read_unaligned(resolve_location_src!(taskstate => o1).add(of1 as _)))
-      .pointer as *mut T;
+    let o1 = std::ptr::read_unaligned(resolve_location_src!(taskstate => o1).add(of1 as _)).pointer
+      as *mut T;
     let o2 = (resolve_location_src!(taskstate => o2) as *mut T).add(of2 as _);
 
     Atomicable::a_load(o1, o2, ord)
   };
 }
 
-#[allow(unused)]
 fn call_cas<T: Atomicable + Clone + Copy>(
   taskstate: *mut VMTaskState,
   ptr_loc: u8,
@@ -293,8 +290,8 @@ fn call_cas<T: Atomicable + Clone + Copy>(
 ) {
   unsafe {
     let o1 =
-      (std::ptr::read_unaligned(resolve_location_src!(taskstate => ptr_loc).add(ptr_loc_of as _))
-        .pointer as *mut T);
+      std::ptr::read_unaligned(resolve_location_src!(taskstate => ptr_loc).add(ptr_loc_of as _))
+        .pointer as *mut T;
 
     let o2 = (resolve_location_src!(taskstate => val_stored_loc) as *mut T).add(val_store_of as _);
     let o3 = (resolve_location_src!(taskstate => expected_loc) as *mut T).offset(expected_of as _);
@@ -304,7 +301,6 @@ fn call_cas<T: Atomicable + Clone + Copy>(
   };
 }
 
-#[allow(unused)]
 fn call_rmw<T: Atomicable + Clone + Copy>(
   taskstate: *mut VMTaskState,
   ord: Ordering,
@@ -321,8 +317,8 @@ fn call_rmw<T: Atomicable + Clone + Copy>(
   op: ATOMICRmwOp,
 ) {
   unsafe {
-    let ptr = (std::ptr::read_unaligned(resolve_location_src!(taskstate => o1).add(of1 as _)))
-      .pointer as *mut T;
+    let ptr = std::ptr::read_unaligned(resolve_location_src!(taskstate => o1).add(of1 as _)).pointer
+      as *mut T;
 
     let load_to = (resolve_location_src!(taskstate => o2) as *mut T).add(of2 as _);
     let rhs = (resolve_location_src!(taskstate => o3) as *mut T).add(of3 as _);

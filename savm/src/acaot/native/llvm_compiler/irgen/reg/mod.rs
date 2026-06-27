@@ -1,7 +1,7 @@
 use crate::acaot::native::llvm_compiler::{
   CompilerMeta, LLVM_CTX, LLVM_VAR_NAME,
   irgen::{
-    OffsetBytes, offsetload, offsetload_aligned, offsetptr, offsetstore,
+    OffsetBytes, offsetload_aligned, offsetptr, offsetstore_aligned,
     reg::regmap::{RegMapOut, RegMask, load_all_vectored, regmapper},
   },
   ssaupdater::{LARGEPAD, REG_R2, REG_R3},
@@ -17,6 +17,7 @@ use llvm_sys::{
 
 pub mod regmap;
 
+#[allow(unused)]
 pub const REGISTER_WIDTH: u8 = 8;
 
 pub fn llvmresolve_location_src_ptr(
@@ -228,24 +229,24 @@ pub fn llvmresolve_location_src_store(
         StoreResolver::RegMapOut(typemap, regsvalue, out)
       }
       // Scratchpad
-      8 => StoreResolver::Ptr(meta.scratchpad, offsetbytes),
+      8 => StoreResolver::Ptr(meta.scratchpad, offsetbytes, alignment),
       // Largepad
       9 => {
         let val = (*meta_ptr).regmnt.usereg(LARGEPAD);
 
-        StoreResolver::Ptr(val, offsetbytes)
+        StoreResolver::Ptr(val, offsetbytes, alignment)
       }
       // Read pointer through r2
       10 => {
         let val = (*meta_ptr).regmnt.usereg(REG_R2);
 
-        StoreResolver::Ptr(val, offsetbytes)
+        StoreResolver::Ptr(val, offsetbytes, alignment)
       }
       // Read pointer through r3
       11 => {
         let val = (*meta_ptr).regmnt.usereg(REG_R3);
 
-        StoreResolver::Ptr(val, offsetbytes)
+        StoreResolver::Ptr(val, offsetbytes, alignment)
       }
       _ => unreachable!(),
     }
@@ -254,7 +255,7 @@ pub fn llvmresolve_location_src_store(
 
 pub enum StoreResolver {
   RegMapOut(LLVMTypeMapping, Box<[LLVMValueRef]>, RegMapOut),
-  Ptr(LLVMValueRef, i64),
+  Ptr(LLVMValueRef, i64, Option<u8>),
 }
 
 impl StoreResolver {
@@ -317,13 +318,14 @@ impl StoreResolver {
             (*meta_ptr).regmnt.setreg(regid as _, regval);
           }
         }
-        Self::Ptr(ptr, offset) => {
-          offsetstore(
+        Self::Ptr(ptr, offset, align) => {
+          offsetstore_aligned(
             meta.builder,
             meta.llvmctx,
             vect,
             ptr,
             OffsetBytes::I(offset),
+            align.map(|x| x as u32),
           );
         }
       }
@@ -348,6 +350,7 @@ impl LLVMTypeOrWidth {
     unsafe { LLVMVectorType(typeref, count as _) }
   }
 
+  #[allow(unused)]
   pub fn regsized(&self, count: u32) -> bool {
     let llvmtype = self.r#type();
 
@@ -362,7 +365,6 @@ impl LLVMTypeOrWidth {
 
   pub fn r#type(&self) -> LLVMTypeMapping {
     unsafe {
-      let ctx = LLVM_CTX.with(|x| x.0);
       let ctx = LLVM_CTX.with(|x| x.0);
 
       let (width_bytes, signed, float, is_f32) = match self {

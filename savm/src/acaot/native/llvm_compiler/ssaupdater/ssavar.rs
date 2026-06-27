@@ -1,14 +1,11 @@
 #![allow(unsafe_op_in_unsafe_fn)]
 
-use std::ffi::CStr;
-use std::ptr::NonNull;
-
-use crate::acaot::native::llvm_compiler::LLVM_CTX;
 use crate::acaot::native::llvm_compiler::dispose::IRBuilder;
 use ahash::HashMap;
 use ahash::HashMapExt;
 use llvm_sys::core::*;
 use llvm_sys::prelude::*;
+use std::ptr::NonNull;
 
 unsafe extern "C" {
   unsafe fn llvm_get_num_preds(bb: LLVMBasicBlockRef) -> u64;

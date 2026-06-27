@@ -1,9 +1,5 @@
 use llvm_sys::{
-  core::{
-    LLVMBuildAShr, LLVMBuildCall2, LLVMBuildLShr, LLVMBuildShl, LLVMBuildSub, LLVMConstInt,
-    LLVMConstNull, LLVMFunctionType, LLVMGetCalledFunctionType, LLVMGetIntrinsicDeclaration,
-    LLVMGlobalGetValueType, LLVMLookupIntrinsicID, LLVMTypeOf, LLVMVectorType,
-  },
+  core::{LLVMBuildSub, LLVMConstNull, LLVMTypeOf},
   prelude::LLVMValueRef,
 };
 
@@ -72,11 +68,11 @@ where
 
   let output = process(typ, count, meta, src1);
 
-  target.synchronize(meta, src1);
+  target.synchronize(meta, output);
 }
 
 pub fn handle_vneg(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
-  handle_vdataop(pickle, meta, |ty, count, meta, src1| {
+  handle_vdataop(pickle, meta, |ty, _count, meta, src1| {
     let extllvm = ty.r#type();
     let basety = unsafe { LLVMTypeOf(src1) };
 
@@ -93,7 +89,7 @@ pub fn handle_vneg(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
 }
 
 pub fn handle_vabs(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
-  handle_vdataop(pickle, meta, |ty, count, meta, src1| {
+  handle_vdataop(pickle, meta, |ty, _count, meta, src1| {
     let extllvm = ty.r#type();
     let basety = unsafe { LLVMTypeOf(src1) };
 

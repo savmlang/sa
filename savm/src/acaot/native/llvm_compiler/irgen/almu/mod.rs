@@ -1,11 +1,10 @@
 // Arithmatic Logic Memory Unit
 
-use std::{ffi::CStr, mem::offset_of, ops::Deref};
+use std::mem::offset_of;
 
 use crate::acaot::{
   native::llvm_compiler::{
     CompilerMeta, LLVM_VAR_NAME,
-    dispose::LLVMMsg,
     irgen::{
       OffsetBytes, offsetload,
       reg::{
@@ -26,17 +25,13 @@ use crate::acaot::{
   },
 };
 use llvm_sys::{
-  LLVMIntPredicate,
-  LLVMOpcode::LLVMInsertElement,
-  LLVMRealPredicate,
+  LLVMIntPredicate, LLVMRealPredicate,
   core::{
-    LLVMBuildAShr, LLVMBuildAdd, LLVMBuildBitCast, LLVMBuildCall2, LLVMBuildExtractValue,
-    LLVMBuildFCmp, LLVMBuildICmp, LLVMBuildInsertElement, LLVMBuildLShr, LLVMBuildMul,
-    LLVMBuildSDiv, LLVMBuildSExt, LLVMBuildSRem, LLVMBuildSub, LLVMBuildTrunc, LLVMBuildUDiv,
-    LLVMBuildURem, LLVMBuildZExt, LLVMBuildZExtOrBitCast, LLVMConstInt, LLVMConstVector,
-    LLVMGetBasicBlockName, LLVMGetInsertBlock, LLVMGetIntrinsicDeclaration, LLVMGetUndef,
-    LLVMGlobalGetValueType, LLVMInt8TypeInContext, LLVMInt16TypeInContext, LLVMIntTypeInContext,
-    LLVMLookupIntrinsicID, LLVMTypeOf, LLVMVectorType,
+    LLVMBuildAShr, LLVMBuildAdd, LLVMBuildBitCast, LLVMBuildExtractValue, LLVMBuildFCmp,
+    LLVMBuildICmp, LLVMBuildLShr, LLVMBuildMul, LLVMBuildSDiv, LLVMBuildSExt, LLVMBuildSRem,
+    LLVMBuildSub, LLVMBuildTrunc, LLVMBuildUDiv, LLVMBuildURem, LLVMBuildZExt,
+    LLVMBuildZExtOrBitCast, LLVMConstInt, LLVMConstVector, LLVMInt8TypeInContext,
+    LLVMInt16TypeInContext, LLVMIntTypeInContext, LLVMTypeOf, LLVMVectorType,
   },
   prelude::LLVMValueRef,
 };
@@ -105,7 +100,6 @@ pub fn handle_vcmp(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
   } = parse_vcmp(pickle, meta.ws.as_ref());
 
   let typ = LLVMTypeOrWidth::Width(datawdt);
-  let r#type = typ.r#type();
 
   let src1 = llvmresolve_location_src_load(meta, typ, src1, None, of_src1, count);
   let src2 = llvmresolve_location_src_load(meta, typ, src2, None, of_src2, count);
@@ -237,7 +231,7 @@ pub fn handle_rem(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
 }
 
 #[inline(always)]
-fn arithlikeop<E, F>(pickle: &PickleInstruction, meta: &mut CompilerMeta, multipler: E, call: F)
+fn arithlikeop<E, F>(_pickle: &PickleInstruction, meta: &mut CompilerMeta, multipler: E, call: F)
 where
   // Remains useful for things like, mul_wide
   E: FnOnce(u16) -> u32,
@@ -286,7 +280,7 @@ pub fn handle_add(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
     pickle,
     meta,
     |_| 1,
-    |meta, instdefined, r#type, count, src1, src2| unsafe {
+    |meta, instdefined, r#type, _count, src1, src2| unsafe {
       // [<Carry/Sigflow bit>] [<saturation bit>] [Padding (14bits)] (16b)
       let carry = (instdefined >> 15) == 1; // gets the last bit
       let saturate = (instdefined >> 14 & 0b01) == 1; // gets the saturation bit
@@ -323,9 +317,6 @@ pub fn handle_add(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
 
         meta.call_intrinsic(saturate, &mut typearg, &mut [src1, src2])
       } else {
-        let blk = LLVMGetInsertBlock(meta.builder);
-        let name = CStr::from_ptr(LLVMGetBasicBlockName(blk));
-
         LLVMBuildAdd(meta.builder, src1, src2, LLVM_VAR_NAME.0)
       }
     },

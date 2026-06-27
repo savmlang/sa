@@ -1,7 +1,6 @@
 use llvm_sys::core::{
-  LLVMBuildFPExt, LLVMBuildFPToSI, LLVMBuildFPToUI, LLVMBuildFPTrunc, LLVMBuildSExt,
-  LLVMBuildSExtOrBitCast, LLVMBuildSIToFP, LLVMBuildTrunc, LLVMBuildUIToFP, LLVMBuildZExt,
-  LLVMBuildZExtOrBitCast, LLVMTypeOf,
+  LLVMBuildFPExt, LLVMBuildFPToSI, LLVMBuildFPToUI, LLVMBuildFPTrunc, LLVMBuildSExtOrBitCast,
+  LLVMBuildSIToFP, LLVMBuildTrunc, LLVMBuildUIToFP, LLVMBuildZExtOrBitCast,
 };
 
 use crate::acaot::{

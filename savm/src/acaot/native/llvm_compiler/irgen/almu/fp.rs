@@ -48,25 +48,25 @@ where
 }
 
 pub fn handle_vfadd(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
-  fpop(pickle, meta, |meta, datatype, _, src1, src2| unsafe {
+  fpop(pickle, meta, |meta, _datatype, _, src1, src2| unsafe {
     LLVMBuildFAdd(meta.builder, src1, src2, LLVM_VAR_NAME.0)
   });
 }
 
 pub fn handle_vfsub(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
-  fpop(pickle, meta, |meta, datatype, _, src1, src2| unsafe {
+  fpop(pickle, meta, |meta, _datatype, _, src1, src2| unsafe {
     LLVMBuildFSub(meta.builder, src1, src2, LLVM_VAR_NAME.0)
   });
 }
 
 pub fn handle_vfmul(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
-  fpop(pickle, meta, |meta, datatype, _, src1, src2| unsafe {
+  fpop(pickle, meta, |meta, _datatype, _, src1, src2| unsafe {
     LLVMBuildFMul(meta.builder, src1, src2, LLVM_VAR_NAME.0)
   });
 }
 
 pub fn handle_vfdiv(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
-  fpop(pickle, meta, |meta, datatype, _, src1, src2| unsafe {
+  fpop(pickle, meta, |meta, _datatype, _, src1, src2| unsafe {
     LLVMBuildFDiv(meta.builder, src1, src2, LLVM_VAR_NAME.0)
   });
 }

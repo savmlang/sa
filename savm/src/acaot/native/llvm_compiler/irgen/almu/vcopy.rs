@@ -1,6 +1,4 @@
-use llvm_sys::core::{
-  LLVMAddCallSiteAttribute, LLVMBuildMemCpy, LLVMBuildMemMove, LLVMConstInt, LLVMInt1TypeInContext,
-};
+use llvm_sys::core::{LLVMBuildMemCpy, LLVMBuildMemMove, LLVMConstInt, LLVMSetVolatile};
 
 use crate::acaot::{
   native::llvm_compiler::{
@@ -41,12 +39,11 @@ pub fn handle_vcopy(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
         llvmresolve_location_src_store(meta, typ, target, Some(target_align), target_offset, count);
 
       let is_ptr =
-        matches!(store, StoreResolver::Ptr(_, _)) && matches!(src, SrcType::RegMap { .. });
+        matches!(store, StoreResolver::Ptr(_, _, _)) && matches!(src, SrcType::RegMap { .. });
 
       if is_ptr {
         let SrcType::Pointer {
           pointerval: srcptr,
-          alignment,
           builder,
           llvmctx,
           ..
@@ -55,20 +52,16 @@ pub fn handle_vcopy(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
           unreachable!();
         };
 
-        let StoreResolver::Ptr(output, offset) = store else {
+        let StoreResolver::Ptr(output, offset, _) = store else {
           unreachable!();
         };
         let target = offsetptr(builder, llvmctx, output, offset.cast_unsigned(), true);
 
         unsafe {
-          let volatile = LLVMConstInt(
-            LLVMInt1TypeInContext(meta.llvmctx),
-            if volatile { 1 } else { 0 },
-            0,
-          );
+          let volatile = if volatile { 1 } else { 0 };
 
           if overlapping {
-            LLVMBuildMemMove(
+            let memmove = LLVMBuildMemMove(
               builder,
               target,
               target_align as _,
@@ -76,8 +69,10 @@ pub fn handle_vcopy(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
               src_align as _,
               LLVMConstInt(meta.i32, count as _, 0),
             );
+
+            LLVMSetVolatile(memmove, volatile);
           } else {
-            LLVMBuildMemCpy(
+            let memmove = LLVMBuildMemCpy(
               builder,
               target,
               target_align as _,
@@ -85,6 +80,8 @@ pub fn handle_vcopy(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
               src_align as _,
               LLVMConstInt(meta.i32, count as _, 0),
             );
+
+            LLVMSetVolatile(memmove, volatile);
           }
         }
       } else {
@@ -131,7 +128,7 @@ pub fn handle_vcopy(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
         }
       };
 
-      let (targetptr, targetalign) = match srcdata {
+      let (targetptr, targetalign) = match targetdata {
         SrcType::Pointer {
           pointerval,
           alignment,
@@ -150,14 +147,10 @@ pub fn handle_vcopy(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
         }
       };
 
-      let volatile = LLVMConstInt(
-        LLVMInt1TypeInContext(meta.llvmctx),
-        if volatile { 1 } else { 0 },
-        0,
-      );
+      let volatile = if volatile { 1 } else { 0 };
 
       if overlapping {
-        LLVMBuildMemMove(
+        let memmove = LLVMBuildMemMove(
           meta.builder,
           targetptr,
           targetalign.map(|x| x as _).unwrap_or(1),
@@ -165,8 +158,10 @@ pub fn handle_vcopy(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
           srcalign.map(|x| x as _).unwrap_or(1),
           meta.regmnt.usereg(0),
         );
+
+        LLVMSetVolatile(memmove, volatile);
       } else {
-        LLVMBuildMemCpy(
+        let memmove = LLVMBuildMemCpy(
           meta.builder,
           targetptr,
           targetalign.map(|x| x as _).unwrap_or(1),
@@ -174,6 +169,8 @@ pub fn handle_vcopy(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
           srcalign.map(|x| x as _).unwrap_or(1),
           meta.regmnt.usereg(0),
         );
+
+        LLVMSetVolatile(memmove, volatile);
       }
 
       // Load back updated values!

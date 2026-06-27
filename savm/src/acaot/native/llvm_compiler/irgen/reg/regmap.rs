@@ -1,15 +1,13 @@
 use crate::acaot::native::llvm_compiler::{LLVM_VAR_NAME, irgen::reg::LLVMTypeMapping};
 use llvm_sys::{
-  LLVMOpcode::LLVMShuffleVector,
   core::{
-    LLVMBuildBitCast, LLVMBuildExtractElement, LLVMBuildInsertElement, LLVMBuildShuffleVector,
-    LLVMConstInt, LLVMConstVector, LLVMGetUndef, LLVMInt32TypeInContext, LLVMTypeOf,
-    LLVMVectorType,
+    LLVMBuildBitCast, LLVMBuildExtractElement, LLVMBuildInsertElement, LLVMConstInt, LLVMGetUndef,
+    LLVMInt32TypeInContext, LLVMVectorType,
   },
   prelude::{LLVMBuilderRef, LLVMContextRef, LLVMValueRef},
 };
 use sart::structures::QuadPackedData;
-use std::ops::{Range, Rem};
+use std::ops::Range;
 
 pub fn regmapper(reg0: u8, offset_bytes: i32, typedata: LLVMTypeMapping, count: u32) -> RegMapOut {
   debug_assert!(
@@ -105,7 +103,6 @@ pub fn load_all_vectored(
       return vectbase;
     }
 
-    let counts = 8 / ty.width;
     let i32_ty = LLVMInt32TypeInContext(ctx);
 
     let prepared_vectors: Vec<LLVMValueRef> = regv

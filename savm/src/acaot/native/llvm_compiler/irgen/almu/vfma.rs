@@ -1,20 +1,13 @@
-use llvm_sys::core::{
-  LLVMBuildAShr, LLVMBuildCall2, LLVMBuildLShr, LLVMBuildShl, LLVMFunctionType,
-  LLVMGetCalledFunctionType, LLVMGetIntrinsicDeclaration, LLVMGlobalGetValueType,
-  LLVMLookupIntrinsicID, LLVMTypeOf, LLVMVectorType,
-};
+use llvm_sys::core::LLVMTypeOf;
 
 use crate::acaot::{
   native::llvm_compiler::{
-    CompilerMeta, LLVM_VAR_NAME,
+    CompilerMeta,
     irgen::reg::{LLVMTypeOrWidth, llvmresolve_location_src_load, llvmresolve_location_src_store},
   },
   pickle::{
     def::PickleInstruction,
-    reader::{
-      fp::{VFMA, parse_vfma},
-      vsh::{VSH, parse_vsh},
-    },
+    reader::fp::{VFMA, parse_vfma},
   },
 };
 
@@ -33,7 +26,6 @@ pub fn handle_vfma(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
   } = parse_vfma(pickle, meta.ws.as_ref());
 
   let datatype = LLVMTypeOrWidth::Type(datatype);
-  let typdata = datatype.r#type();
 
   let src1 = llvmresolve_location_src_load(meta, datatype, src1, None, of_src1 as _, count);
   let src2 = llvmresolve_location_src_load(meta, datatype, src2, None, of_src2 as _, count);

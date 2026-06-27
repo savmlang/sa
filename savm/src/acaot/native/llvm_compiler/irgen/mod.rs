@@ -4,9 +4,8 @@ use llvm_sys::{
   core::{
     LLVMAddCase, LLVMBuildAnd, LLVMBuildCall2, LLVMBuildCondBr, LLVMBuildGEP2, LLVMBuildICmp,
     LLVMBuildLoad2, LLVMBuildRetVoid, LLVMBuildStore, LLVMBuildSwitch, LLVMBuildUnreachable,
-    LLVMConstInt, LLVMFunctionType, LLVMGetCalledFunctionType, LLVMGetIntrinsicDeclaration,
-    LLVMGlobalGetValueType, LLVMInt8TypeInContext, LLVMInt64TypeInContext, LLVMLookupIntrinsicID,
-    LLVMPointerTypeInContext, LLVMPositionBuilderAtEnd, LLVMSetAlignment, LLVMVoidTypeInContext,
+    LLVMConstInt, LLVMGetIntrinsicDeclaration, LLVMGlobalGetValueType, LLVMInt8TypeInContext,
+    LLVMInt64TypeInContext, LLVMLookupIntrinsicID, LLVMPositionBuilderAtEnd, LLVMSetAlignment,
   },
   prelude::{LLVMBuilderRef, LLVMContextRef, LLVMTypeRef, LLVMValueRef},
 };
@@ -14,7 +13,7 @@ use sart::{
   ctr::{FLAGS::FLAG_JUMP_TO_RESUME, VMTaskState},
   structures::QuadPackedData,
 };
-use std::{mem::offset_of, ptr::null_mut};
+use std::mem::offset_of;
 
 pub(crate) mod almu;
 mod pickle;
@@ -24,7 +23,6 @@ pub fn compile<const SENDBACK: bool>(meta: &mut CompilerMeta) {
   unsafe {
     let builder = meta.builder;
     let ctx = meta.llvmctx;
-    let module = meta.llvmmodule;
     let vmctx = meta.vmctx;
     let meta_ptr = meta as *mut CompilerMeta;
 
