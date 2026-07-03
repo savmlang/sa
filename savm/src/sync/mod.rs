@@ -144,7 +144,7 @@ impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
 
         #[cfg(feature = "native")]
         if JMPTOJIT {
-          if let Some(_) = &crate::JIT_CACHE.get().unwrap_unchecked().0.get(&sectionid) {
+          if let Some(_) = &crate::JIT_CACHE.get().unwrap_unchecked().get(sectionid) {
             if let Some(marker) = jumptomark {
               use sart::ctr::FLAGS::FLAG_JUMP_TO_RESUME;
 
@@ -234,11 +234,11 @@ impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
       unreachable!();
     };
 
-    let Some(jit) = jitcache.0.get_one(&sectionid) else {
+    let Some(jit) = jitcache.get(sectionid) else {
       return self.dispatch_chocolate::<true>(sectionid);
     };
 
-    let (_, exec) = unsafe { &**jit }.get();
+    let (_, exec) = jit.get();
 
     self.exec_jit(*exec.deref());
 

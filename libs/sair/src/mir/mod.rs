@@ -11,6 +11,7 @@ use crate::{
       sig::{Signature, SignatureRef},
     },
   },
+  saemit::machine::TargetVM,
 };
 
 pub mod block;
@@ -24,16 +25,17 @@ pub struct Module<'a, T: StringStore> {
   imports: HashMap<StringRef<'a, T>, SignatureRef, rapidhash::fast::RandomState>,
   exports: Vec<StringRef<'a, T>>,
 
-  typemap: Vec<ValueType>,
+  typemap: Vec<ValueType<'a>>,
 
   sigs: Vec<Signature>,
   functions: HashMap<StringRef<'a, T>, function::Function<'a, T>, rapidhash::fast::RandomState>,
 
   name: StringRef<'a, T>,
+  pub arch: &'a dyn TargetVM<T = T>,
 }
 
 impl<'a, T: StringStore> Module<'a, T> {
-  pub fn new(store: &'a T, name: &str) -> Self {
+  pub fn new(store: &'a T, name: &str, arch: &'a dyn TargetVM<T = T>) -> Self {
     let mut typemap: Vec<ValueType> = [
       BaseType::Int64,
       BaseType::Int32,
@@ -67,6 +69,7 @@ impl<'a, T: StringStore> Module<'a, T> {
       exports: Vec::with_capacity(32),
 
       functions: Default::default(),
+      arch,
     }
   }
 
@@ -106,7 +109,7 @@ impl<'a, T: StringStore> Module<'a, T> {
   /// Inserting Duplicate ValueType will **NOT** merge them into the same
   /// [ValueTypeRef] and worse than that - our verifier will **NOT** treat
   /// the two as equal types.
-  pub fn insert_type(&mut self, t: ValueType) -> ValueTypeRef {
+  pub fn insert_type(&mut self, t: ValueType<'a>) -> ValueTypeRef {
     self.typemap.push(t);
 
     unsafe { ValueTypeRef(NonZeroUsize::new_unchecked(self.typemap.len())) }
@@ -144,6 +147,7 @@ impl<'a, T: StringStore> Module<'a, T> {
 
 impl<'a, T: StringStore> Debug for Module<'a, T> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    writeln!(f, "; target=\"{:?}\"", self.arch)?;
     writeln!(
       f,
       "define module {} {{",

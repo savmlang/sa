@@ -32,19 +32,3 @@ pub extern "C" fn savm_toolkit_savm_dispatch_chocolate(
     }
   };
 }
-
-#[no_mangle]
-#[cfg(feature = "native")]
-pub extern "C" fn savm_toolkit_savm_dispatch_jit(vm: *mut SAVM, sectionid: u64) {
-  let vm = vm as *mut VM<IBytecodeResolver>;
-
-  unsafe { (*vm).dispatch_jit(sectionid) };
-}
-
-#[no_mangle]
-#[cfg(feature = "native")]
-pub extern "C" fn savm_toolkit_savm_exec_jit(vm: *mut SAVM, exec: *const savm::Executable) {
-  let vm = vm as *mut VM<IBytecodeResolver>;
-
-  unsafe { (*vm).exec_jit(exec) };
-}

@@ -4,19 +4,20 @@ use crate::{
 };
 use ahash::{HashMap, HashMapExt};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
+#[cfg(feature = "native")]
+use sajit::Executable;
 use sart::structures::ffi::CallSig;
 use std::sync::Arc;
 
 // Native (JIT) layers
 #[cfg(feature = "native")]
 use crate::{
-  CacheLevel, SafeSwappableCodeStore, acaot::native::NativeCompilerBuilder,
+  CacheLevel, JIT_CACHE,
+  acaot::native::{NativeCompilerBuilder, store::SwappableCodeSpace},
   management::jitmem::calculate_relocation_abs,
 };
 #[cfg(feature = "native")]
 use crossbeam_channel::Sender;
-#[cfg(feature = "native")]
-use evmap::handles::WriteHandle;
 #[cfg(feature = "native")]
 use sart::code::SwappableCodeStore;
 #[cfg(feature = "native")]
@@ -120,10 +121,7 @@ pub fn schedule<
   }
 }
 
-pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(
-  #[cfg(feature = "native")] mut evmap: WriteHandle<u64, SafeSwappableCodeStore>,
-  resolve: Arc<T>,
-) {
+pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(resolve: Arc<T>) {
   let last = resolve.as_ref().last_section_id();
 
   let mut nativeptr = HashMap::new();
@@ -196,6 +194,8 @@ pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(
     {
       use crate::permute::ShuffledSliceIter;
       use std::collections::HashSet;
+
+      let evmap = unsafe { JIT_CACHE.get().unwrap_unchecked() };
 
       let rs = resolve.as_ref();
       let compilers = compiler_infra();
@@ -318,7 +318,7 @@ pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(
                 // We've gotten jitted output
                 // Commit it & Update new JIT Data
                 JITOut::JITData { moduleid, jitdata } => {
-                  process_jit(resolve.as_ref(), &mut samgr, &mut evmap, moduleid, jitdata);
+                  process_jit(resolve.as_ref(), evmap, &mut samgr, moduleid, jitdata);
                 }
               }
             }
@@ -355,8 +355,8 @@ pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(
 #[cfg(feature = "native")]
 fn process_jit<T: BytecodeResolver + Send + Sync + 'static>(
   resolver: &T,
+  evmap: &SwappableCodeSpace,
   sajit: &mut JITMemoryManager,
-  evmap: &mut WriteHandle<u64, SafeSwappableCodeStore>,
   moduleid: u64,
   cache: CacheData,
 ) {
@@ -377,26 +377,46 @@ fn process_jit<T: BytecodeResolver + Send + Sync + 'static>(
             // How did Jesus allow this honestly?
             abort();
           }
-          CacheLevel::CraneliftEpicenter | CacheLevel::LLVMEpitome => {
-            todo!("Soon")
-          }
-          CacheLevel::LLVMCinder | CacheLevel::LLVMCrater | CacheLevel::CraneliftCrafter => {
-            let relocs = calculate_relocation_abs(&reloc);
+          level => {
+            // Logical Safety : To the same thread that has `set` the value - it will never ever
+            // be out of date on that exact core.
+            // If it gets context switched to a different core - the updates will still be flushed.
+            let write = |bin: *const Executable, parent_counter: *mut usize| {
+              if let Some(jitblob) = evmap.get(moduleid) {
+                // Case `usize` back into the `*mut JIT`
 
-            let bin = sajit.write_quick(&binary, &relocs);
+                _ = unsafe { jitblob.set(0, bin, parent_counter, None) };
+              } else {
+                let mgr = SwappableCodeStore::new(bin, parent_counter);
 
-            if let Some(jitblob) = evmap.get_one(&moduleid) {
-              // Case `usize` back into the `*mut JIT`
-              let mgr = unsafe { &**jitblob };
+                _ = unsafe { mgr.set(0, bin, parent_counter, None) };
 
-              _ = unsafe { mgr.set(0, bin, None) };
-            } else {
-              let mgr = Box::new(SwappableCodeStore::new(bin));
+                unsafe { evmap.set(moduleid, mgr) };
+              }
+            };
 
-              _ = unsafe { mgr.set(0, bin, None) };
+            match level {
+              CacheLevel::CraneliftEpicenter => {
+                todo!("Soon")
+              }
+              CacheLevel::LLVMEpitome => {
+                todo!("Soon");
+              }
+              CacheLevel::LLVMCinder | CacheLevel::LLVMCrater => {
+                let (bin, parent_counter) = sajit
+                  .write_llvm(&binary, |_| {
+                    panic!("Crater and Cinder need not resolve pointers.");
+                  })
+                  .expect("Unable to write LLVM JIT Memory");
+                write(bin, parent_counter);
+              }
+              CacheLevel::CraneliftCrafter => {
+                let relocs = calculate_relocation_abs(&reloc);
 
-              evmap.insert(moduleid, Box::into_raw(mgr));
-              evmap.publish();
+                let (bin, parent_counter) = sajit.write_quick(&binary, &relocs);
+                write(bin, parent_counter);
+              }
+              _ => {}
             }
           }
         },

@@ -62,6 +62,8 @@ impl<'a, 'b, T: StringStore> FunctionBuilder<'a, 'b, T> {
       store: self.parent.store,
       instr: Vec::with_capacity(16),
 
+      v0: newid == 0,
+
       preds: vec![],
       succ: vec![],
 

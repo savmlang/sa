@@ -188,7 +188,6 @@ jobs:
             clang: armv7-linux-gnueabihf
             llvm: arm-linux-gnueabihf
             feature: pro
-            c: ",savmc/native"
             arch: armhf
 
           # PowerPC 64-bit
@@ -200,7 +199,7 @@ jobs:
           - rust: powerpc64le-unknown-linux-gnu
             clang: powerpc64le-linux-gnu
             feature: pro
-            c: ",savmc/native"
+
             arch: ppc64el
 
           # RISC-V 64-bit (gc)
@@ -213,21 +212,21 @@ jobs:
           - rust: riscv64gc-unknown-linux-gnu
             clang: riscv64-linux-gnu
             feature: standard
-            c: ",savmc/native"
+
             arch: riscv64
             cpu: rv64
 
           - rust: riscv64gc-unknown-linux-gnu
             clang: riscv64-linux-gnu
             feature: pro
-            c: ",savmc/native"
+
             arch: riscv64
             cpu: rv64
 
           - rust: riscv64gc-unknown-linux-gnu
             clang: riscv64-linux-gnu
             feature: pro_standard
-            c: ",savmc/native"
+
             arch: riscv64
             cpu: rv64
 
@@ -311,7 +310,6 @@ jobs:
           - build: nano
 
           - build: pro
-            c: ",savmc/native"
 
         config:
           - target: x86_64-unknown-linux-musl
@@ -342,7 +340,7 @@ jobs:
           # X64
           - feature:
               build: standard
-              c: ",savmc/native"
+
             config:
               target: x86_64-unknown-linux-musl
               platform: linux/amd64
@@ -350,7 +348,7 @@ jobs:
 
           - feature:
               build: pro_standard
-              c: ",savmc/native"
+
             config:
               target: x86_64-unknown-linux-musl
               platform: linux/amd64
@@ -359,7 +357,7 @@ jobs:
           # ARM64
           - feature:
               build: standard
-              c: ",savmc/native"
+
             config:
               target: aarch64-unknown-linux-musl
               platform: linux/arm64/v8
@@ -367,7 +365,7 @@ jobs:
 
           - feature:
               build: pro_standard
-              c: ",savmc/native"
+
             config:
               target: aarch64-unknown-linux-musl
               platform: linux/arm64/v8
@@ -376,7 +374,7 @@ jobs:
           # RISCV64
           - feature:
               build: standard
-              c: ",savmc/native"
+
             config:
               target: riscv64gc-unknown-linux-musl
               platform: linux/riscv64
@@ -384,7 +382,7 @@ jobs:
 
           - feature:
               build: pro_standard
-              c: ",savmc/native"
+
             config:
               target: riscv64gc-unknown-linux-musl
               platform: linux/riscv64

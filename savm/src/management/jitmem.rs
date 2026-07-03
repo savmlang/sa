@@ -1,6 +1,11 @@
 #[cfg(feature = "llvm")]
 use std::borrow::Cow;
-use std::{num::NonZeroU8, pin::Pin, ptr::null};
+use std::{
+  mem::forget,
+  num::NonZeroU8,
+  pin::Pin,
+  ptr::{null, null_mut},
+};
 
 use sajit::relcar::RELCAR_BASIC;
 use sajit::relocations::RelocKind;
@@ -45,8 +50,21 @@ impl JITMemoryManager {
     }
   }
 
+  pub fn gc(&mut self) {
+    self
+      .quick
+      .extract_if(.., |x| unsafe { x.try_free() }.is_ok())
+      .for_each(|x| {
+        // SAFETY : try_drop has ran all the drop glue code
+        // We must dealloc the Box and continue
+        let innr = *Pin::into_inner(x);
+        forget(innr);
+      });
+  }
+
   // Reserve a 1KB space for SaVM CoreData
   const SAVM_COREDATA: usize = 1 * 1024;
+
   fn alloc_sized(
     quick: &mut Vec<Pin<Box<MemoryExecutable>>>,
     size: usize,
@@ -61,25 +79,29 @@ impl JITMemoryManager {
     let m = MemoryExecutable::new_slab(Some(NonZeroU8::new(amt as u8).unwrap()));
 
     quick.push(Box::pin(m));
-
-    quick.last_mut().expect("Infallible")
+    let handle = quick.last_mut().expect("Infallible");
+    handle
   }
 
   // Max executable JIT blob is ~<32MB (for sanity)
   const MAX_EXEC_SIZE: usize = 31 * 1024 * 1024 + 1023 * 1024;
 
-  pub fn write_quick(&mut self, data: &[u8], relocs: &[Relocation]) -> *const Executable {
+  pub fn write_quick(
+    &mut self,
+    data: &[u8],
+    relocs: &[Relocation],
+  ) -> (*const Executable, *mut usize) {
     // Try to fit larger ones
     // optimistically
     //
     // If it pays off separately - we'll think
-    let mut out = null();
+    let mut out = (null(), null_mut());
     let succ = self
       .quick
       .iter_mut()
       .any(|x| match x.write_fn(data, relocs, &RELCAR_BASIC) {
         WriteFnResult::Executable(ex) => {
-          out = ex;
+          out = (ex, x.stored.as_ptr());
           true
         }
         _ => false,
@@ -97,7 +119,7 @@ impl JITMemoryManager {
       let m = Self::alloc_sized(&mut self.quick, size);
 
       let out = match m.write_fn(data, relocs, &RELCAR_BASIC) {
-        WriteFnResult::Executable(ex) => ex,
+        WriteFnResult::Executable(ex) => (ex, m.stored.as_ptr()),
         _ => panic!("Reached a position where calculation is not idompotent"),
       };
 
@@ -112,7 +134,7 @@ impl JITMemoryManager {
     &mut self,
     data: &[u8],
     mut resolver: T,
-  ) -> Result<*const Executable, Cow<'static, [Cow<'static, str>]>>
+  ) -> Result<(*const Executable, *mut usize), Cow<'static, [Cow<'static, str>]>>
   where
     T: FnMut(*const str) -> usize,
   {
@@ -188,7 +210,7 @@ impl JITMemoryManager {
       None => Self::alloc_sized(&mut self.quick, size_needed),
     };
 
-    let out = {
+    let (out, mexec) = {
       use sajit::MemorySizeInfo;
 
       let old = mexec.cursor();
@@ -200,14 +222,14 @@ impl JITMemoryManager {
 
       assert!((new - old) <= size_needed);
 
-      out
+      Ok::<_, Cow<'_, [Cow<'static, str>]>>((out?, mexec.stored.as_ptr()))
     }?;
 
     let paths = ["compiledlib", "@compiledlib", "_compiledlib"];
 
     paths
       .iter()
-      .find_map(|&name| out.get(name).map(|x| *x))
+      .find_map(|&name| out.get(name).map(|x| (*x, mexec)))
       .ok_or_else(|| {
         Cow::Borrowed(
           &[Cow::Borrowed("Could now get @compiledlib symbol")] as &'static [Cow<'static, str>]

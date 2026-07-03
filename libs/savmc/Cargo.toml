@@ -10,6 +10,3 @@ crate-type = ["cdylib", "staticlib"]
 postcard = { version = "^1", features = ["alloc"], default-features = false }
 savm = { path = "../../savm", default-features = false }
 cprelude = { path = "../cprelude" }
-
-[features]
-native = []

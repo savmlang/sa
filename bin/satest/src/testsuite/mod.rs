@@ -90,7 +90,7 @@ pub fn test_jits<T: BytecodeResolver + Send + Sync + 'static>(
     let compiled = compiler.compile(&out2, SaVMJumpWrapRef(&jumps2));
 
     let tf = t0.elapsed();
-    let exec = match compiled {
+    let (exec, _) = match compiled {
       savm::CacheData::JITCache {
         level,
         binary,

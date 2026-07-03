@@ -14,13 +14,13 @@ use std::{
 
 use ahash::HashMap;
 use moka::sync::{CacheBuilder, SegmentedCache};
-#[cfg(feature = "native")]
-use sart::code::SwappableCodeStore;
 use sart::structures::ffi::CallSig;
 
 pub use sart;
 use tokio::runtime::{Builder, Runtime};
 
+#[cfg(feature = "native")]
+use crate::acaot::native::store::SwappableCodeSpace;
 use crate::{
   acaot::{JITReloc, pickle::def::PickleInstruction},
   management::management_main,
@@ -192,16 +192,9 @@ pub(crate) static CODE_CACHE: LazyLock<
 #[cfg(feature = "native")]
 pub use sajit::Executable;
 
-#[cfg(feature = "native")]
-use evmap::handles::ReadHandle;
-
-#[cfg(feature = "native")]
-pub type SafeSwappableCodeStore = *mut SwappableCodeStore<*const Executable>;
-
 // This only and only stores JIT instructions
 #[cfg(feature = "native")]
-pub static JIT_CACHE: OnceLock<ThreadSafe<ReadHandle<u64, SafeSwappableCodeStore>>> =
-  OnceLock::new();
+pub static JIT_CACHE: OnceLock<SwappableCodeSpace> = OnceLock::new();
 
 #[derive(Debug, Clone, Copy)]
 pub struct ThreadSafe<T>(pub T);
@@ -277,18 +270,14 @@ impl<T: BytecodeResolver + Send + Sync + 'static> VM<T> {
       let resolve = resolver.clone();
 
       #[cfg(feature = "native")]
-      let writer = {
-        let (writer, reader) = evmap::new();
-        JIT_CACHE.set(ThreadSafe(reader)).expect("impossible");
-
-        ThreadSafe(writer)
-      };
+      JIT_CACHE
+        .set(SwappableCodeSpace::create(resolve.as_ref().last_section_id() as usize + 1).unwrap())
+        .expect("impossible");
 
       thread::spawn(move || {
         #[cfg(feature = "native")]
         {
-          let data = writer;
-          management_main(data.0, resolve);
+          management_main(resolve);
         }
 
         #[cfg(not(feature = "native"))]

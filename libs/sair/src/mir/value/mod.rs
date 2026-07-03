@@ -1,4 +1,9 @@
-use std::{marker::PhantomData, num::NonZeroUsize, ops::Sub, rc::Rc};
+use std::{
+  marker::PhantomData,
+  num::NonZeroUsize,
+  ops::{Deref, Sub},
+  rc::Rc,
+};
 
 pub mod calc;
 pub mod sig;
@@ -11,7 +16,7 @@ pub struct ValueMeta {}
 
 #[repr(align(1))]
 #[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub enum ValueType {
+pub enum ValueType<'a> {
   Base {
     base: BaseType,
 
@@ -29,7 +34,7 @@ pub enum ValueType {
     align: Option<Alignment>,
   },
   Union {
-    composition: Rc<[ValueTypeRef]>,
+    composition: ValueTypeArray<'a>,
     align: Option<Alignment>,
   },
   /// Padding is automatically inserted!
@@ -40,9 +45,33 @@ pub enum ValueType {
   },
   /// Padding is automatically inserted!
   Composite {
-    composition: Rc<[ValueTypeRef]>,
+    composition: ValueTypeArray<'a>,
     align: Option<Alignment>,
   },
+}
+
+#[repr(align(1))]
+#[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ValueTypeArray<'a> {
+  Rc(Rc<[ValueTypeRef]>),
+  Slice(&'a [ValueTypeRef]),
+}
+
+impl<'a> AsRef<[ValueTypeRef]> for ValueTypeArray<'a> {
+  fn as_ref(&self) -> &[ValueTypeRef] {
+    match self {
+      Self::Rc(x) => x.as_ref(),
+      Self::Slice(x) => x,
+    }
+  }
+}
+
+impl<'a> Deref for ValueTypeArray<'a> {
+  type Target = [ValueTypeRef];
+
+  fn deref(&self) -> &Self::Target {
+    self.as_ref()
+  }
 }
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
@@ -94,6 +123,38 @@ impl Alignment {
       Self::B32768 => 32768,
 
       Self::B65536 => 65536,
+    }
+  }
+
+  pub const fn parse(data: usize) -> Alignment {
+    match data {
+      1 => Self::B1,
+      2 => Self::B2,
+
+      4 => Self::B4,
+      8 => Self::B8,
+
+      16 => Self::B16,
+      32 => Self::B32,
+
+      64 => Self::B64,
+      128 => Self::B128,
+
+      256 => Self::B256,
+      512 => Self::B512,
+
+      1024 => Self::B1024,
+      2048 => Self::B2048,
+
+      4096 => Self::B4096,
+      8192 => Self::B8192,
+
+      16384 => Self::B16384,
+      32768 => Self::B32768,
+
+      65536 => Self::B65536,
+
+      _ => panic!("Could not correctly construct alignment"),
     }
   }
 }
@@ -154,7 +215,7 @@ pub(crate) mod internal {
       value::{BaseType, ValueType},
     },
   };
-  use std::fmt::Formatter;
+  use std::fmt::{Debug, Formatter};
 
   impl BaseType {
     pub(crate) fn fmt(self, f: &mut Formatter) -> std::fmt::Result {
@@ -179,7 +240,7 @@ pub(crate) mod internal {
     }
   }
 
-  impl ValueType {
+  impl<'a> ValueType<'a> {
     pub(crate) fn fmt<T: StringStore>(
       &self,
       id: usize,
@@ -200,7 +261,9 @@ pub(crate) mod internal {
           writeln!(f, "")?;
         }
         &Self::PrimaryUnion {
-          composition, count, ..
+          ref composition,
+          count,
+          ..
         } => {
           writeln!(f, "union {{")?;
 
@@ -213,11 +276,13 @@ pub(crate) mod internal {
           writeln!(f, "  }}")?;
         }
         &Self::PrimaryComposite {
-          composition, count, ..
+          ref composition,
+          count,
+          ..
         } => {
           writeln!(f, "struct {{")?;
 
-          for item in &composition[0..(count as usize)] {
+          for item in &composition.as_ref()[0..(count as usize)] {
             write!(f, "    ")?;
             item.fmt(f)?;
             writeln!(f, "")?;

@@ -13,7 +13,6 @@ rand = { version = "^0.10", default-features = false, features = ["sys_rng"] }
 
 # Concurrency Maps
 ahash = "^0.8"
-evmap = { version = "^11", optional = true }
 moka = { version = "^0.12", features = ["sync"] }
 
 # Concurrent Units
@@ -63,7 +62,7 @@ dev = ["cranelift", "llvm"]
 
 llvm = ["dep:llvm-sys", "dep:cc", "native", "sajit/llvm"]
 cranelift = ["dep:cranelift", "native"]
-native = ["dep:sajit", "dep:evmap", "dep:crossbeam-channel", "dag"]
+native = ["dep:sajit", "dep:crossbeam-channel", "dag"]
 
 # AcDAG support
 dag = []

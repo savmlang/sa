@@ -3,8 +3,7 @@
   "rust-analyzer.cargo.features": [
     "savm/dev",
     "savmrunshared/pro_standard",
-    "satest/pro_standard",
-    "savmc/native"
+    "satest/pro_standard"
   ],
   "rust-analyzer.cargo.extraEnv": {
     "LLVM_SYS_221_PREFIX": "${workspaceFolder}/llvm/install"

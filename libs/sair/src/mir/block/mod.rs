@@ -8,6 +8,8 @@ pub mod instr;
 pub struct Block<'a, T: StringStore> {
   pub store: &'a T,
 
+  pub(crate) v0: bool,
+
   pub(crate) instr: Vec<HLInstruction<ValueId>>,
   pub(crate) preds: Vec<BlockId>,
   pub(crate) succ: Vec<BlockId>,

@@ -12,6 +12,8 @@ pub mod cranelift;
 #[cfg(feature = "llvm")]
 pub mod llvm_compiler;
 
+pub mod store;
+
 pub use super::*;
 
 pub trait NativeCompiler<const SENDBACK: bool> {

@@ -1,20 +1,22 @@
-use std::rc::Rc;
-
 use sair::{
   SingleThreadedStringStore,
   mir::{
     Module,
     value::{
-      BaseType, ValueType,
+      BaseType, ValueType, ValueTypeArray,
       consts::{D64, F32, I32, I64},
       sig::Signature,
     },
   },
+  saemit::machine::v0::IsaV0,
 };
+use std::rc::Rc;
 
 fn main() {
   let store = SingleThreadedStringStore::new();
-  let mut module = Module::new(&store, "MyModule");
+  let v0 = IsaV0::generate();
+
+  let mut module = Module::new(&store, "MyModule", &v0);
 
   module.insert_type(ValueType::Vector {
     base: BaseType::UInt64,
@@ -48,13 +50,14 @@ fn main() {
     align: None,
   });
 
+  let array = [a, I32, F32];
   let b = module.insert_type(ValueType::Union {
-    composition: Rc::new([a, I32, F32]),
+    composition: ValueTypeArray::Slice(&array),
     align: None,
   });
 
   module.insert_type(ValueType::Composite {
-    composition: Rc::new([I64, D64, a, b]),
+    composition: ValueTypeArray::Rc(Rc::new([I64, D64, a, b])),
     align: None,
   });
 

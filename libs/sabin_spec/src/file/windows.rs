@@ -52,10 +52,10 @@ impl IRamFile for RamFile {
   {
     unsafe {
       let utf16_size = path.len() + 1;
+      let mut slice = [0u16; 128];
 
       let container;
       let lpfilename = if utf16_size <= 128 {
-        let mut slice = [0u16; 128];
         path
           .encode_utf16()
           .chain(once(0))

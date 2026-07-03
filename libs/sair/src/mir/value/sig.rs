@@ -4,7 +4,7 @@ use crate::{
   StringStore,
   mir::{
     Module,
-    value::{ValueType, ValueTypeRef},
+    value::{ValueType, ValueTypeArray, ValueTypeRef},
   },
 };
 
@@ -26,7 +26,7 @@ impl Signature {
     // It has to be aligned by `16` atmost
     if !argv.is_empty() {
       let unified = ValueType::Composite {
-        composition: Rc::from(argv),
+        composition: ValueTypeArray::Rc(Rc::from(argv)),
         align: None,
       };
 

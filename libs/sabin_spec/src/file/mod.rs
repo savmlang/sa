@@ -1,8 +1,12 @@
 #[cfg(windows)]
 pub mod windows;
-
 #[cfg(windows)]
 pub use windows::RamFile;
+
+#[cfg(unix)]
+pub mod unix;
+#[cfg(unix)]
+pub use unix::RamFile;
 
 pub trait IRamFile {
   /// On failure, this results in the OS ERROR code

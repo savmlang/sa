@@ -15,6 +15,7 @@ use dashmap::DashMap;
 
 pub mod llir;
 pub mod mir;
+pub mod saemit;
 
 #[repr(align(64))]
 pub struct SingleThreadedStringStore {

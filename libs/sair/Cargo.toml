@@ -6,4 +6,3 @@ edition = "2024"
 [dependencies]
 dashmap = "6.2.1"
 rapidhash = "4.4.1"
-regalloc3 = { git = "https://github.com/Amanieu/regalloc3" }

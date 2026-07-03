@@ -6,7 +6,7 @@ use crate::{
   },
 };
 
-impl ValueType {
+impl<'a> ValueType<'a> {
   pub fn size<T: StringStore>(&self, module: &Module<T>) -> usize {
     match self {
       Self::Base { base, .. } => width(base),
