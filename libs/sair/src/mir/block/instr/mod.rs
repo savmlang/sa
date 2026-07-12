@@ -1,4 +1,4 @@
-use crate::mir::{block::BlockId, function::ssa::ValueId, value::ValueTypeRef};
+use crate::mir::{block::BlockId, function::ssa::ValueId, value::BaseType};
 use const_str::convert_ascii_case;
 use std::fmt::Formatter;
 
@@ -197,7 +197,7 @@ instloader! {
   // --- MEMORY FLOW ---
 
   /// Set an immediate upto 8 bytes
-  Set { typedata: ValueTypeRef, value: u64 } () -> (out)
+  Set { typedata: BaseType, value: u64 } () -> (out)
 
   Return(out) -> ()
 }
@@ -298,9 +298,9 @@ impl AHQF for u64 {
   }
 }
 
-impl AHQF for ValueTypeRef {
+impl AHQF for BaseType {
   fn f(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "@type:{}", self.0)
+    self.format(f)
   }
 }
 

@@ -65,7 +65,6 @@ fn main() {
   let sig = Signature::new(&mut module, &[I64], None).unwrap();
   let sig = module.signature(sig);
 
-  module.import("hello2", sig);
   module.export_fn("hello");
 
   {

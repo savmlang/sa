@@ -6,7 +6,7 @@ use crate::{
       builder::{FunctionBuilder, InstId},
       ssa::ValueId,
     },
-    value::ValueTypeRef,
+    value::{ValueType, ValueTypeRef},
   },
 };
 
@@ -41,6 +41,7 @@ impl<'a, 'b, T: StringStore> FunctionBuilder<'a, 'b, T> {
   }
 
   implement! {
+    // Arithmatic
     fn vadd(ctx, a, b) -> ValueId {
       verify: {
         typecheck!(ctx, a, b { is_num });
@@ -123,6 +124,7 @@ impl<'a, 'b, T: StringStore> FunctionBuilder<'a, 'b, T> {
       }
     }
 
+    // Control Flow
     fn jump(ctx) {
       immediates {
         block: BlockId,
@@ -156,8 +158,15 @@ impl<'a, 'b, T: StringStore> FunctionBuilder<'a, 'b, T> {
         }
       },
       process: {
+        let tt = ctx.module.type_data(intty).unwrap();
+
+        let typedata = match tt {
+          &ValueType::Base { base, .. } => base,
+          _ => unreachable!()
+        };
+
         let out = ctx.define_ssa(intty);
-        let id = ctx.inst_process(HLInstruction::Set { out, typedata: intty, value });
+        let id = ctx.inst_process(HLInstruction::Set { out, typedata, value });
 
         Instruction { id, out }
       }
