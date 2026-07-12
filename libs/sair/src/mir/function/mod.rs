@@ -12,6 +12,7 @@ use crate::{
 };
 
 pub mod builder;
+pub mod ir;
 pub mod ssa;
 
 pub struct Function<'a, T: StringStore> {
@@ -47,12 +48,12 @@ impl<'a, T: StringStore> Function<'a, T> {
 pub(crate) mod internal {
   use crate::{
     StringStore,
-    mir::{Module, function::Function},
+    mir::{Module, function::Function, value::ValueType},
   };
   use std::fmt::{Formatter, Result};
 
   impl<'a, T: StringStore> Function<'a, T> {
-    pub(crate) fn print(&self, f: &mut Formatter, _module: &Module<T>) -> Result {
+    pub(crate) fn print(&self, f: &mut Formatter, module: &Module<T>) -> Result {
       writeln!(
         f,
         "  fun {} (@sig:#{}):",
@@ -61,6 +62,53 @@ pub(crate) mod internal {
       )?;
 
       for (id, block) in self.blocks.iter().enumerate() {
+        // Print the signature
+        {
+          write!(f, "    @sig (")?;
+
+          for &param in &block.params {
+            let typetag = self.get_ssa(param).unwrap().typetag;
+            match module.type_data(typetag).unwrap() {
+              ValueType::Base { base, .. } => {
+                write!(f, " ")?;
+                base.format(f)?
+              }
+              _ => write!(f, " @type:{}", typetag.0.get())?,
+            }
+          }
+
+          writeln!(f, " )")?;
+        }
+
+        if block.v0 {
+          writeln!(f, "    @entry")?;
+        }
+
+        // Write Preds
+        if !block.v0 {
+          if block.preds.is_empty() {
+            writeln!(f, "    @orphan")?;
+          } else {
+            write!(f, "    @preds (")?;
+
+            for &param in &block.preds {
+              write!(f, " #{}", param.0)?
+            }
+
+            writeln!(f, " )")?;
+          }
+        }
+        // Write Succs
+        if !block.succ.is_empty() {
+          write!(f, "    @succs (")?;
+
+          for &param in &block.succ {
+            write!(f, " #{}", param.0)?
+          }
+
+          writeln!(f, " )")?;
+        }
+
         write!(f, "    block #{}", id)?;
 
         if !block.params.is_empty() {
@@ -74,6 +122,15 @@ pub(crate) mod internal {
         }
 
         writeln!(f, ":")?;
+
+        // Print Instructors
+        for inst in &block.instr {
+          write!(f, "      ")?;
+          inst.format(f)?;
+          writeln!(f)?;
+        }
+
+        writeln!(f)?;
       }
 
       Ok(())

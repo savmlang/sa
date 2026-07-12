@@ -2,13 +2,14 @@ use crate::{
   StringStore,
   mir::{
     Module,
-    block::{Block, instr::HLInstruction},
+    block::{Block, BlockId, instr::HLInstruction},
     function::{
       Function,
+      ir::InstructionId,
       ssa::{SSA, ValueId},
     },
     ssa::SSAResolver,
-    value::ValueTypeRef,
+    value::{ValueType, ValueTypeRef},
   },
 };
 
@@ -17,7 +18,7 @@ pub struct FunctionBuilder<'a, 'b, T: StringStore> {
 
   pub(crate) module: &'b Module<'a, T>,
 
-  currblock: BlockId,
+  pub(crate) currblock: BlockId,
   instr: InstId,
 
   pub hmap: Vec<SSAResolver>,
@@ -64,10 +65,9 @@ impl<'a, 'b, T: StringStore> FunctionBuilder<'a, 'b, T> {
 
       v0: newid == 0,
 
-      preds: vec![],
-      succ: vec![],
+      preds: Default::default(),
+      succ: Default::default(),
 
-      man_params: params.len(),
       params,
     });
 
@@ -115,6 +115,12 @@ impl<'a, 'b, T: StringStore> FunctionBuilder<'a, 'b, T> {
     Some(())
   }
 
+  pub fn type_of(&self, v: ValueId) -> (ValueTypeRef, &ValueType<'_>) {
+    let tag = self.parent.get_ssa(v).unwrap().typetag;
+
+    (tag, self.module.type_data(tag).unwrap())
+  }
+
   pub(crate) fn define_ssa(&mut self, typetag: ValueTypeRef) -> ValueId {
     let idx = self.parent.ssa.len();
     self.parent.ssa.push(SSA {
@@ -125,18 +131,17 @@ impl<'a, 'b, T: StringStore> FunctionBuilder<'a, 'b, T> {
     ValueId(idx)
   }
 
-  // TODO: Will define purposes later!
-  pub(crate) fn inst_process(&mut self, inst: HLInstruction<ValueId>) {
+  pub(crate) fn inst_process(&mut self, inst: HLInstruction<ValueId>) -> InstructionId {
     self.instr.0 += 1;
 
-    unsafe { self.parent.blocks.get_unchecked_mut(self.currblock.0) }
-      .instr
-      .push(inst);
+    let instr = &mut unsafe { self.parent.blocks.get_unchecked_mut(self.currblock.0) }.instr;
+
+    let id = instr.len();
+    instr.push(inst);
+
+    InstId(id)
   }
 }
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct BlockId(pub(crate) usize);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct InstId(pub(crate) usize);

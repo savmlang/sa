@@ -3,8 +3,10 @@ use std::{fmt::Debug, marker::PhantomData};
 use crate::{
   StringStore,
   mir::{Module, function::Function},
-  saemit::machine::TargetVM,
+  saemit::machine::{TargetVM, sabi_map, v0::blockalloc::BlockAlloc},
 };
+
+mod blockalloc;
 
 /// Targets the Instruction Set Architecture of `v0` of the SaVM Language
 ///
@@ -25,7 +27,14 @@ impl<T: StringStore> TargetVM for IsaV0<T> {
   type T = T;
 
   fn regalloc(&self, func: &Function<'_, Self::T>, module: &Module<'_, Self::T>) {
-    for block in &func.blocks {}
+    let mut blockalloc = BlockAlloc::default();
+
+    for block in &func.blocks {
+      blockalloc.clear();
+      let sabimap = sabi_map(&block.params, &func, &module);
+
+      println!("{sabimap:?}");
+    }
   }
 }
 

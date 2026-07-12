@@ -1,4 +1,6 @@
-use crate::mir::{block::BlockId, function::ssa::ValueId};
+use crate::mir::{block::BlockId, function::ssa::ValueId, value::ValueTypeRef};
+use const_str::convert_ascii_case;
+use std::fmt::Formatter;
 
 pub mod loc;
 
@@ -6,7 +8,7 @@ macro_rules! instloader {
   (
     $(
       $(#[$meta:meta])*
-      $name:ident $({ $( $imm:ident: $ty:ident ),* })? ($($arg:ident),*) -> ($($out:ident),*)
+      $name:ident $({ $( $imm:ident: $ty:ty ),* })? ($($arg:ident),*) -> ($($out:ident),*)
     )*
   ) => {
     /// `V*` instructions support BOTH vector and scalar values
@@ -35,6 +37,56 @@ macro_rules! instloader {
     }
 
     impl<T: Register> HLInstruction<T> {
+      pub fn format(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+          $(
+            Self::$name {
+              $(
+                $arg,
+              )*
+              $(
+                $out,
+              )*
+              $($(
+                $imm,
+              )*)?
+            } => {
+              let name = convert_ascii_case!(lower, stringify!($name));
+
+              // Show output if available
+              #[allow(unused)]
+              let mut outputs = false;
+              $(
+                $out.f(f)?;
+                write!(f, " ")?;
+                outputs = true;
+              )*
+
+              if outputs {
+                write!(f, "= ")?;
+              }
+
+              write!(f, "{name}")?;
+
+              // Pass Args First
+              $(
+                write!(f, " ")?;
+                $arg.f(f)?;
+              )*
+
+              // Pass Immediates
+              $(
+                $(
+                  write!(f, " ")?;
+                  $imm.f(f)?;
+                )*
+              )?
+            }
+          ),*
+        }
+        write!(f, "")
+      }
+
       pub fn all_vals<E>(&self, mut cb: E)
       where
         E: FnMut(&T)
@@ -137,15 +189,15 @@ instloader! {
 
   // --- CONTROL FLOW ---
 
-  Jump { block: BlockId } () -> ()
-  JumpIf { zero: BlockId, nonzero: BlockId } (val) -> ()
+  Jump { block: BlockId, args: Box<[ValueId]> } () -> ()
+  JumpIf { zero: BlockId, nonzero: BlockId, args: Box<[ValueId]> } (val) -> ()
   ICompare { comparison: IntComparison } (a, b) -> (result)
   FCompare { comparison: FloatComparison } (a, b) -> (result)
 
   // --- MEMORY FLOW ---
 
   /// Set an immediate upto 8 bytes
-  Set { value: u64 } () -> (out)
+  Set { typedata: ValueTypeRef, value: u64 } () -> (out)
 
   Return(out) -> ()
 }
@@ -159,6 +211,22 @@ pub enum IntComparison {
   LessThanEqual = 3,
   GreaterThan = 4,
   GreaterThanEqual = 5,
+}
+impl IntComparison {
+  pub(crate) fn f(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(
+      f,
+      "{}",
+      match self {
+        Self::Equal => "eq",
+        Self::NotEqual => "ne",
+        Self::LessThan => "lt",
+        Self::LessThanEqual => "le",
+        Self::GreaterThan => "gt",
+        Self::GreaterThanEqual => "ge",
+      }
+    )
+  }
 }
 
 #[repr(u8)]
@@ -181,9 +249,70 @@ pub enum FloatComparison {
   UnorderedOrGreaterThanOrEqual = 23,
 }
 
+impl FloatComparison {
+  pub(crate) fn f(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(
+      f,
+      "{}",
+      match self {
+        Self::Ordered => "ord",
+        Self::Unordered => "nord",
+        Self::Equal => "eq",
+        Self::NotEqual => "ne",
+
+        Self::OrderedNotEqual => "one",
+        Self::UnorderedOrEqual => "ue",
+        Self::LessThan => "lt",
+        Self::LessThanOrEqual => "le",
+        Self::GreaterThan => "gt",
+        Self::GreaterThanOrEqual => "ge",
+        Self::UnorderedOrLessThan => "ult",
+        Self::UnorderedOrLessThanOrEqual => "ule",
+        Self::UnorderedOrGreaterThan => "ugt",
+        Self::UnorderedOrGreaterThanOrEqual => "uge",
+      }
+    )
+  }
+}
+
 #[allow(private_bounds)]
-pub trait Register: Internal {}
+pub trait Register: Internal {
+  fn f(&self, f: &mut Formatter<'_>) -> std::fmt::Result;
+}
 pub(crate) trait Internal {}
 
 impl Internal for ValueId {}
-impl Register for ValueId {}
+impl Register for ValueId {
+  fn f(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "v{}", self.0)
+  }
+}
+
+trait AHQF {
+  fn f(&self, f: &mut Formatter<'_>) -> std::fmt::Result;
+}
+
+impl AHQF for u64 {
+  fn f(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{self}")
+  }
+}
+
+impl AHQF for ValueTypeRef {
+  fn f(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "@type:{}", self.0)
+  }
+}
+
+impl AHQF for &Box<[ValueId]> {
+  fn f(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "(")?;
+
+    for item in self.iter() {
+      write!(f, " ")?;
+      item.f(f)?;
+    }
+
+    write!(f, " )")
+  }
+}

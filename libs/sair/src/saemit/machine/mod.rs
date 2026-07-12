@@ -64,13 +64,26 @@ pub(crate) fn sabi_map<T: StringStore>(
       });
     }
     _ => {
-      output = Some(LocSrc {
-        offset: 0,
-        reg: VMRegister::Scratchpad,
+      let size = argstruct.size(module);
 
-        count: 2,
-        width: argstruct.size(module),
-      });
+      // If above 64, we must be doing an allocation passing
+      if size >= 64 {
+        output = Some(LocSrc {
+          offset: 0,
+          reg: VMRegister::Largepad,
+
+          count: 1,
+          width: size,
+        });
+      } else {
+        output = Some(LocSrc {
+          offset: 0,
+          reg: VMRegister::Scratchpad,
+
+          count: 1,
+          width: size,
+        });
+      }
     }
   }
 

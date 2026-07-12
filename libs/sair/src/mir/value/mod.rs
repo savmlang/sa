@@ -50,6 +50,33 @@ pub enum ValueType<'a> {
   },
 }
 
+impl<'a> ValueType<'a> {
+  pub fn is_num(&self) -> bool {
+    matches!(self, Self::Base { .. } | Self::Vector { .. })
+  }
+
+  pub fn is_vector(&self) -> bool {
+    matches!(self, Self::Vector { .. })
+  }
+
+  pub fn is_scalar(&self) -> bool {
+    !self.is_vector()
+  }
+
+  pub fn is_int(&self) -> bool {
+    self.is_num() && !self.is_float()
+  }
+
+  pub fn is_float(&self) -> bool {
+    match self {
+      Self::Base { base, .. } | Self::Vector { base, .. } => {
+        matches!(base, BaseType::Float32 | BaseType::Double64)
+      }
+      _ => false,
+    }
+  }
+}
+
 #[repr(align(1))]
 #[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ValueTypeArray<'a> {
@@ -215,10 +242,10 @@ pub(crate) mod internal {
       value::{BaseType, ValueType},
     },
   };
-  use std::fmt::{Debug, Formatter};
+  use std::fmt::Formatter;
 
   impl BaseType {
-    pub(crate) fn fmt(self, f: &mut Formatter) -> std::fmt::Result {
+    pub(crate) fn format(self, f: &mut Formatter) -> std::fmt::Result {
       write!(
         f,
         "@{}",
@@ -257,7 +284,7 @@ pub(crate) mod internal {
 
       match self {
         Self::Base { base, .. } => {
-          base.fmt(f)?;
+          base.format(f)?;
           writeln!(f, "")?;
         }
         &Self::PrimaryUnion {
@@ -269,7 +296,7 @@ pub(crate) mod internal {
 
           for item in &composition[0..(count as usize)] {
             write!(f, "    ")?;
-            item.fmt(f)?;
+            item.format(f)?;
             writeln!(f, "")?;
           }
 
@@ -284,7 +311,7 @@ pub(crate) mod internal {
 
           for item in &composition.as_ref()[0..(count as usize)] {
             write!(f, "    ")?;
-            item.fmt(f)?;
+            item.format(f)?;
             writeln!(f, "")?;
           }
 
@@ -293,7 +320,7 @@ pub(crate) mod internal {
         Self::Vector { base, count } => {
           write!(f, "vector <")?;
 
-          base.fmt(f)?;
+          base.format(f)?;
 
           writeln!(f, " x {count}>")?;
         }
@@ -305,7 +332,7 @@ pub(crate) mod internal {
 
             if let Some(x) = store.type_data(vtr) {
               match x {
-                ValueType::Base { base, .. } => base.fmt(f)?,
+                ValueType::Base { base, .. } => base.format(f)?,
                 _ => write!(f, "@type:{}", vtr.0)?,
               }
               writeln!(f, "")?;
@@ -324,7 +351,7 @@ pub(crate) mod internal {
 
             if let Some(x) = store.type_data(vtr) {
               match x {
-                ValueType::Base { base, .. } => base.fmt(f)?,
+                ValueType::Base { base, .. } => base.format(f)?,
                 _ => write!(f, "@type:{}", vtr.0)?,
               }
 

@@ -115,7 +115,7 @@ impl<'a, T: StringStore> Module<'a, T> {
     unsafe { ValueTypeRef(NonZeroUsize::new_unchecked(self.typemap.len())) }
   }
 
-  pub fn type_data(&self, id: ValueTypeRef) -> Option<&ValueType> {
+  pub fn type_data(&self, id: ValueTypeRef) -> Option<&ValueType<'_>> {
     self.typemap.get(id.index())
   }
 

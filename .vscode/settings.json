@@ -8,6 +8,8 @@
   "rust-analyzer.cargo.extraEnv": {
     "LLVM_SYS_221_PREFIX": "${workspaceFolder}/llvm/install"
   },
+  "rust-analyzer.procMacro.enable": true,
+  "rust-analyzer.cargo.sysroot": "discover",
   "terminal.integrated.profiles.windows": {
     "SaVM Development": {
       "path": [

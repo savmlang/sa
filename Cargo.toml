@@ -12,6 +12,10 @@ members = [
   # Sa Runtime
   "sart",
 
+  # Sa Runtime Async Helper
+  "sart/saffi/libsavmasync",
+  "sart/saffi/savmasync",
+
   # Sa Runtime Allocator
   "sart/saffi/libsalloc",
 

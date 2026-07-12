@@ -2,13 +2,14 @@ use sair::{
   SingleThreadedStringStore,
   mir::{
     Module,
+    block::BLOCK_0,
     value::{
       BaseType, ValueType, ValueTypeArray,
       consts::{D64, F32, I32, I64},
       sig::Signature,
     },
   },
-  saemit::machine::v0::IsaV0,
+  saemit::machine::{TargetVM, v0::IsaV0},
 };
 use std::rc::Rc;
 
@@ -71,7 +72,19 @@ fn main() {
     let mut myfn = module.function("hello", sig);
 
     let mut builder = myfn.builder(&module);
-    builder.block(&[I64, D64, a]);
+
+    let block1 = builder.block(&[I64]);
+    let block2 = builder.block(&[]);
+
+    builder.position_end(block1);
+
+    let val = builder.iconst(I64, 300).unwrap().out;
+    builder.jump(block1, &[val]).unwrap();
+
+    builder.position_end(BLOCK_0);
+    builder.jump(block2, &[]).unwrap();
+
+    v0.regalloc(&myfn, &module);
 
     _ = module.add_function(myfn);
   }
