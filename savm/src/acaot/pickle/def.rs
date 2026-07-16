@@ -1,3 +1,8 @@
+use sart::{
+  ctr::VMTaskState,
+  saffi::futures::{FutureTask, implements::create_future},
+};
+
 use crate::{BytecodeResolver, acaot::pickle::implementation::*};
 
 /// Pickle is our own internal NE implementation
@@ -13,8 +18,22 @@ pub struct PickleInstruction {
 
 macro_rules! opcodes {
   (
+    async $opcode:ident $($generic:ident)? diff $diff:ident
+  ) => { };
+  (
+    async $opcode:ident $($generic:ident)?
+  ) => {
+    pastey::paste! {
+      fn [<call_ $opcode:lower _async>]<'a $(,$generic: BytecodeResolver + Send + Sync + 'static)?>(a: &'a PickleInstruction, b: *mut WorkingSet, c: *mut VMTaskState) -> FutureTask<()> {
+        create_future(async move {
+          [<call_ $opcode:lower>]$(::<$generic>)?(a, b, c)
+        })
+      }
+    }
+  };
+  (
     $(
-      $id:expr => $opcode:ident $($generic:ident)?
+      $id:expr => $opcode:ident $($generic:ident)? $(diff $diff:ident)?
     ),*
   ) => {
     pastey::paste! {
@@ -34,6 +53,20 @@ macro_rules! opcodes {
         [
           $(
             [<call_ $opcode:lower>]$(::<$generic>)?
+          ),*
+        ]
+      }
+
+      $(
+        opcodes! {
+          async $opcode $($generic)? $(diff $diff)?
+        }
+      )*
+
+      pub(crate) const fn pickle_generate_table_async<T: BytecodeResolver + Send + Sync + 'static>() -> [ResolveFnAsync; DISPATCH_TOTAL_ITEMS] {
+        [
+          $(
+            [<call_ $opcode:lower _async>]$(::<$generic>)?
           ),*
         ]
       }

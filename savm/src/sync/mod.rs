@@ -41,6 +41,34 @@ pub struct VMState {
   pub cindex: usize,
 }
 
+impl VMState {
+  pub fn init() -> Self {
+    VMState {
+      ws: WorkingSet {
+        arr: &[],
+        dispatch: null(),
+        largepad: unsafe { salloc::aligned_malloc(SIZE_128KB, 8) as _ },
+        largepad_cursor: 0,
+        ame: null_mut(),
+        ame_free: true,
+        jmp: (0, 0),
+        relocmap: SaVMJumpWrap(Default::default()),
+      },
+      ts: unsafe {
+        let mut ts: [VMTaskState; 50] = zeroed();
+
+        let alloca = salloc::aligned_malloc(SCRATCHPAD, 64) as *mut QuadPackedData;
+        for (i, t) in ts.iter_mut().enumerate() {
+          t.scratchpad = alloca.add(i * 24);
+        }
+
+        ts
+      },
+      cindex: 0,
+    }
+  }
+}
+
 impl Drop for VMState {
   fn drop(&mut self) {
     unsafe {
@@ -55,33 +83,11 @@ impl Drop for VMState {
 }
 
 thread_local! {
-  pub static VMSTAT: UnsafeCell<VMState> = UnsafeCell::new(VMState {
-    ws: WorkingSet {
-      arr: &[],
-      dispatch: null(),
-      largepad: unsafe { salloc::aligned_malloc(SIZE_128KB, 8) as _ },
-      largepad_cursor: 0,
-      ame: null_mut(),
-      ame_free: true,
-      jmp: (0, 0),
-      relocmap: SaVMJumpWrap(Default::default())
-    },
-    ts: unsafe {
-      let mut ts: [VMTaskState; 50] = zeroed();
-
-      let alloca = salloc::aligned_malloc(SCRATCHPAD, 64) as *mut QuadPackedData;
-      for (i, t) in ts.iter_mut().enumerate() {
-        t.scratchpad = alloca.add(i * 24);
-      }
-
-      ts
-    },
-    cindex: 0
-  });
+  pub static VMSTAT: UnsafeCell<VMState> = UnsafeCell::new(VMState::init());
 }
 
 impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
-  const PICKLE_DISPATCH_TABLE: [ResolveFn; DISPATCH_TOTAL_ITEMS] = pickle_generate_table::<E>();
+  pub const PICKLE_DISPATCH_TABLE: [ResolveFn; DISPATCH_TOTAL_ITEMS] = pickle_generate_table::<E>();
 
   pub fn fncall(&self, sectionid: u64, oldtsk: *mut VMTaskState) -> [QuadPackedData; 2] {
     VMSTAT.with(|p| {

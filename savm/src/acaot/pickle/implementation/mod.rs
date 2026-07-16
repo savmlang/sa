@@ -14,6 +14,7 @@ pub use threading::*;
 
 use sart::{
   ctr::{AggressiveMatrixExtension, VMTaskState},
+  saffi::futures::FutureTask,
   salloc,
   structures::QuadPackedData,
 };
@@ -222,6 +223,11 @@ macro_rules! resolve_location_src {
 
 pub type ResolveFn =
   fn(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) -> ();
+pub type ResolveFnAsync = fn(
+  pickle: &PickleInstruction,
+  ws: *mut WorkingSet,
+  taskstate: *mut VMTaskState,
+) -> FutureTask<()>;
 
 #[inline(always)]
 pub fn call_hint(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {

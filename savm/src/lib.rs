@@ -26,6 +26,7 @@ use crate::{
   management::management_main,
 };
 
+pub mod asynchronous;
 pub mod executor;
 pub mod kvwrap;
 pub mod management;
