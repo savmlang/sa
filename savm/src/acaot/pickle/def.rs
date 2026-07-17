@@ -1,7 +1,4 @@
-use sart::{
-  ctr::VMTaskState,
-  saffi::futures::{FutureTask, implements::create_future},
-};
+use sart::{ctr::VMTaskState, saffi::futures::FutureTask};
 
 use crate::{BytecodeResolver, acaot::pickle::implementation::*};
 
@@ -18,22 +15,22 @@ pub struct PickleInstruction {
 
 macro_rules! opcodes {
   (
-    async $opcode:ident $($generic:ident)? diff $diff:ident
+    async $opcode:ident $($generic:ident)? { $diff:ident }
   ) => { };
   (
     async $opcode:ident $($generic:ident)?
   ) => {
     pastey::paste! {
-      fn [<call_ $opcode:lower _async>]<'a $(,$generic: BytecodeResolver + Send + Sync + 'static)?>(a: &'a PickleInstruction, b: *mut WorkingSet, c: *mut VMTaskState) -> FutureTask<()> {
-        create_future(async move {
-          [<call_ $opcode:lower>]$(::<$generic>)?(a, b, c)
-        })
+      fn [<call_ $opcode:lower _async>]<'a $(,$generic: BytecodeResolver + Send + Sync + 'static)?>(a: &'a PickleInstruction, b: *mut WorkingSet, c: *mut VMTaskState) -> Option<FutureTask<()>> {
+        [<call_ $opcode:lower>]$(::<$generic>)?(a, b, c);
+
+        None
       }
     }
   };
   (
     $(
-      $id:expr => $opcode:ident $($generic:ident)? $(diff $diff:ident)?
+      $id:expr => $opcode:ident $($generic:ident)? $({ $diff:ident })?
     ),*
   ) => {
     pastey::paste! {
@@ -59,7 +56,7 @@ macro_rules! opcodes {
 
       $(
         opcodes! {
-          async $opcode $($generic)? $(diff $diff)?
+          async $opcode $($generic)? $({ $diff })?
         }
       )*
 
@@ -81,7 +78,7 @@ opcodes! {
   //
   // u1 = opcode after WS_PUT
   // u2 = total numbers of WS_PUT
-  0 => HINT,
+  0 => HINT { diff },
   // Working Set put
   // Put 16 bites (u2, u3 in native-endian)
   // with offset specified by u1 in multiple of (16bits)
@@ -132,6 +129,8 @@ opcodes! {
   28 => VMINIMAX,
   29 => VFMA,
   30 => SYNCCALL T,
+
+
   31 => ASYNCCALL,
   32 => SPAWN T,
   33 => TASK,

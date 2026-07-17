@@ -252,7 +252,12 @@ pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(resolve: Arc
         let rb = resolve.clone();
 
         threads += 1;
-        thread::spawn(move || compiler::<false, _>(rb, rx, upd));
+        thread::Builder::new()
+          .name("JIT Worker #0 - Critical".into())
+          // 2MiB stack for thread
+          .stack_size(2 * 1024 * 1024)
+          .spawn(move || compiler::<false, _>(rb, rx, upd))
+          .expect("Unable to start thread for CRITICAL jit worker");
 
         tx
       };
@@ -276,7 +281,12 @@ pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(resolve: Arc
         let rb = resolve.clone();
 
         threads += 1;
-        thread::spawn(move || compiler::<false, _>(rb, rx, upd));
+        thread::Builder::new()
+          .name("JIT Worker #1 - Important".into())
+          // 2MiB stack for thread
+          .stack_size(2 * 1024 * 1024)
+          .spawn(move || compiler::<false, _>(rb, rx, upd))
+          .expect("Unable to start thread for IMPORTANT jit worker");
 
         tx
       };
@@ -301,7 +311,12 @@ pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(resolve: Arc
         let rb = resolve.clone();
 
         threads += 1;
-        thread::spawn(move || compiler::<false, _>(rb, rx, upd));
+        thread::Builder::new()
+          .name("JIT Worker #2 - Others".into())
+          // 2MiB stack for thread
+          .stack_size(2 * 1024 * 1024)
+          .spawn(move || compiler::<false, _>(rb, rx, upd))
+          .expect("Unable to start thread for OTHERS jit worker");
 
         tx
       };
@@ -396,12 +411,15 @@ fn process_jit<T: BytecodeResolver + Send + Sync + 'static>(
             };
 
             match level {
+              #[cfg(feature = "cranelift")]
               CacheLevel::CraneliftEpicenter => {
                 todo!("Soon")
               }
+              #[cfg(feature = "llvm")]
               CacheLevel::LLVMEpitome => {
                 todo!("Soon");
               }
+              #[cfg(feature = "llvm")]
               CacheLevel::LLVMCinder | CacheLevel::LLVMCrater => {
                 let (bin, parent_counter) = sajit
                   .write_llvm(&binary, |_| {
@@ -410,13 +428,14 @@ fn process_jit<T: BytecodeResolver + Send + Sync + 'static>(
                   .expect("Unable to write LLVM JIT Memory");
                 write(bin, parent_counter);
               }
+              #[cfg(feature = "cranelift")]
               CacheLevel::CraneliftCrafter => {
                 let relocs = calculate_relocation_abs(&reloc);
 
                 let (bin, parent_counter) = sajit.write_quick(&binary, &relocs);
                 write(bin, parent_counter);
               }
-              _ => {}
+              e => unreachable!("Found an unknown tier for current feature set : {e:?}"),
             }
           }
         },

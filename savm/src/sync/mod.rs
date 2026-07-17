@@ -2,9 +2,9 @@ use std::{
   cell::UnsafeCell,
   hint::cold_path,
   mem::zeroed,
-  ptr::{self, addr_of_mut, null, null_mut},
+  ptr::{addr_of_mut, null, null_mut},
   sync::{
-    Arc, OnceLock,
+    Arc, LazyLock, OnceLock,
     atomic::{Ordering, compiler_fence},
   },
 };
@@ -14,26 +14,26 @@ use sajit::Executable;
 use sart::{ctr::VMTaskState, salloc, structures::QuadPackedData};
 
 use crate::{
-  BytecodeResolver, CODE_CACHE, SymbolMapTable, VM,
+  BytecodeResolver, CODE_CACHE, PickleJumpData, SymbolMapTable, VM,
   acaot::pickle::{
     PickleWorker,
     def::{
       DISPATCH_TOTAL_ITEMS, PICKLE_OPCODE_HINT, PICKLE_OPCODE_MARK, PickleInstruction,
       pickle_generate_table,
     },
-    implementation::{ResolveFn, SIZE_128KB, WorkingSet},
+    implementation::{DispatchFn, ResolveFn, SIZE_128KB, WorkingSet},
   },
-  kvwrap::{SaVMJumpWrap, SaVMJumpWrapImpl},
+  kvwrap::SaVMJumpWrap,
 };
 
 pub static GLOBAL_DATA: OnceLock<UnSafePtr<u8>> = OnceLock::new();
-
-pub struct UnSafePtr<T>(pub *mut T);
-
-unsafe impl<T> Send for UnSafePtr<T> {}
-unsafe impl<T> Sync for UnSafePtr<T> {}
+static UNUSED_RELOCMAP: LazyLock<Arc<[PickleJumpData]>> = LazyLock::new(Default::default);
 
 const SCRATCHPAD: usize = 50 * 24 * size_of::<QuadPackedData>();
+
+pub struct UnSafePtr<T>(pub *mut T);
+unsafe impl<T> Send for UnSafePtr<T> {}
+unsafe impl<T> Sync for UnSafePtr<T> {}
 
 pub struct VMState {
   pub ws: WorkingSet,
@@ -46,13 +46,13 @@ impl VMState {
     VMState {
       ws: WorkingSet {
         arr: &[],
-        dispatch: null(),
+        dispatch: DispatchFn { dispatch: null() },
         largepad: unsafe { salloc::aligned_malloc(SIZE_128KB, 8) as _ },
         largepad_cursor: 0,
         ame: null_mut(),
         ame_free: true,
         jmp: (0, 0),
-        relocmap: SaVMJumpWrap(Default::default()),
+        relocmap: SaVMJumpWrap(UNUSED_RELOCMAP.clone()),
       },
       ts: unsafe {
         let mut ts: [VMTaskState; 50] = zeroed();
@@ -86,32 +86,119 @@ thread_local! {
   pub static VMSTAT: UnsafeCell<VMState> = UnsafeCell::new(VMState::init());
 }
 
+/// Compression module to compress the VMState
+pub(crate) mod compress;
+
+/// Functions for preparation & standard prologue-epilogues
+pub(crate) mod preps {
+  use crate::{
+    PickleJumpData,
+    acaot::pickle::{def::PickleInstruction, implementation::DispatchFn},
+    kvwrap::{SaVMJumpWrap, SaVMJumpWrapImpl},
+    sync::VMState,
+  };
+  use sart::{
+    ctr::{FLAGS::FLAG_JUMP_TO_RESUME, VMTaskState},
+    structures::QuadPackedData,
+  };
+  use std::{os::raw::c_void, ptr, sync::Arc};
+
+  #[inline(always)]
+  pub fn fncall_prep(vmstat: *mut VMState, oldtsk: *mut VMTaskState) {
+    unsafe {
+      (*vmstat).cindex += 1;
+      ptr::write((*vmstat).ts.as_mut_ptr().add((*vmstat).cindex), *oldtsk);
+    }
+  }
+
+  #[inline(always)]
+  pub fn fncall_out(vmstat: *mut VMState) -> [QuadPackedData; 2] {
+    unsafe {
+      let resp = (*vmstat).ts.get_unchecked((*vmstat).cindex);
+
+      (*vmstat).cindex -= 1;
+
+      [resp.r7, resp.r8]
+    }
+  }
+
+  #[inline(always)]
+  pub fn prep_jit(ts: *mut VMTaskState, marker: Option<u64>) {
+    unsafe {
+      // Add the JUMP entry
+      if let Some(marker) = marker {
+        (*ts).flags |= FLAG_JUMP_TO_RESUME;
+        (*ts).curline_or_resume.unsigned = marker;
+      }
+    }
+  }
+
+  #[inline(always)]
+  pub fn prepare_interpreter_loop<F: FnOnce(&mut DispatchFn)>(
+    t: *mut VMState,
+    jumps: Arc<[PickleJumpData]>,
+    engine: *mut c_void,
+    dispatch: F,
+  ) -> *mut VMTaskState {
+    unsafe {
+      let wrapped = SaVMJumpWrap(jumps);
+
+      dispatch(&mut (*t).ws.dispatch);
+      (*t).ws.jmp = (0, wrapped.get(&0).unwrap_or_default());
+      (*t).ws.relocmap = wrapped;
+
+      let ts = (*t).ts.as_mut_ptr().add((*t).cindex as usize);
+
+      (*ts).engine_or_pt.pt = engine;
+      (*ts).curline_or_resume.usi = 0;
+
+      ts
+    }
+  }
+
+  #[inline(always)]
+  pub fn interpreter_process_hintmark(
+    dt: &[PickleInstruction],
+    ts: *mut VMTaskState,
+    marker: &mut Option<u64>,
+  ) {
+    unsafe {
+      let data: [PickleInstruction; 2] = {
+        dt[((*ts).curline_or_resume.usi + 1)..(*ts).curline_or_resume.usi + 3]
+          .try_into()
+          .unwrap()
+      };
+
+      let out = u64::from_le_bytes([
+        data[0].opcode,
+        data[0].u1,
+        data[0].u2,
+        data[0].u3,
+        data[1].opcode,
+        data[1].u1,
+        data[1].u2,
+        data[1].u3,
+      ]);
+
+      *marker = Some(out);
+
+      // Also increment by the correct amount
+      (*ts).curline_or_resume.usi += 3;
+    }
+  }
+}
+
 impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
   pub const PICKLE_DISPATCH_TABLE: [ResolveFn; DISPATCH_TOTAL_ITEMS] = pickle_generate_table::<E>();
 
   pub fn fncall(&self, sectionid: u64, oldtsk: *mut VMTaskState) -> [QuadPackedData; 2] {
-    VMSTAT.with(|p| {
-      let p = p.get();
-
-      unsafe {
-        (*p).cindex += 1;
-        ptr::write((*p).ts.as_mut_ptr().add((*p).cindex), *oldtsk)
-      };
-    });
+    let vmstat = VMSTAT.with(|x| x.get());
+    preps::fncall_prep(vmstat, oldtsk);
 
     self.dispatch_chocolate::<true>(sectionid);
 
-    VMSTAT.with(|p| {
-      let p = p.get();
-
-      unsafe {
-        let resp = (*p).ts.get_unchecked((*p).cindex);
-
-        (*p).cindex -= 1;
-
-        [resp.r7, resp.r8]
-      }
-    })
+    let vmstat = VMSTAT.with(|x| x.get());
+    preps::fncall_out(vmstat)
   }
 
   pub fn call_section(&self, sectionid: u64) {
@@ -121,46 +208,35 @@ impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
   #[inline(always)]
   pub fn dispatch_chocolate<const JMPTOJIT: bool>(&self, sectionid: u64) {
     let Some((data, jumps)) = CODE_CACHE.get(&sectionid) else {
-      return self.pickle_section(sectionid, Self::dispatch_chocolate::<JMPTOJIT>);
+      self.pickle_section(sectionid);
+
+      return self.dispatch_chocolate::<JMPTOJIT>(sectionid);
     };
 
     let leng = data.len();
 
     #[allow(unused)]
-    let mut jumptomark = None;
+    let mut marker = None;
     #[allow(unused)]
     let mut run_jit = false;
 
-    VMSTAT.with(|x| unsafe {
-      let t = x.get();
+    let t = VMSTAT.with(UnsafeCell::get);
+    let ts = preps::prepare_interpreter_loop(t, jumps, self as *const _ as *mut _, |x| {
+      x.dispatch = Self::PICKLE_DISPATCH_TABLE.as_ptr();
+    });
 
-      let wrapped = SaVMJumpWrap(jumps);
-
-      (*t).ws.dispatch = Self::PICKLE_DISPATCH_TABLE.as_ptr();
-      (*t).ws.jmp = (0, wrapped.get(&0).unwrap_or_default());
-      (*t).ws.relocmap = wrapped;
-
-      let ts = (*t).ts.as_mut_ptr().add((*t).cindex as usize);
-
-      (*ts).engine_or_pt.pt = self as *const _ as _;
-      (*ts).curline_or_resume.usi = 0;
-
+    unsafe {
       'jcheck: loop {
         let dt = data.as_ref();
 
         #[cfg(feature = "native")]
         if JMPTOJIT {
           if let Some(_) = &crate::JIT_CACHE.get().unwrap_unchecked().get(sectionid) {
-            if let Some(marker) = jumptomark {
-              use sart::ctr::FLAGS::FLAG_JUMP_TO_RESUME;
-
-              (*ts).flags = FLAG_JUMP_TO_RESUME;
-              (*ts).curline_or_resume.unsigned = marker;
-            }
+            // We have to marker to jump to
+            preps::prep_jit(ts, marker);
 
             // Jump to JIT
             run_jit = true;
-
             break 'jcheck;
           };
         }
@@ -176,30 +252,12 @@ impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
 
           // USE A NO-OP to our benefit
           if pickle.opcode == PICKLE_OPCODE_HINT && PICKLE_OPCODE_MARK == pickle.u1 {
-            let data: [PickleInstruction; 2] = {
-              dt[((*ts).curline_or_resume.usi + 1)..(*ts).curline_or_resume.usi + 3]
-                .try_into()
-                .unwrap()
-            };
-
-            let out = u64::from_le_bytes([
-              data[0].opcode,
-              data[0].u1,
-              data[0].u2,
-              data[0].u3,
-              data[1].opcode,
-              data[1].u1,
-              data[1].u2,
-              data[1].u3,
-            ]);
-
-            jumptomark = Some(out);
-
-            (*ts).curline_or_resume.usi += 3;
+            preps::interpreter_process_hintmark(dt, ts, &mut marker);
 
             continue 'jcheck;
           }
 
+          // Optimize the HINT interpreter opcode
           if pickle.opcode == PICKLE_OPCODE_HINT {
             let dptr = dt.as_ptr();
             (*ts).engine_or_pt.pt = dptr as _;
@@ -217,11 +275,10 @@ impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
           (*ts).curline_or_resume.usi += 1;
         }
       }
-    });
+    }
 
     #[cfg(feature = "native")]
     if run_jit {
-      // TODO: Replace with `become`
       return self.dispatch_jit(sectionid);
     }
 
@@ -232,13 +289,12 @@ impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
   #[inline(always)]
   #[cfg(feature = "native")]
   pub fn dispatch_jit(&self, sectionid: u64) {
+    use crate::JIT_CACHE;
     use std::ops::Deref;
 
-    use crate::JIT_CACHE;
-
-    let Some(jitcache) = JIT_CACHE.get() else {
-      unreachable!();
-    };
+    let jitcache = JIT_CACHE
+      .get()
+      .expect("JITCache should NOT be uninitialized");
 
     let Some(jit) = jitcache.get(sectionid) else {
       return self.dispatch_chocolate::<true>(sectionid);
@@ -256,10 +312,9 @@ impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
   #[inline(always)]
   #[cfg(feature = "native")]
   pub fn exec_jit(&self, exec: *const Executable) {
-    VMSTAT.with(|x| unsafe {
+    let vmstate = VMSTAT.with(UnsafeCell::get);
+    unsafe {
       use std::mem::transmute;
-
-      let vmstate = x.get();
 
       let curr_taskstate = (*vmstate).ts.as_mut_ptr().add((*vmstate).cindex);
 
@@ -275,10 +330,10 @@ impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
       // Execute
       let exec: extern "C" fn(vmtskstate: *mut VMTaskState) = transmute(exec);
       exec(curr_taskstate);
-    });
+    }
   }
 
-  fn pickle_section(&self, sectionid: u64, dispatch: fn(vm: &Self, sectionid: u64) -> ()) {
+  pub(crate) fn pickle_section(&self, sectionid: u64) {
     // Compile
     let SymbolMapTable::MixedSizedBytecode { bytecode } = self.resolve.resolve_data(sectionid)
     else {
@@ -297,21 +352,18 @@ impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
 
     CODE_CACHE.insert(sectionid, (out, Arc::from(worker.jump)));
     CODE_CACHE.run_pending_tasks();
-
-    // TODO: Replace with `become`
-    return dispatch(self, sectionid);
   }
 
-  fn ame_free(&self, _sectionid: u64) {
-    VMSTAT.with(|vtsk| unsafe {
-      let vm = &mut *vtsk.get();
+  pub(crate) fn ame_free(&self, _sectionid: u64) {
+    let vm = VMSTAT.with(UnsafeCell::get);
 
-      for tsk in &mut vm.ts {
+    unsafe {
+      for tsk in &mut (*vm).ts {
         if !tsk.ame.is_null() {
-          vm.ws.freeame(tsk.ame);
+          (*vm).ws.freeame(tsk.ame);
           tsk.ame = null_mut();
         }
       }
-    })
+    }
   }
 }

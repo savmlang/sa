@@ -35,13 +35,18 @@ use crate::{
 
 pub const SIZE_128KB: usize = 128 * 1024 / size_of::<QuadPackedData>();
 
+pub union DispatchFn {
+  pub dispatch: *const ResolveFn,
+  pub dispatch_async: *const ResolveFnAsync,
+}
+
 pub struct WorkingSet {
   pub arr: &'static [u8],
   pub largepad: *mut QuadPackedData, // SIZE_128KB allocated
   pub largepad_cursor: usize,
   pub relocmap: SaVMJumpWrap,
 
-  pub dispatch: *const ResolveFn,
+  pub dispatch: DispatchFn,
 
   // AME
   pub ame: *mut AggressiveMatrixExtension,
@@ -227,10 +232,14 @@ pub type ResolveFnAsync = fn(
   pickle: &PickleInstruction,
   ws: *mut WorkingSet,
   taskstate: *mut VMTaskState,
-) -> FutureTask<()>;
+) -> Option<FutureTask<()>>;
 
 #[inline(always)]
-pub fn call_hint(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
+pub fn hint_common(
+  pickle: &PickleInstruction,
+  ws: *mut WorkingSet,
+  taskstate: *mut VMTaskState,
+) -> u8 {
   unsafe {
     let instruction = pickle.u1;
 
@@ -253,6 +262,15 @@ pub fn call_hint(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mu
     // +1 to go past the last WS_PUT
     (*taskstate).curline_or_resume.usi = pic + total_wsput + 1;
 
+    instruction
+  }
+}
+
+#[inline(always)]
+pub fn call_hint(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
+  unsafe {
+    let instruction = hint_common(pickle, ws, taskstate);
+
     // Call next instruction
     {
       let pkl = &*((*taskstate).engine_or_pt.pt as *const PickleInstruction)
@@ -268,10 +286,42 @@ pub fn call_hint(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mu
         PICKLE_OPCODE_JIF => call_jif(pkl, ws, taskstate),
         PICKLE_OPCODE_VCMP => call_vcmp(pkl, ws, taskstate),
         PICKLE_OPCODE_VADD => call_vadd(pkl, ws, taskstate),
-        _ => return (*(*ws).dispatch.add(instruction as usize))(pkl, ws, taskstate),
+        _ => return (*(*ws).dispatch.dispatch.add(instruction as usize))(pkl, ws, taskstate),
       }
     }
   }
+}
+
+#[inline(always)]
+pub fn call_hint_async(
+  pickle: &PickleInstruction,
+  ws: *mut WorkingSet,
+  taskstate: *mut VMTaskState,
+) -> Option<FutureTask<()>> {
+  unsafe {
+    let instruction = hint_common(pickle, ws, taskstate);
+
+    // Call next instruction
+    {
+      let pkl = &*((*taskstate).engine_or_pt.pt as *const PickleInstruction)
+        .add((*taskstate).curline_or_resume.usi);
+
+      debug_assert!(pkl.opcode == instruction);
+
+      // TODO: Replace with `become` once its in nightly-functional
+      match instruction {
+        // These calls are infact inlined
+        PICKLE_OPCODE_MARK => call_mark(pkl, ws, taskstate),
+        PICKLE_OPCODE_JMP => call_jmp(pkl, ws, taskstate),
+        PICKLE_OPCODE_JIF => call_jif(pkl, ws, taskstate),
+        PICKLE_OPCODE_VCMP => call_vcmp(pkl, ws, taskstate),
+        PICKLE_OPCODE_VADD => call_vadd(pkl, ws, taskstate),
+        _ => return (*(*ws).dispatch.dispatch_async.add(instruction as usize))(pkl, ws, taskstate),
+      }
+    }
+  }
+
+  None
 }
 
 #[inline(always)]

@@ -1,0 +1,10 @@
+# Limit stack to 256KB
+
+[target.'cfg(target_env = "msvc")']
+rustflags = ["-C", "link-args=/STACK:262144"]
+
+[target.'cfg(target_os = "macos")']
+rustflags = ["-C", "link-args=-Wl,-stack_size,0x40000"]
+
+[target.'cfg(any(target_os = "linux", target_os = "freebsd"))']
+rustflags = ["-C", "link-args=-Wl,-z,stack-size=262144"]

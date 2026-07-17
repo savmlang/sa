@@ -275,15 +275,12 @@ impl<T: BytecodeResolver + Send + Sync + 'static> VM<T> {
         .set(SwappableCodeSpace::create(resolve.as_ref().last_section_id() as usize + 1).unwrap())
         .expect("impossible");
 
-      thread::spawn(move || {
-        #[cfg(feature = "native")]
-        {
-          management_main(resolve);
-        }
-
-        #[cfg(not(feature = "native"))]
-        management_main(resolve);
-      });
+      thread::Builder::new()
+        .name("JIT Management".into())
+        // 32KiB stack space
+        .stack_size(32 * 1024)
+        .spawn(move || management_main(resolve))
+        .expect("Unable to spawn management thread");
     }
 
     Self { resolve: resolver }
