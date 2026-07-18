@@ -35,7 +35,6 @@ fi
 echo "Building C Libraries"
 
 cargo build \
-  --workspace \
   --no-default-features \
   -Zbuild-std=std,core,proc_macro,panic_abort \
   --release \
