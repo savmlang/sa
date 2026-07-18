@@ -39,8 +39,7 @@ cargo build \
   --no-default-features \
   -Zbuild-std=std,core,proc_macro,panic_abort \
   --release \
-  --target $TARGET \
-  -p savmasync -p salloc
+  --target $TARGET -p savmasync -p salloc
   
 cargo build \
   --workspace \
