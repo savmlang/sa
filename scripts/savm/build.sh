@@ -32,7 +32,7 @@ if [[ "$TARGET" == "armv7-unknown-linux-gnueabihf" ]]; then
     -C link-arg=-Wl,--allow-shlib-undefined"
 fi
 
-echo "Building SaVM"
+echo "Building C Libraries"
 
 cargo build \
   --workspace \
@@ -41,6 +41,8 @@ cargo build \
   --release \
   --target $TARGET -p savmasync -p salloc
   
+echo "Building SaVM Substrate"
+
 cargo build \
   --workspace \
   --no-default-features \
