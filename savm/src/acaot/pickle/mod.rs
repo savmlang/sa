@@ -529,18 +529,18 @@ impl<T: Read> PickleWorker<T> {
   fn handle_reg(&mut self) {
     let [register] = self.bytecode.extract_result().expect("");
 
-    let offset = self.bytecode.extract_result().expect("");
+    let [offset] = self.bytecode.extract_result().expect("");
 
-    let data_ne: [u8; 8] =
-      u64::from_le_bytes(self.bytecode.extract_result::<8>().expect("")).to_ne_bytes();
+    let data = u64::from_le_bytes(self.bytecode.extract_result::<8>().expect(""));
+    let data_ne: [u8; 8] = data.to_ne_bytes();
 
     self.emit_copy_bytes(PICKLE_OPCODE_REG, data_ne);
 
     self.out.push(PickleInstruction {
       opcode: PICKLE_OPCODE_REG,
       u1: register & 0xF,
-      u2: (register >> 2) & 0b11,
-      u3: u8::from_le_bytes(offset),
+      u2: (register >> 4) & 0b11,
+      u3: offset,
     });
   }
 
