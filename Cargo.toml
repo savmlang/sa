@@ -3,6 +3,13 @@
 metadata.savm.version = "v0.0.1-nightly+3"
 
 members = [
+  # Sa Runtime Async Helper
+  "sart/saffi/libsavmasync",
+  "sart/saffi/savmasync",
+
+  # Sa Runtime Allocator
+  "sart/saffi/libsalloc",
+
   # Sa VM (CORE)
   "savm",
 
@@ -11,13 +18,6 @@ members = [
 
   # Sa Runtime
   "sart",
-
-  # Sa Runtime Async Helper
-  "sart/saffi/libsavmasync",
-  "sart/saffi/savmasync",
-
-  # Sa Runtime Allocator
-  "sart/saffi/libsalloc",
 
   # Sa Runtime FFI
   "sart/saffi/ffi",
