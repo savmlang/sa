@@ -46,8 +46,8 @@ contents:
       mode: 0755
       owner: root
 
-  - # Copy upto depth of 1
-    src: ${SAVM_EXPANDED}/*
+  - # Copy fully
+    src: ${SAVM_EXPANDED}/**/*
     dst: /opt/savm/
     expand: true
     file_info:
