@@ -1,4 +1,4 @@
-use coreinstaller::BIN;
+use coreinstaller::extract;
 use std::{borrow::Cow, env::current_exe, fs, path::PathBuf, thread::sleep, time::Duration};
 use windows::Win32::{
   Storage::FileSystem::{MOVEFILE_DELAY_UNTIL_REBOOT, MoveFileExW},
@@ -29,9 +29,7 @@ pub fn install_info<
 
   cb(s("Copying Core Runtime..."), 1.0 / steps);
 
-  BIN
-    .extract(&path)
-    .expect("This shouldn't error, if it does we crash");
+  extract(&path);
 
   cb(s("Copying important files..."), 2.0 / steps);
 

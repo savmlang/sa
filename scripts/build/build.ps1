@@ -11,6 +11,7 @@ $env:SAVM_VERSION = $(./getVersion.ps1)
 foreach ($tech in $iter) {
   # AutoSet for future rust compiles
   $env:TARGET_PKG_DIR = $tech.FullName
+  $env:TARGET_PKG_ZIP = Resolve-Path ("./release/" + $tech.BaseName + "/" + $tech.Name + ".zip")
 
   $dirn = $tech.Name
 

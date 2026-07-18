@@ -1,3 +1,10 @@
-pub use include_dir::{Dir, include_dir};
+use std::{env, io::Cursor, path::Path};
+use zip::ZipArchive;
 
-pub static BIN: Dir<'_> = include_dir!("$TARGET_PKG_DIR");
+const COMPRESSED_DATA: &[u8] = include_bytes!(env!("TARGET_PKG_ZIP"));
+
+pub fn extract<T: AsRef<Path>>(directory: T) {
+  let mut archive = ZipArchive::new(Cursor::new(COMPRESSED_DATA)).unwrap();
+
+  archive.extract(directory).unwrap();
+}

@@ -4,4 +4,8 @@ version = "1.0.0"
 edition = "2024"
 
 [dependencies]
-include_dir = "^0.7"
+zip = { version = "^8", default-features = false, features = [
+  "deflate-flate2",
+  "deflate",
+  "zstd",
+] }
