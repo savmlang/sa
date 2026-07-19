@@ -304,6 +304,8 @@ jobs:
           cargo install --force cargo-expand
           cargo install --force cbindgen
 
+          # Recursively own the target dir
+          sudo chown -R runner:runner .
           ./package.ps1
 
       - name: Upload Artifact
