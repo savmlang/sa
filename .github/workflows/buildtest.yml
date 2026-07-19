@@ -584,7 +584,7 @@ jobs:
           cache: false
 
       - name: Install nFPM
-        run: go install github.com/savmlang/nfpm/v2/cmd/nfpm@main
+        run: go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
 
       - name: Download & Build Installers
         shell: pwsh
