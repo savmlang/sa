@@ -49,6 +49,9 @@ lexical-core = { version = "^1", default-features = false, features = [
 ] }
 mixedradix = { path = "../mixedradix" }
 
+# Sa CPU Affinity
+saffine = { path = "../internal/saffine" }
+
 [build-dependencies]
 cc = { version = "^1", optional = true }
 

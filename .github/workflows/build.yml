@@ -1,4 +1,4 @@
-name: Build
+name: Build SaVM for Release
 
 on:
   push:
@@ -10,6 +10,40 @@ permissions:
   attestations: write
 
 jobs:
+  begin:
+    name: Await Approval
+    environment:
+      name: Publishing
+
+    runs-on: ubuntu-latest
+
+    outputs:
+      GPG_KEY_B64: ${{ steps.secrets.outputs.GPG_KEY_B64 }}
+      GPG_KEY_ID: ${{ steps.secrets.outputs.GPG_KEY_ID }}
+      GPG_PASSPHRASE: ${{ steps.secrets.outputs.GPG_PASSPHRASE }}
+
+    steps:
+      - name: Pass Secrets
+        id: secrets
+        run: |
+          echo "::add-mask::${{ secrets.GPG_KEY_ID }}"
+          echo "::add-mask::${{ secrets.GPG_PASSPHRASE }}"
+
+          # Use multiline to pass strings
+          cat << 'EOF' > key.gpg
+          ${{ secrets.GPG_KEY }}
+          EOF
+
+          base64key=$(cat key.gpg | base64 | tr -d '\n')
+          echo "::add-mask::$base64key"
+          echo "GPG_KEY_B64=$base64key" >> "$GITHUB_OUTPUT"
+
+          rm key.gpg
+
+          echo "GPG_KEY_ID=${{ secrets.GPG_KEY_ID }}" >> "$GITHUB_OUTPUT"
+          echo "GPG_PASSPHRASE=${{ secrets.GPG_PASSPHRASE }}" >> "$GITHUB_OUTPUT"
+
+  # Builds can start while approval awaits
   build:
     name: Build SaVM
     uses: ./.github/workflows/buildtest.yml
@@ -19,12 +53,9 @@ jobs:
 
   publish:
     name: Publish Official SaVM
-    needs: [build]
+    needs: [begin, build]
 
     runs-on: ubuntu-latest
-
-    environment:
-      name: Publishing
 
     steps:
       - name: Checkout
@@ -39,9 +70,7 @@ jobs:
       - name: Restore GPG key
         working-directory: scripts/build/nfpm
         run: |
-          cat << 'EOF' > key.gpg
-          ${{ secrets.GPG_KEY }}
-          EOF
+          echo "${{ needs.begin.outputs.GPG_KEY_B64 }}" | base64 -d > key.gpg
 
       - name: Generate timestamp
         id: version
@@ -60,10 +89,13 @@ jobs:
           sudo apt install nfpm
 
           ./extract.ps1
+          ./build.ps1
         env:
           GH_TOKEN: ${{ github.token }}
-          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
-          NFPM_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          GPG_KEY_ID: ${{ needs.begin.outputs.GPG_KEY_ID }}
+          NFPM_PASSPHRASE: ${{ needs.begin.outputs.GPG_PASSPHRASE }}
+          LINBUILD: true
+          RELEASE: true
         working-directory: scripts/build
 
       - name: Release Artifacts
@@ -82,4 +114,3 @@ jobs:
         run: gh release edit v${{ steps.version.outputs.version }} --draft=false
         env:
           GH_TOKEN: ${{ github.token }}
-          LINBUILD: true

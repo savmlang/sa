@@ -1,0 +1,10 @@
+[package]
+name = "saffine"
+version = "0.1.0"
+edition = "2024"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "^0.62", features = ["Win32_System_SystemInformation"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "^0.2"

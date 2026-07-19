@@ -1606,6 +1606,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "saffine"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "windows",
+]
+
+[[package]]
 name = "sair"
 version = "0.1.0"
 dependencies = [
@@ -1706,6 +1714,7 @@ dependencies = [
  "pastey",
  "rand 0.10.2",
  "rayon",
+ "saffine",
  "sajit",
  "sart",
  "serde",

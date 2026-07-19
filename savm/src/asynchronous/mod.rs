@@ -23,6 +23,8 @@ use crate::{
   sync::VMState,
 };
 
+pub mod pool;
+
 /// An Async SaVM Implementation to aid the sync design of the VM
 pub struct AsyncVMSubstrate<'a, E>
 where

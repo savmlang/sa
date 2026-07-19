@@ -557,8 +557,9 @@ jobs:
             compression-level: 9
 
   package_wlm:
-    name: Package Installers
+    if: inputs.artifact != 'true'
 
+    name: Package Installers
     runs-on: ubuntu-latest
 
     needs: [win32, linux_crosscompile, linux, linux_musl, package_m, package_w]
@@ -606,23 +607,9 @@ jobs:
           $timestamp = Get-Date -Format "yyyy-MM-dd-HH-mm"
           echo "time=$timestamp" >> $env:GITHUB_OUTPUT
 
-      - name: Upload Artifact
-        uses: Wandalen/wretry.action@e94c43bf2e865e7dbbd90b0c1061053f5888932a
-        if: inputs.artifact == 'true'
-        with:
-          action: actions/upload-artifact@v7
-          with: |
-            name: final-release-assets
-            path: |
-              ./scripts/build/outputs/**/*
-              ./scripts/build/release/**/*.zip
-            archive: true
-            compression-level: 9
-
       - name: Release Artifacts
         uses: softprops/action-gh-release@v3
         id: release
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         with:
           tag_name: savmdryrun-${{ steps.time.outputs.time }}
           prerelease: true
@@ -636,7 +623,6 @@ jobs:
             ./scripts/build/release/**/*.zip
 
       - name: Undraft
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: gh release edit savmdryrun-${{ steps.time.outputs.time }} --draft=false
         env:
           GH_TOKEN: ${{ github.token }}
