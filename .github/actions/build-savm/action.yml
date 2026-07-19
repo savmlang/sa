@@ -147,11 +147,12 @@ runs:
         ./package.ps1
 
     - name: Upload Artifact
-      uses: actions/upload-artifact@v7
-      continue-on-error: true
+      uses: Wandalen/wretry.action@e94c43bf2e865e7dbbd90b0c1061053f5888932a
       with:
-        name: savm-${{ inputs.rusttarget }}-${{ inputs.feature }}
-        path: |
-          savm-${{ inputs.rusttarget }}-${{ inputs.feature }}.zip
-        archive: true
-        compression-level: 0
+        action: actions/upload-artifact@v7
+        with: |
+          name: savm-${{ inputs.rusttarget }}-${{ inputs.feature }}
+          path: |
+            savm-${{ inputs.rusttarget }}-${{ inputs.feature }}.zip
+          archive: true
+          compression-level: 7

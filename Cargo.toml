@@ -61,7 +61,7 @@ members = [
 resolver = "3"
 
 # These are testing and hence should not be directly bundled
-exclude = ["acdagtests", "sajit/llvmtest"]
+exclude = ["sajit/llvmtest"]
 
 [profile.release]
 opt-level = 3

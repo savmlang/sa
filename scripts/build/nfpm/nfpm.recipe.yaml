@@ -54,7 +54,7 @@ contents:
       mode: 0755
       owner: root
 
-  # Install our allocator
+  # Install core runtime libraries
   - src: /opt/savm/libsalloc.so
     dst: /usr/lib/libsalloc.so
     type: symlink
@@ -62,14 +62,28 @@ contents:
       mode: 0755
       owner: root
 
-  # Install to path
-  - src: /opt/savm/satest
-    dst: /usr/bin/satest
+  - src: /opt/savm/libsavmasync.so
+    dst: /usr/lib/libsavmasync.so
     type: symlink
     file_info:
       mode: 0755
       owner: root
 
+  - src: /opt/savm/libsavmc.so
+    dst: /usr/lib/libsavmc.so
+    type: symlink
+    file_info:
+      mode: 0755
+      owner: root
+
+  - src: /opt/savm/libsasmc.so
+    dst: /usr/lib/libsasmc.so
+    type: symlink
+    file_info:
+      mode: 0755
+      owner: root
+
+  # Install SaVM Binaries
   - src: /opt/savm/savmrun
     dst: /usr/bin/savmrun
     type: symlink
@@ -77,8 +91,29 @@ contents:
       mode: 0755
       owner: root
 
-  - src: /opt/savm/sasm
-    dst: /usr/bin/sasm
+  - src: /opt/savm/savmrtcache
+    dst: /usr/bin/savmrtcache
+    type: symlink
+    file_info:
+      mode: 0755
+      owner: root
+
+  - src: /opt/savm/savmrt
+    dst: /usr/bin/savmrt
+    type: symlink
+    file_info:
+      mode: 0755
+      owner: root
+
+  - src: /opt/savm/savmimgrun
+    dst: /usr/bin/savmimgrun
+    type: symlink
+    file_info:
+      mode: 0755
+      owner: root
+
+  - src: /opt/savm/satest
+    dst: /usr/bin/satest
     type: symlink
     file_info:
       mode: 0755
@@ -86,6 +121,13 @@ contents:
 
   - src: /opt/savm/sapacker
     dst: /usr/bin/sapacker
+    type: symlink
+    file_info:
+      mode: 0755
+      owner: root
+  
+  - src: /opt/savm/sasm
+    dst: /usr/bin/sasm
     type: symlink
     file_info:
       mode: 0755

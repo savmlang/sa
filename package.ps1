@@ -3,7 +3,7 @@ $tgt = $env:TARGET
 New-Item -Path "./target/c/include" -ItemType Directory -ErrorAction SilentlyContinue
 
 $crates = @(
-  "savmc", "sabinc", "sasmc", "salloc"
+  "savmc", "sasmc", "salloc"
 )
 
 foreach ($crate in $crates) {

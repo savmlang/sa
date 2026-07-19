@@ -257,8 +257,24 @@ jobs:
 
       - name: Build SaVM
         run: |
-          bash ./scripts/savm/sysroot.sh
-          bash ./scripts/savm/build.sh
+          # Retry loop for the main build script
+          success=false
+          for i in {1..5}; do
+            echo "Attempt $i of 5: Running build.sh..."
+            if bash ./scripts/savm/sysroot.sh; then
+              if bash ./scripts/savm/build.sh; then
+                success=true
+                break
+              fi
+            fi
+            echo "Attempt $i failed. Waiting 5 seconds before retrying..."
+            sleep 5
+          done
+
+          if [ "$success" = false ]; then
+            echo "Build failed completely after 5 attempts."
+            exit 1
+          fi
         env:
           LLVM_SYS_221_PREFIX: ${{ github.workspace }}/llvm/install
           ARCH: ${{ matrix.target.arch }}
@@ -291,14 +307,15 @@ jobs:
           ./package.ps1
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v7
-        continue-on-error: true
+        uses: Wandalen/wretry.action@e94c43bf2e865e7dbbd90b0c1061053f5888932a
         with:
-          name: savm-${{ matrix.target.rust }}-${{ matrix.target.feature }}
-          path: |
-            savm-${{ matrix.target.rust }}-${{ matrix.target.feature }}.zip
-          archive: true
-          compression-level: 0
+          action: actions/upload-artifact@v7
+          with: |
+            name: savm-${{ matrix.target.rust }}-${{ matrix.target.feature }}
+            path: |
+              savm-${{ matrix.target.rust }}-${{ matrix.target.feature }}.zip
+            archive: true
+            compression-level: 7
 
   linux_musl:
     name: Build SaVM ${{ matrix.feature.build }} (${{ matrix.config.target }})
@@ -437,14 +454,15 @@ jobs:
           ./package.ps1
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v7
-        continue-on-error: true
+        uses: Wandalen/wretry.action@e94c43bf2e865e7dbbd90b0c1061053f5888932a
         with:
-          name: savm-${{ matrix.config.target }}-${{ matrix.feature.build }}
-          path: |
-            savm-${{ matrix.config.target }}-${{ matrix.feature.build }}.zip
-          archive: true
-          compression-level: 0
+          action: actions/upload-artifact@v7
+          with: |
+            name: savm-${{ matrix.config.target }}-${{ matrix.feature.build }}
+            path: |
+              savm-${{ matrix.config.target }}-${{ matrix.feature.build }}.zip
+            archive: true
+            compression-level: 7
 
   package_m:
     name: Package Installers (macOS)
@@ -476,14 +494,15 @@ jobs:
         working-directory: scripts/build
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v7
-        continue-on-error: true
+        uses: Wandalen/wretry.action@e94c43bf2e865e7dbbd90b0c1061053f5888932a
         with:
-          name: macos-images
-          path: |
-            ./scripts/build/outputs/**/*
-          archive: true
-          compression-level: 9
+          action: actions/upload-artifact@v7
+          with: |
+            name: macos-images
+            path: |
+              ./scripts/build/outputs/**/*
+            archive: true
+            compression-level: 9
 
   package_w:
     name: Package Installers (Windows)
@@ -523,14 +542,15 @@ jobs:
         working-directory: scripts/build
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v7
-        continue-on-error: true
+        uses: Wandalen/wretry.action@e94c43bf2e865e7dbbd90b0c1061053f5888932a
         with:
-          name: windows-images
-          path: |
-            ./scripts/build/outputs/**/*
-          archive: true
-          compression-level: 9
+          action: actions/upload-artifact@v7
+          with: |
+            name: windows-images
+            path: |
+              ./scripts/build/outputs/**/*
+            archive: true
+            compression-level: 9
 
   package_wlm:
     name: Package Installers
@@ -583,16 +603,17 @@ jobs:
           echo "time=$timestamp" >> $env:GITHUB_OUTPUT
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v7
+        uses: Wandalen/wretry.action@e94c43bf2e865e7dbbd90b0c1061053f5888932a
         if: inputs.artifact == 'true'
-        continue-on-error: true
         with:
-          name: final-release-assets
-          path: |
-            ./scripts/build/outputs/**/*
-            ./scripts/build/release/**/*.zip
-          archive: true
-          compression-level: 9
+          action: actions/upload-artifact@v7
+          with: |
+            name: final-release-assets
+            path: |
+              ./scripts/build/outputs/**/*
+              ./scripts/build/release/**/*.zip
+            archive: true
+            compression-level: 9
 
       - name: Release Artifacts
         uses: softprops/action-gh-release@v3
