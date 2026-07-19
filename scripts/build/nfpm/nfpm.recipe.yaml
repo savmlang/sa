@@ -34,22 +34,17 @@ homepage: "https://github.com/savmlang"
 license: "AGPL-3.0 With SaVM Linking Exception"
 
 contents:
-  - dst: /opt/savm
-    type: dir
+  - # Copy fully
+    src: ${SAVM_EXPANDED}/
+    dst: /opt/savm
+    expand: true
+    type: tree
     file_info:
       mode: 0755
       owner: root
 
   - src: "../../../LICENSE"
     dst: /opt/savm/LICENSE
-    file_info:
-      mode: 0755
-      owner: root
-
-  - # Copy fully
-    src: ${SAVM_EXPANDED}/**/*
-    dst: /opt/savm/
-    expand: true
     file_info:
       mode: 0755
       owner: root
