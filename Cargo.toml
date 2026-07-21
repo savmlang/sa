@@ -1,6 +1,6 @@
 [workspace]
 # Official SaVM Build Version
-metadata.savm.version = "v0.0.2-nightly+1"
+metadata.savm.version = "v0.0.1"
 
 members = [
   # Sa Runtime Async Helper
