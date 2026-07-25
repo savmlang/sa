@@ -79,7 +79,6 @@ impl<T: Read> PickleWorker<T> {
         INSTRUCTION_VMINIMAX => self.handle_vminimax(),
         INSTRUCTION_VFMA => self.handle_vfma(),
         INSTRUCTION_SYNCCALL => self.handle_synccall(),
-        INSTRUCTION_ASYNCCALL => self.handle_asynccall(),
         INSTRUCTION_SPAWN => self.handle_spawn(),
         INSTRUCTION_TASK => self.handle_task(),
         INSTRUCTION_ATOMIC => self.handle_atomic(),
@@ -151,26 +150,6 @@ impl<T: Read> PickleWorker<T> {
     self.out.push(PickleInstruction {
       opcode: opcode,
       u1: o0,
-      u2: 0,
-      u3: 0,
-    });
-  }
-
-  fn handle_asynccall(&mut self) {
-    let opcode = PICKLE_OPCODE_ASYNCCALL;
-    let sectionid = self.bytecode.extract::<8>().swap_if_be();
-    let marker = self.bytecode.extract::<8>().swap_if_be();
-
-    self.libcalls.push(u64::from_ne_bytes(sectionid));
-
-    let mut copy = [0u8; 16];
-    copy[0..8].copy_from_slice(&sectionid);
-    copy[8..16].copy_from_slice(&marker);
-    self.emit_copy_bytes(opcode, copy);
-
-    self.out.push(PickleInstruction {
-      opcode: opcode,
-      u1: 0,
       u2: 0,
       u3: 0,
     });

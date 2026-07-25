@@ -7,7 +7,7 @@ use std::{
 use sart::ctr::VMTaskState;
 
 use crate::{
-  BytecodeResolver, GLOBAL_RUNTIME, ThreadSafe, VM,
+  BytecodeResolver, ThreadSafe, VM,
   acaot::pickle::{
     def::PickleInstruction,
     implementation::WorkingSet,
@@ -19,47 +19,26 @@ use crate::{
 pub extern "C" fn savm_spawn<T: BytecodeResolver + Send + Sync + 'static>(
   taskstate: *mut VMTaskState,
   section: u64,
-  launch_async: bool,
   return_hwnd: bool,
 ) -> *mut c_void {
   unsafe {
     let safe_taskstate = ThreadSafe(taskstate);
-    let vm = ThreadSafe((*taskstate).engine_or_pt.pt as *mut VM<T>);
+    let vm = ThreadSafe((*taskstate).engine.pt as *mut VM<T>);
 
-    if launch_async {
-      let tokiort = GLOBAL_RUNTIME.spawn(async move {
-        let _vm = vm;
-        let _taskstate = safe_taskstate;
+    let stdrt = spawn(move || {
+      let vm = vm;
+      let taskstate = safe_taskstate;
 
-        // let [r7, r8] = (*vm.0).async_fncall(section, taskstate.0).await;
-        // (r7, r8)
-        todo!("Add Async fncall");
-      });
+      let [r7, r8] = (*vm.0).fncall(section, taskstate.0);
+      (r7.u64, r8.u64)
+    });
 
-      // Return HWND
-      if return_hwnd {
-        let rtptr = Box::into_raw(Box::new(tokiort));
+    // Return HWND
+    if return_hwnd {
+      let rtptr = Box::into_raw(Box::new(stdrt));
 
-        return rtptr as _;
-      }
+      return rtptr as _;
     }
-    // Launch SYNC
-    else {
-      let stdrt = spawn(move || {
-        let vm = vm;
-        let taskstate = safe_taskstate;
-
-        let [r7, r8] = (*vm.0).fncall(section, taskstate.0);
-        (r7.u64, r8.u64)
-      });
-
-      // Return HWND
-      if return_hwnd {
-        let rtptr = Box::into_raw(Box::new(stdrt));
-
-        return rtptr as _;
-      }
-    };
   };
 
   null_mut()
@@ -72,7 +51,6 @@ pub fn call_spawn<T: BytecodeResolver + Send + Sync + 'static>(
 ) {
   unsafe {
     let SPAWN {
-      launch_as_async,
       out_loc,
       return_hwnd,
       section,
@@ -80,7 +58,7 @@ pub fn call_spawn<T: BytecodeResolver + Send + Sync + 'static>(
 
     let hwnd = resolve_location_src!(taskstate => out_loc);
 
-    let newhwnd = savm_spawn::<T>(taskstate, section, launch_as_async, return_hwnd);
+    let newhwnd = savm_spawn::<T>(taskstate, section, return_hwnd);
 
     if !newhwnd.is_null() {
       ptr::write(hwnd as *mut *mut c_void, newhwnd);

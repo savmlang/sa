@@ -124,7 +124,7 @@ pub fn resolve_location_src_load_assumedwdt(
     9 => {
       let baseptr = builder.use_var(meta.largepad);
 
-      let ptr = builder.ins().iadd_imm(baseptr, ofset as i64);
+      let ptr = builder.ins().iadd_imm_u(baseptr, ofset as i64);
       let alignment = get_max_alignment(alignment.unwrap_or(8), ofset);
 
       break_simd_waterfall(alignment, typedata, count, assumedwdt)
@@ -216,7 +216,7 @@ pub fn resolve_location_src_store_assumedwdt(
     9 => {
       let baseptr = builder.use_var(meta.largepad);
 
-      let ptr = builder.ins().iadd_imm(baseptr, ofset as i64);
+      let ptr = builder.ins().iadd_imm_u(baseptr, ofset as i64);
       let alignment = get_max_alignment(alignment.unwrap_or(8), ofset);
 
       let waterfall =

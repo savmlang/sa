@@ -27,7 +27,7 @@ pub fn resolve_loc_to_ptr(
     9 => {
       let stadr = builder.use_var(meta.largepad);
 
-      let stadr = builder.ins().iadd_imm(stadr, offset as i64);
+      let stadr = builder.ins().iadd_imm_u(stadr, offset as i64);
 
       return LocToPtr {
         ptr: stadr,
@@ -63,7 +63,7 @@ pub fn resolve_loc_to_ptr(
     let var = builder.use_var(var);
     builder
       .ins()
-      .stack_store(var, meta.regspill, idx as i32 * 8);
+      .stack_store(meta.isa.pointer_type(), var, meta.regspill, idx as i32 * 8);
   });
 
   let ptr = builder.ins().stack_addr(
@@ -86,7 +86,9 @@ impl LocToPtr {
   pub fn sync(self, builder: &mut FunctionBuilder, meta: &mut CompilerMeta) {
     if self.reg_touched {
       (0..8).into_iter().for_each(|reg| {
-        let val = builder.ins().stack_load(I64, meta.regspill, 8 * reg);
+        let val = builder
+          .ins()
+          .stack_load(meta.isa.pointer_type(), I64, meta.regspill, 8 * reg);
 
         let reg = resolve_reg(builder, meta, reg as u8);
         builder.def_var(reg, val);

@@ -5,7 +5,7 @@ use crate::acaot::{
     CompilerMeta,
     irgen::{
       almu::handle_reg,
-      reg::{TypeOrWidth, break_simd_waterfall, resolve_reg},
+      reg::{TypeOrWidth, resolve_reg},
     },
   },
   pickle::def::{
@@ -21,12 +21,13 @@ use crate::acaot::{
   },
 };
 use cranelift::{
+  codegen::ir::{InstBuilderBase, immediates::Imm64, types::I32},
   frontend::Switch,
   prelude::{
     FunctionBuilder, InstBuilder, MemFlagsData as MemFlags, TrapCode, isa::TargetIsa, types::I64,
   },
 };
-use sart::ctr::VMTaskState;
+use sart::ctr::{OPCODES::OPCODE_OK, VMTaskState};
 
 mod almu;
 mod reg;
@@ -35,7 +36,7 @@ pub fn compile<const SENDBACK: bool>(
   builder: &mut FunctionBuilder,
   meta: &mut CompilerMeta,
   pickle: &[PickleInstruction],
-  isa: &dyn TargetIsa,
+  _isa: &dyn TargetIsa,
 ) {
   // Start from block
   builder.switch_to_block(meta.blockv0);
@@ -234,49 +235,6 @@ pub fn compile<const SENDBACK: bool>(
     builder.ins().trap(TrapCode::unwrap_user(30));
   }
 
-  // Write the async-epilogue
-  {
-    builder.switch_to_block(meta.async_epilogue);
-
-    // if let Some(r8) = meta.r8 {
-    //   let r8_val = builder.use_var(r8);
-    //   builder.ins().store(
-    //     MemFlags::new().with_aligned(),
-    //     meta.vmtaskstate,
-    //     r8_val,
-    //     offset_of!(VMTaskState, r8) as i32,
-    //   );
-    // }
-
-    // Copy the whole of well - yeah - i had almost forgot
-    // scratchpad (192-bytes at 64-byte alignment)
-    let mf = MemFlags::new().with_aligned().with_can_move();
-
-    let stack_scratchpad_addr = builder
-      .ins()
-      .stack_addr(isa.pointer_type(), meta.scratchpad, 0);
-    let scratchpad_addr = builder.ins().load(
-      isa.pointer_type(),
-      mf,
-      meta.vmtaskstate,
-      offset_of!(VMTaskState, scratchpad) as i32,
-    );
-
-    for (offset, typ, mflags) in
-      break_simd_waterfall(64, TypeOrWidth::Type(0).clif_mapping(), 8, None)
-    {
-      let lr = builder
-        .ins()
-        .load(typ, mflags, stack_scratchpad_addr, offset as i32);
-
-      builder
-        .ins()
-        .store(mflags, lr, scratchpad_addr, offset as i32);
-    }
-
-    builder.ins().return_(&[]);
-  }
-
   // Write the epilogue (SYNC)
   {
     builder.switch_to_block(meta.epilogue);
@@ -308,6 +266,16 @@ pub fn compile<const SENDBACK: bool>(
           .store(MemFlags::trusted(), r_val, meta.vmtaskstate, offset);
       }
     }
+
+    let opcode_ok = builder
+      .ins()
+      .build_imm_const(I32, Imm64::new(OPCODE_OK as _), false);
+    builder.ins().store(
+      MemFlags::trusted(),
+      opcode_ok,
+      meta.vmtaskstate,
+      offset_of!(VMTaskState, opcode) as i32,
+    );
 
     builder.ins().return_(&[]);
   }

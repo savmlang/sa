@@ -69,6 +69,7 @@ pub fn hwnd_libcall_sync(
         let regval = builder.use_var(reg);
 
         builder.ins().stack_store(
+          meta.isa.pointer_type(),
           regval,
           meta.regspill,
           regid as i32 * size_of::<QuadPackedData>() as i32,
@@ -76,30 +77,32 @@ pub fn hwnd_libcall_sync(
       }
     });
 
-    // Hydrate only engine_or_pt and ws_or_pt2
-    let engine_or_pt = builder.ins().load(
+    // Hydrate only engine and ws
+    let engine = builder.ins().load(
       I64,
       MemFlags::trusted(),
       meta.vmtaskstate,
-      offset_of!(VMTaskState, engine_or_pt) as i32,
+      offset_of!(VMTaskState, engine) as i32,
     );
-    let ws_or_pt2 = builder.ins().load(
+    let ws = builder.ins().load(
       I64,
       MemFlags::trusted(),
       meta.vmtaskstate,
-      offset_of!(VMTaskState, ws_or_pt2) as i32,
+      offset_of!(VMTaskState, ws) as i32,
     );
 
     builder.ins().stack_store(
-      engine_or_pt,
+      meta.isa.pointer_type(),
+      engine,
       meta.regspill,
-      offset_of!(VMTaskState, engine_or_pt) as i32,
+      offset_of!(VMTaskState, engine) as i32,
     );
 
     builder.ins().stack_store(
-      ws_or_pt2,
+      meta.isa.pointer_type(),
+      ws,
       meta.regspill,
-      offset_of!(VMTaskState, ws_or_pt2) as i32,
+      offset_of!(VMTaskState, ws) as i32,
     );
   };
 
@@ -111,7 +114,7 @@ pub fn hwnd_libcall_sync(
     let tskst = if rel {
       let newtskst = builder
         .ins()
-        .iadd_imm(vmtskst, size_of::<VMTaskState>() as i64);
+        .iadd_imm_u(vmtskst, size_of::<VMTaskState>() as i64);
 
       stdprelude(Some(newtskst));
 
@@ -211,6 +214,7 @@ pub fn hwnd_libcall_sync(
           let regval = builder.use_var(reg);
 
           builder.ins().stack_store(
+            meta.isa.pointer_type(),
             regval,
             meta.regspill,
             regid as i32 * size_of::<QuadPackedData>() as i32,
@@ -219,6 +223,7 @@ pub fn hwnd_libcall_sync(
 
         let scratchpadptr = builder.ins().stack_addr(I64, meta.scratchpad, 0);
         builder.ins().stack_store(
+          meta.isa.pointer_type(),
           scratchpadptr,
           meta.regspill,
           offset_of!(VMTaskState, scratchpad) as i32,
@@ -234,6 +239,7 @@ pub fn hwnd_libcall_sync(
         [6u8, 7].into_iter().for_each(|idx| {
           // Unload from stack
           let regval = builder.ins().stack_load(
+            meta.isa.pointer_type(),
             I64,
             meta.regspill,
             idx as i32 * size_of::<QuadPackedData>() as i32,
@@ -392,6 +398,7 @@ pub fn hwnd_libcall_sync(
           // Unload from stack
           if saffi.clobbers(reg).unwrap() {
             let regval = builder.ins().stack_load(
+              meta.isa.pointer_type(),
               I64,
               meta.regspill,
               idx as i32 * size_of::<QuadPackedData>() as i32,

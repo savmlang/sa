@@ -193,7 +193,6 @@ impl<const T: bool> NativeCompiler<T> for SaVMCranelift {
 
       let trap = builder.create_block();
 
-      let async_epilogue = builder.create_block();
       let epilogue = builder.create_block();
 
       CompilerMeta {
@@ -214,7 +213,6 @@ impl<const T: bool> NativeCompiler<T> for SaVMCranelift {
         prologue,
         blockv0,
         epilogue,
-        async_epilogue,
         vmtaskstate,
         trap,
         ws: [0u8; 20],
@@ -239,7 +237,7 @@ impl<const T: bool> NativeCompiler<T> for SaVMCranelift {
     compile::<T>(&mut builder, &mut ws, pickle.as_ref(), isa);
 
     // Compile
-    builder.finalize();
+    builder.finalize(isa.frontend_config());
 
     let (bin, relocs) = {
       let mut ctx = Context::for_function(f);
@@ -329,7 +327,6 @@ pub struct CompilerMeta<'a> {
   // Main Blocks
   pub prologue: Block,
   pub trap: Block,
-  pub async_epilogue: Block,
   pub epilogue: Block,
   pub blockv0: Block,
   pub jumpresolver: Block,

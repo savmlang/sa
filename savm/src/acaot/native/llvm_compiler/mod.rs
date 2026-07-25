@@ -17,8 +17,7 @@ use llvm_sys::{
     LLVMContextCreate, LLVMCreateBuilderInContext, LLVMFunctionType, LLVMGetParam,
     LLVMInt8TypeInContext, LLVMInt32TypeInContext, LLVMInt64TypeInContext,
     LLVMModuleCreateWithNameInContext, LLVMPointerTypeInContext, LLVMPositionBuilderAtEnd,
-    LLVMPrintModuleToString, LLVMSetAlignment, LLVMSetDataLayout, LLVMSetTarget,
-    LLVMVoidTypeInContext,
+    LLVMSetAlignment, LLVMSetDataLayout, LLVMSetTarget, LLVMVoidTypeInContext,
   },
   error::LLVMConsumeError,
   prelude::{
@@ -338,11 +337,6 @@ impl<const T: bool> NativeCompiler<T> for SaVMLLVM {
           ws: [0; 20],
           prologue,
           trap: LLVMAppendBasicBlockInContext(ctx, function_val, c"trap".as_ptr()),
-          async_epilogue: LLVMAppendBasicBlockInContext(
-            ctx,
-            function_val,
-            c"async_epilogue".as_ptr(),
-          ),
           blockv0: LLVMAppendBasicBlockInContext(ctx, function_val, c"blockv0".as_ptr()),
           epilogue: LLVMAppendBasicBlockInContext(ctx, function_val, c"epilogue".as_ptr()),
           jumpresolver: LLVMAppendBasicBlockInContext(ctx, function_val, c"jumpresolver".as_ptr()),
@@ -414,14 +408,6 @@ impl<const T: bool> NativeCompiler<T> for SaVMLLVM {
         }
       }
 
-      // Print Module
-      #[cfg(debug_assertions)]
-      {
-        let module = LLVMMsg(LLVMPrintModuleToString(module));
-
-        println!("{}", module.to_str().unwrap());
-      }
-
       // Compile Pipeline
       let mut buf: LLVMMemoryBufferRef = null_mut();
       {
@@ -474,7 +460,6 @@ pub struct CompilerMeta<'a> {
   // Main Blocks
   pub prologue: LLVMBasicBlockRef,
   pub trap: LLVMBasicBlockRef,
-  pub async_epilogue: LLVMBasicBlockRef,
   pub epilogue: LLVMBasicBlockRef,
   pub blockv0: LLVMBasicBlockRef,
   pub jumpresolver: LLVMBasicBlockRef,

@@ -1,5 +1,3 @@
-use sart::{ctr::VMTaskState, saffi::futures::FutureTask};
-
 use crate::{BytecodeResolver, acaot::pickle::implementation::*};
 
 /// Pickle is our own internal NE implementation
@@ -15,22 +13,8 @@ pub struct PickleInstruction {
 
 macro_rules! opcodes {
   (
-    async $opcode:ident $($generic:ident)? { $diff:ident }
-  ) => { };
-  (
-    async $opcode:ident $($generic:ident)?
-  ) => {
-    pastey::paste! {
-      fn [<call_ $opcode:lower _async>]<'a $(,$generic: BytecodeResolver + Send + Sync + 'static)?>(a: &'a PickleInstruction, b: *mut WorkingSet, c: *mut VMTaskState) -> Option<FutureTask<()>> {
-        [<call_ $opcode:lower>]$(::<$generic>)?(a, b, c);
-
-        None
-      }
-    }
-  };
-  (
     $(
-      $id:expr => $opcode:ident $($generic:ident)? $({ $diff:ident })?
+      $id:expr => $opcode:ident $($generic:ident)?
     ),*
   ) => {
     pastey::paste! {
@@ -53,20 +37,6 @@ macro_rules! opcodes {
           ),*
         ]
       }
-
-      $(
-        opcodes! {
-          async $opcode $($generic)? $({ $diff })?
-        }
-      )*
-
-      pub(crate) const fn pickle_generate_table_async<T: BytecodeResolver + Send + Sync + 'static>() -> [ResolveFnAsync; DISPATCH_TOTAL_ITEMS] {
-        [
-          $(
-            [<call_ $opcode:lower _async>]$(::<$generic>)?
-          ),*
-        ]
-      }
     }
   };
 }
@@ -78,7 +48,7 @@ opcodes! {
   //
   // u1 = opcode after WS_PUT
   // u2 = total numbers of WS_PUT
-  0 => HINT { diff },
+  0 => HINT,
   // Working Set put
   // Put 16 bites (u2, u3 in native-endian)
   // with offset specified by u1 in multiple of (16bits)
@@ -131,8 +101,7 @@ opcodes! {
   30 => SYNCCALL T,
 
 
-  31 => ASYNCCALL,
-  32 => SPAWN T,
-  33 => TASK,
-  34 => ATOMIC
+  31 => SPAWN T,
+  32 => TASK,
+  33 => ATOMIC
 }

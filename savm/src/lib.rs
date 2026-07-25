@@ -17,7 +17,6 @@ use moka::sync::{CacheBuilder, SegmentedCache};
 use sart::structures::ffi::CallSig;
 
 pub use sart;
-use tokio::runtime::{Builder, Runtime};
 
 #[cfg(feature = "native")]
 use crate::acaot::native::store::SwappableCodeSpace;
@@ -26,7 +25,6 @@ use crate::{
   management::management_main,
 };
 
-pub mod asynchronous;
 pub mod executor;
 pub mod kvwrap;
 pub mod management;
@@ -171,9 +169,6 @@ pub trait BytecodeResolver: Any {
   /// eg. we hope it does not replace Pickle code with Cranelift code as that'll lead to performance losses next round
   fn update_cache(&self, section: u64, cache: CacheData);
 }
-
-pub static GLOBAL_RUNTIME: LazyLock<Runtime> =
-  LazyLock::new(|| Builder::new_multi_thread().enable_all().build().unwrap());
 
 pub(crate) static FNCALL_DISPATCH: OnceLock<HashMap<u64, (ThreadSafe<*const ()>, CallSig)>> =
   OnceLock::new();

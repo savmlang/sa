@@ -21,7 +21,7 @@ use crate::{
       DISPATCH_TOTAL_ITEMS, PICKLE_OPCODE_HINT, PICKLE_OPCODE_MARK, PickleInstruction,
       pickle_generate_table,
     },
-    implementation::{DispatchFn, ResolveFn, SIZE_128KB, WorkingSet},
+    implementation::{ResolveFn, SIZE_128KB, WorkingSet},
   },
   kvwrap::SaVMJumpWrap,
 };
@@ -46,7 +46,7 @@ impl VMState {
     VMState {
       ws: WorkingSet {
         arr: &[],
-        dispatch: DispatchFn { dispatch: null() },
+        dispatch: null(),
         largepad: unsafe { salloc::aligned_malloc(SIZE_128KB, 8) as _ },
         largepad_cursor: 0,
         ame: null_mut(),
@@ -85,9 +85,6 @@ impl Drop for VMState {
 thread_local! {
   pub static VMSTAT: UnsafeCell<VMState> = UnsafeCell::new(VMState::init());
 }
-
-/// Compression module to compress the VMState
-pub(crate) mod compress;
 
 /// Functions for preparation & standard prologue-epilogues
 pub(crate) mod preps {
@@ -149,7 +146,7 @@ pub(crate) mod preps {
 
       let ts = (*t).ts.as_mut_ptr().add((*t).cindex as usize);
 
-      (*ts).engine_or_pt.pt = engine;
+      (*ts).engine.pt = engine;
       (*ts).curline_or_resume.usi = 0;
 
       ts
@@ -222,7 +219,7 @@ impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
 
     let t = VMSTAT.with(UnsafeCell::get);
     let ts = preps::prepare_interpreter_loop(t, jumps, self as *const _ as *mut _, |x| {
-      x.dispatch = Self::PICKLE_DISPATCH_TABLE.as_ptr();
+      *x = Self::PICKLE_DISPATCH_TABLE.as_ptr();
     });
 
     unsafe {
@@ -260,7 +257,7 @@ impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
           // Optimize the HINT interpreter opcode
           if pickle.opcode == PICKLE_OPCODE_HINT {
             let dptr = dt.as_ptr();
-            (*ts).engine_or_pt.pt = dptr as _;
+            (*ts).engine.pt = dptr as _;
           }
 
           // Ensure the state's reflected
@@ -296,22 +293,34 @@ impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
       .get()
       .expect("JITCache should NOT be uninitialized");
 
-    let Some(jit) = jitcache.get(sectionid) else {
-      return self.dispatch_chocolate::<true>(sectionid);
-    };
+    // Loop is set to set up - JIT Check points.
+    loop {
+      use sart::ctr::OPCODES::OPCODE_JIT_CHECK;
 
-    let (_, exec) = jit.get();
+      let Some(jit) = jitcache.get(sectionid) else {
+        return self.dispatch_chocolate::<true>(sectionid);
+      };
 
-    self.exec_jit(*exec.deref());
+      let (_, exec) = jit.get();
 
-    drop(exec);
+      let opcode = self.exec_jit(*exec.deref());
+
+      drop(exec);
+
+      if opcode == OPCODE_JIT_CHECK {
+        cold_path();
+        continue;
+      }
+
+      break;
+    }
 
     return self.ame_free(sectionid);
   }
 
   #[inline(always)]
   #[cfg(feature = "native")]
-  pub fn exec_jit(&self, exec: *const Executable) {
+  pub fn exec_jit(&self, exec: *const Executable) -> u32 {
     let vmstate = VMSTAT.with(UnsafeCell::get);
     unsafe {
       use std::mem::transmute;
@@ -319,17 +328,18 @@ impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
       let curr_taskstate = (*vmstate).ts.as_mut_ptr().add((*vmstate).cindex);
 
       // Setup Pointers
-      // todo!() figure out jumping
       {
         let task = &mut *curr_taskstate;
 
-        task.engine_or_pt.pt = self as *const _ as *mut Self as _;
-        task.ws_or_pt2.pt = &mut (*vmstate).ws as *mut _ as _;
+        task.engine.pt = self as *const _ as *mut Self as _;
+        task.ws.pt = &mut (*vmstate).ws as *mut _ as _;
       }
 
       // Execute
       let exec: extern "C" fn(vmtskstate: *mut VMTaskState) = transmute(exec);
       exec(curr_taskstate);
+
+      (*curr_taskstate).opcode
     }
   }
 

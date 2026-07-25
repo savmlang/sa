@@ -20,13 +20,13 @@ pub fn reglane_insert(builder: &mut FunctionBuilder, reg: Value, valadd: Value, 
 
     builder
       .ins()
-      .ishl_imm(ext, single_elem_width as i64 * 8 * idx as i64)
+      .ishl_imm_u(ext, single_elem_width as i64 * 8 * idx as i64)
   };
 
   let reg = {
     let mask = ((1u64 << (single_elem_width * 8)) - 1) << (single_elem_width * 8 * idx as u32);
 
-    builder.ins().band_imm(reg, !mask.cast_signed())
+    builder.ins().band_imm_u(reg, !mask.cast_signed())
   };
 
   builder.ins().bor(reg, valadd_extended)
@@ -39,11 +39,11 @@ pub fn reglane_extract(builder: &mut FunctionBuilder, reg: Value, shrink: Type, 
   let reg = {
     let mask = ((1u64 << (single_elem_width * 8)) - 1) << (single_elem_width * 8 * idx as u32);
 
-    let masked = builder.ins().band_imm(reg, mask.cast_signed());
+    let masked = builder.ins().band_imm_u(reg, mask.cast_signed());
 
     builder
       .ins()
-      .ushr_imm(masked, single_elem_width as i64 * 8 * idx as i64)
+      .ushr_imm_u(masked, single_elem_width as i64 * 8 * idx as i64)
   };
 
   let ireduce = canonical(cliftype);

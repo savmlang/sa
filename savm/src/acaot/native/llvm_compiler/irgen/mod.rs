@@ -10,7 +10,7 @@ use llvm_sys::{
   prelude::{LLVMBuilderRef, LLVMContextRef, LLVMTypeRef, LLVMValueRef},
 };
 use sart::{
-  ctr::{FLAGS::FLAG_JUMP_TO_RESUME, VMTaskState},
+  ctr::{FLAGS::FLAG_JUMP_TO_RESUME, OPCODES::OPCODE_OK, VMTaskState},
   structures::QuadPackedData,
 };
 use std::mem::offset_of;
@@ -95,6 +95,14 @@ pub fn compile<const SENDBACK: bool>(meta: &mut CompilerMeta) {
     {
       LLVMPositionBuilderAtEnd(builder, meta.epilogue);
 
+      offsetstore(
+        builder,
+        ctx,
+        LLVMConstInt(meta.i32, OPCODE_OK as _, 0),
+        vmctx,
+        OffsetBytes::U(offset_of!(VMTaskState, opcode) as _),
+      );
+
       // Sendback
       let regs = if SENDBACK {
         &[0, 1, 2, 3, 4, 5, 6, 7usize] as &[usize]
@@ -103,28 +111,6 @@ pub fn compile<const SENDBACK: bool>(meta: &mut CompilerMeta) {
       };
 
       regs.into_iter().for_each(|&regid| {
-        if let Some(regval) = (*meta_ptr).regmnt.try_usereg(regid) {
-          offsetstore(
-            builder,
-            ctx,
-            regval,
-            vmctx,
-            OffsetBytes::U(size_of::<QuadPackedData>() as u64 * regid as u64),
-          );
-        }
-      });
-
-      LLVMBuildRetVoid(builder);
-    }
-
-    // Async Epilogue
-    {
-      LLVMPositionBuilderAtEnd(builder, meta.async_epilogue);
-
-      // Sendback all regs in async
-      let regs = [0, 1, 2, 3, 4, 5, 6, 7];
-
-      regs.into_iter().for_each(|regid| {
         if let Some(regval) = (*meta_ptr).regmnt.try_usereg(regid) {
           offsetstore(
             builder,

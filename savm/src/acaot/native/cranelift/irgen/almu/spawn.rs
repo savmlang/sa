@@ -22,7 +22,6 @@ pub fn hwnd_spawn(
 ) {
   let SPAWN {
     section,
-    launch_as_async,
     return_hwnd,
     out_loc,
   } = parse_spawn(&pickle, meta.ws.as_ref());
@@ -30,7 +29,6 @@ pub fn hwnd_spawn(
   // pub extern "C" fn savm_spawn(
   //   taskstate: *mut VMTaskState,
   //   section: u64,
-  //   launch_async: bool,
   //   return_hwnd: bool,
   // ) -> *mut c_void
   let sig = *meta.sigref.entry(SigStore::VMSpawn).or_insert_with(|| {
@@ -38,7 +36,6 @@ pub fn hwnd_spawn(
       params: vec![
         AbiParam::new(meta.isa.pointer_type()),
         AbiParam::new(I64),
-        AbiParam::new(I8),
         AbiParam::new(I8),
       ],
       returns: vec![AbiParam::new(meta.isa.pointer_type())],
@@ -56,6 +53,7 @@ pub fn hwnd_spawn(
     let rgval = builder.use_var(rg);
 
     builder.ins().stack_store(
+      meta.isa.pointer_type(),
       rgval,
       meta.regspill,
       regid as i32 * size_of::<QuadPackedData>() as i32,
@@ -64,14 +62,9 @@ pub fn hwnd_spawn(
 
   let vmtsk = builder.ins().stack_addr(I64, meta.regspill, 0);
   let section = builder.ins().iconst(I64, section.cast_signed());
-  let launch_async = builder
-    .ins()
-    .iconst(I8, if launch_as_async { 1 } else { 0 });
   let return_as_hwnd = builder.ins().iconst(I8, if return_hwnd { 1 } else { 0 });
 
-  let fncall = builder
-    .ins()
-    .call(libfn, &[vmtsk, section, launch_async, return_as_hwnd]);
+  let fncall = builder.ins().call(libfn, &[vmtsk, section, return_as_hwnd]);
 
   if return_hwnd {
     let mut outloc =

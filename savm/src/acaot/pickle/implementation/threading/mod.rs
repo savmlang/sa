@@ -41,7 +41,7 @@ pub extern "C" fn ffi_synccall_sectionid<T: BytecodeResolver + Send + Sync + 'st
   sectionid: u64,
 ) {
   unsafe {
-    let vm = (*taskstate).engine_or_pt.pt as *const _ as *const VM<T>;
+    let vm = (*taskstate).engine.pt as *const _ as *const VM<T>;
 
     let [r7, r8] = (*vm).fncall(sectionid, taskstate);
 
@@ -52,7 +52,7 @@ pub extern "C" fn ffi_synccall_sectionid<T: BytecodeResolver + Send + Sync + 'st
 
 pub extern "C" fn ffi_libcall_sectionid(taskstate: *mut VMTaskState, sectionid: u64) {
   {
-    // let vm = (*taskstate).engine_or_pt.pt as *const _ as *const VM;
+    // let vm = (*taskstate).engine.pt as *const _ as *const VM;
 
     let (v, cdecl) = FNCALL_DISPATCH.get().unwrap().get(&sectionid).unwrap();
     run_cdecl(v.0, cdecl, taskstate)
@@ -67,7 +67,7 @@ pub fn call_synccall<T: BytecodeResolver + Send + Sync + 'static>(
   let sectionid = arrcastint!(ws, start = 0, stop = 8, u64);
 
   unsafe {
-    let vm = (*taskstate).engine_or_pt.pt as *const _ as *const VM<T>;
+    let vm = (*taskstate).engine.pt as *const _ as *const VM<T>;
 
     let tskptr = taskstate as *mut _;
 
@@ -217,19 +217,8 @@ fn run_cdecl(fnptr: *const (), cdecl: &CallSig, taskstate: *mut VMTaskState) {
       ptr::copy_nonoverlapping(ret_fullsize.as_ptr() as *const u8, r7 as *mut u8, out_bytes);
     },
 
-    //
-    CallSig::SaFFIAsyncO(_) | CallSig::SaFFIAsyncQ(_) => {
-      unimplemented!("synccall was ran with ASYNC library")
-    }
+    _ => unimplemented!("SaFFI Async will be declared soon"),
   }
-}
-
-pub fn call_asynccall(
-  _pickle: &PickleInstruction,
-  _ws: *mut WorkingSet,
-  _taskstate: *mut VMTaskState,
-) {
-  unimplemented!("Synccall-asyncall will be implemented later!")
 }
 
 pub fn call_task(_pickle: &PickleInstruction, _ws: *mut WorkingSet, _taskstate: *mut VMTaskState) {

@@ -170,7 +170,7 @@ pub fn hwnd_scratch(
     meta.isa.pointer_type(),
     MemFlags::trusted(),
     meta.vmtaskstate,
-    offset_of!(VMTaskState, ws_or_pt2) as i32,
+    offset_of!(VMTaskState, ws) as i32,
   );
 
   let largepad = match scratch {
