@@ -1,10 +1,12 @@
-use std::mem::zeroed;
 #[cfg(feature = "native")]
 use std::{sync::Arc, time::Instant};
 
 use crate::ExpectedOutput;
 #[cfg(feature = "native")]
-use crate::jitmem::JITMemData;
+use crate::jitmem::{
+  JITMemData,
+  run::{clean, run_jit},
+};
 use console::Style;
 use savm::{BytecodeResolver, VM, sync::VMSTAT};
 #[cfg(feature = "native")]
@@ -25,6 +27,7 @@ pub fn test_vm_interpreter<T: BytecodeResolver + Send + Sync + 'static>(
     Style::new().yellow().apply_to("Test")
   );
 
+  clean();
   vm.dispatch_chocolate::<false>(sectionid);
 
   let localfail = assertchecks(out, fail);
@@ -108,7 +111,7 @@ pub fn test_jits<T: BytecodeResolver + Send + Sync + 'static>(
         CacheLevel::LLVMCinder | CacheLevel::LLVMCrater => jitdata
           .mem()
           .write_llvm(&binary, |_x| {
-            panic!("Resolver asked!");
+            panic!("Resolver asked for {}!", unsafe { &*_x });
           })
           .expect("Unable to get rest"),
         _ => err("Unsupported CacheLevel"),
@@ -117,7 +120,9 @@ pub fn test_jits<T: BytecodeResolver + Send + Sync + 'static>(
     };
 
     jitdata.ptrstore.insert((sectionid, *name), (exec as _, tf));
-    vm.exec_jit(exec);
+
+    clean();
+    run_jit(vm, exec);
 
     let localfailure = assertchecks(out, fail);
 
@@ -158,8 +163,6 @@ fn assertchecks(out: &ExpectedOutput, fail: &mut bool) -> bool {
         );
       }
     }
-
-    mt.ts = zeroed();
   });
 
   localfailure

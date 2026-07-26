@@ -4,7 +4,7 @@ use crate::acaot::{
   native::cranelift::{
     CompilerMeta,
     irgen::{
-      almu::handle_reg,
+      almu::{handle_reg, mark_optflow},
       reg::{TypeOrWidth, resolve_reg},
     },
   },
@@ -27,7 +27,14 @@ use cranelift::{
     FunctionBuilder, InstBuilder, MemFlagsData as MemFlags, TrapCode, isa::TargetIsa, types::I64,
   },
 };
-use sart::ctr::{OPCODES::OPCODE_OK, VMTaskState};
+use sart::{
+  ctr::{
+    FLAGS::FLAG_JUMP_TO_RESUME,
+    OPCODES::{OPCODE_JIT_CHECK, OPCODE_OK},
+    VMTaskState,
+  },
+  structures::QuadPackedData,
+};
 
 mod almu;
 mod reg;
@@ -36,7 +43,9 @@ pub fn compile<const SENDBACK: bool>(
   builder: &mut FunctionBuilder,
   meta: &mut CompilerMeta,
   pickle: &[PickleInstruction],
-  _isa: &dyn TargetIsa,
+  isa: &dyn TargetIsa,
+
+  is_epitome: bool,
 ) {
   // Start from block
   builder.switch_to_block(meta.blockv0);
@@ -74,6 +83,11 @@ pub fn compile<const SENDBACK: bool>(
         builder.ins().jump(newblock, []);
 
         builder.switch_to_block(newblock);
+
+        // Ignore this optflow if the compiler is EPITOME
+        if !is_epitome && marker & (1 << 63) > 0 {
+          mark_optflow(builder, meta, marker);
+        }
       }
       PICKLE_OPCODE_JMP => {
         let marker = u64::from_ne_bytes(meta.ws[0..8].try_into().unwrap());
@@ -212,6 +226,45 @@ pub fn compile<const SENDBACK: bool>(
   {
     builder.switch_to_block(meta.jumpresolver);
 
+    // Copy Registers
+    {
+      let vars = [
+        (&meta.r1, offset_of!(VMTaskState, r1) as i32),
+        (&meta.r2, offset_of!(VMTaskState, r2) as i32),
+        (&meta.r3, offset_of!(VMTaskState, r3) as i32),
+        (&meta.r4, offset_of!(VMTaskState, r4) as i32),
+        (&meta.r5, offset_of!(VMTaskState, r5) as i32),
+        (&meta.r6, offset_of!(VMTaskState, r6) as i32),
+        (&meta.r7, offset_of!(VMTaskState, r7) as i32),
+        (&meta.r8, offset_of!(VMTaskState, r8) as i32),
+      ];
+
+      for &(var, offset) in &vars {
+        if let Some(r) = var {
+          let r_val = builder
+            .ins()
+            .load(I64, MemFlags::trusted(), meta.vmtaskstate, offset);
+
+          builder.def_var(*r, r_val);
+        }
+      }
+    }
+
+    // Copy Scratchpad
+    {
+      let scratchpad_ptr = builder.ins().load(
+        I64,
+        MemFlags::trusted(),
+        meta.vmtaskstate,
+        offset_of!(VMTaskState, scratchpad) as i32,
+      );
+      let size = builder.ins().build_imm_const(I64, Imm64::new(192), false);
+      let ss = builder
+        .ins()
+        .stack_addr(isa.pointer_type(), meta.scratchpad, 0);
+      builder.call_memcpy(isa.frontend_config(), ss, scratchpad_ptr, size);
+    }
+
     let mut switch = Switch::new();
 
     for (k, v) in &meta.blockmap {
@@ -233,6 +286,107 @@ pub fn compile<const SENDBACK: bool>(
     builder.switch_to_block(meta.trap);
 
     builder.ins().trap(TrapCode::unwrap_user(30));
+  }
+
+  // Suspend Epilogue (SYNC)
+  // This copies ~320B back to the VM
+  {
+    builder.switch_to_block(meta.suspend_epilogue);
+
+    // Flush Registers
+    {
+      let vars = [
+        (&meta.r1, offset_of!(VMTaskState, r1) as i32),
+        (&meta.r2, offset_of!(VMTaskState, r2) as i32),
+        (&meta.r3, offset_of!(VMTaskState, r3) as i32),
+        (&meta.r4, offset_of!(VMTaskState, r4) as i32),
+        (&meta.r5, offset_of!(VMTaskState, r5) as i32),
+        (&meta.r6, offset_of!(VMTaskState, r6) as i32),
+        (&meta.r7, offset_of!(VMTaskState, r7) as i32),
+        (&meta.r8, offset_of!(VMTaskState, r8) as i32),
+      ];
+
+      for &(var, offset) in &vars {
+        if let Some(r) = var {
+          let r_val = builder.use_var(*r);
+
+          builder
+            .ins()
+            .store(MemFlags::trusted(), r_val, meta.vmtaskstate, offset);
+        }
+      }
+    }
+
+    // Flush Scratchpad
+    {
+      let src = builder
+        .ins()
+        .stack_addr(isa.pointer_type(), meta.scratchpad, 0);
+      let size = builder.ins().build_imm_const(
+        I64,
+        Imm64::new(24 * size_of::<QuadPackedData>() as i64),
+        false,
+      );
+
+      let scratchpad_ptr = builder.ins().load(
+        I64,
+        MemFlags::trusted(),
+        meta.vmtaskstate,
+        offset_of!(VMTaskState, scratchpad) as i32,
+      );
+
+      builder.call_memcpy(isa.frontend_config(), scratchpad_ptr, src, size);
+    }
+
+    // Flush Largepad
+    {
+      let largepad_ptr = builder.use_var(meta.largepad);
+
+      builder.ins().store(
+        MemFlags::trusted(),
+        largepad_ptr,
+        meta.vmtaskstate,
+        offset_of!(VMTaskState, largepad) as i32,
+      );
+    }
+
+    // Opcode Sync + FLAGS Sync + Set next jump point
+    {
+      let opcode_jit_check =
+        builder
+          .ins()
+          .build_imm_const(I32, Imm64::new(OPCODE_JIT_CHECK as _), false);
+      builder.ins().store(
+        MemFlags::trusted(),
+        opcode_jit_check,
+        meta.vmtaskstate,
+        offset_of!(VMTaskState, opcode) as i32,
+      );
+
+      {
+        let offset = offset_of!(VMTaskState, flags) as i32;
+        let old_flags = builder
+          .ins()
+          .load(I32, MemFlags::trusted(), meta.vmtaskstate, offset);
+
+        let flag_jump = builder
+          .ins()
+          .bor_imm_u(old_flags, Imm64::new(FLAG_JUMP_TO_RESUME as i64));
+        builder
+          .ins()
+          .store(MemFlags::trusted(), flag_jump, meta.vmtaskstate, offset);
+      }
+
+      let jump_target = builder.block_params(meta.suspend_epilogue)[0];
+      builder.ins().store(
+        MemFlags::trusted(),
+        jump_target,
+        meta.vmtaskstate,
+        offset_of!(VMTaskState, curline_or_resume) as i32,
+      );
+    }
+
+    builder.ins().return_(&[]);
   }
 
   // Write the epilogue (SYNC)

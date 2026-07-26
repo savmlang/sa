@@ -473,12 +473,12 @@ impl<T: Read> PickleWorker<T> {
   fn handle_jmp(&mut self) {
     let data = u64::from_le_bytes(self.bytecode.extract_result::<8>().unwrap()).to_ne_bytes();
 
-    self.emit_copy_bytes::<6>(PICKLE_OPCODE_JMP, data[0..6].try_into().unwrap());
+    self.emit_copy_bytes::<8>(PICKLE_OPCODE_JMP, data[0..8].try_into().unwrap());
 
     self.out.push(PickleInstruction {
       opcode: PICKLE_OPCODE_JMP,
-      u1: data[6],
-      u2: data[7],
+      u1: 0,
+      u2: 0,
       u3: 0,
     });
   }

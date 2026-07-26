@@ -24,6 +24,7 @@ use crate::{
     implementation::{ResolveFn, SIZE_128KB, WorkingSet},
   },
   kvwrap::SaVMJumpWrap,
+  sync::preps::cleanup_vmstat,
 };
 
 pub static GLOBAL_DATA: OnceLock<UnSafePtr<u8>> = OnceLock::new();
@@ -92,10 +93,13 @@ pub(crate) mod preps {
     PickleJumpData,
     acaot::pickle::{def::PickleInstruction, implementation::DispatchFn},
     kvwrap::{SaVMJumpWrap, SaVMJumpWrapImpl},
-    sync::VMState,
+    sync::{VMSTAT, VMState},
   };
   use sart::{
-    ctr::{FLAGS::FLAG_JUMP_TO_RESUME, VMTaskState},
+    ctr::{
+      FLAGS::{FLAG_FIRST, FLAG_JUMP_TO_RESUME},
+      VMTaskState,
+    },
     structures::QuadPackedData,
   };
   use std::{os::raw::c_void, ptr, sync::Arc};
@@ -183,6 +187,18 @@ pub(crate) mod preps {
       (*ts).curline_or_resume.usi += 3;
     }
   }
+
+  #[inline(always)]
+  pub fn cleanup_vmstat(engine: *mut c_void) {
+    VMSTAT.with(|x| {
+      let t = x.get();
+      let ts = unsafe { (*t).ts.get_unchecked_mut((*t).cindex) };
+
+      ts.flags = ts.flags & FLAG_FIRST; // only FLAG_FIRST is allowed to stay
+      ts.opcode = 0;
+      ts.engine.pt = engine;
+    });
+  }
 }
 
 impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
@@ -223,6 +239,8 @@ impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
     });
 
     unsafe {
+      cleanup_vmstat(self as *const _ as *mut _);
+
       'jcheck: loop {
         let dt = data.as_ref();
 

@@ -29,6 +29,7 @@ use cranelift::{
 mod atomic;
 mod fp;
 mod libcall;
+mod mark;
 mod spawn;
 mod vbit;
 mod vcmp;
@@ -39,6 +40,7 @@ mod vscncop;
 pub use atomic::*;
 pub use fp::*;
 pub use libcall::*;
+pub use mark::*;
 pub use spawn::*;
 pub use vbit::*;
 pub use vcmp::*;

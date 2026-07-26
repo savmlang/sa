@@ -1,12 +1,15 @@
 use console::Style;
-#[cfg(feature = "native")]
-use savm::acaot::native::testing_compiler_infra;
 use savm::{BytecodeResolver, VM};
+#[cfg(feature = "native")]
+use savm::{Executable, acaot::native::testing_compiler_infra};
 use statrs::statistics::{Data, Distribution, OrderStatistics};
 use std::time::Instant;
 
 #[cfg(feature = "native")]
-use crate::jitmem::JITMemData;
+use crate::jitmem::{
+  JITMemData,
+  run::{clean, run_jit},
+};
 
 fn bench_report(median: &str, p75: &str, p99: &str, sd: &str, compile: Option<&str>) {
   print!(
@@ -33,6 +36,8 @@ pub fn interpreter_benchmark<T: BytecodeResolver + Send + Sync + 'static>(
 ) {
   let mut store = Vec::with_capacity(rounds as usize);
   for _ in 0..rounds {
+    clean();
+
     let t0 = Instant::now();
     vm.dispatch_chocolate::<false>(sectionid);
     let tf = t0.elapsed();
@@ -66,8 +71,10 @@ pub fn jit_benchmark<T: BytecodeResolver + Send + Sync + 'static>(
     let (exec, compile) = jit.ptrstore.get(&(sectionid, name)).unwrap();
 
     for _ in 0..rounds {
+      clean();
+
       let t0 = Instant::now();
-      vm.exec_jit(*exec as _);
+      run_jit(vm, *exec as *const Executable);
       let tf = t0.elapsed();
       store.push(tf.as_secs_f64());
     }

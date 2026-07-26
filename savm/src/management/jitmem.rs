@@ -24,7 +24,7 @@ use crate::{
     },
   },
   executor::corevm_libcall,
-  management::polyfills::*,
+  management::polyfills::{llvm::memcpy, *},
 };
 
 pub struct JITMemoryManager {
@@ -156,6 +156,8 @@ impl JITMemoryManager {
       let mut resolver_full = |d: *const str| match unsafe { &*d } {
         "fmaf" => (llvm::fmaf as *const ()).addr(),
         "fma" => (llvm::fma as *const ()).addr(),
+        "memcpy" => (memcpy as *const ()).addr(),
+        "memmove" => (llvm::memmove as *const ()).addr(),
         _ => resolver(d),
       };
 
@@ -313,6 +315,7 @@ pub fn calculate_relocation_abs(reloc: &[JITReloc]) -> Box<[Relocation]> {
           ClirLC::Nearest64 => (nearest64 as *const ()).addr() as _,
           ClirLC::Trunc32 => (trunc32 as *const ()).addr() as _,
           ClirLC::Trunc64 => (trunc64 as *const ()).addr() as _,
+          ClirLC::Memcpy => (memcpy as *const ()).addr() as _,
         },
         _ => relocdata.symbol_addr,
       };

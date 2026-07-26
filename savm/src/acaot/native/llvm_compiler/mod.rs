@@ -328,6 +328,7 @@ impl<const T: bool> NativeCompiler<T> for SaVMLLVM {
         // Compile IR Info
         let mut compilermeta = CompilerMeta {
           pickle,
+          cache_level: &self.cache,
           builder,
           vmctx,
           llvmctx: ctx,
@@ -338,6 +339,11 @@ impl<const T: bool> NativeCompiler<T> for SaVMLLVM {
           prologue,
           trap: LLVMAppendBasicBlockInContext(ctx, function_val, c"trap".as_ptr()),
           blockv0: LLVMAppendBasicBlockInContext(ctx, function_val, c"blockv0".as_ptr()),
+          sync_epilogue: LLVMAppendBasicBlockInContext(
+            ctx,
+            function_val,
+            c"sync_epilogue".as_ptr(),
+          ),
           epilogue: LLVMAppendBasicBlockInContext(ctx, function_val, c"epilogue".as_ptr()),
           jumpresolver: LLVMAppendBasicBlockInContext(ctx, function_val, c"jumpresolver".as_ptr()),
           blockmap,
@@ -447,6 +453,7 @@ impl<const T: bool> NativeCompiler<T> for SaVMLLVM {
 
 pub struct CompilerMeta<'a> {
   pub pickle: &'a [PickleInstruction],
+  pub cache_level: &'a CacheLevel,
 
   pub rel: bool,
   pub ws: [u8; 20],
@@ -461,6 +468,7 @@ pub struct CompilerMeta<'a> {
   pub prologue: LLVMBasicBlockRef,
   pub trap: LLVMBasicBlockRef,
   pub epilogue: LLVMBasicBlockRef,
+  pub sync_epilogue: LLVMBasicBlockRef,
   pub blockv0: LLVMBasicBlockRef,
   pub jumpresolver: LLVMBasicBlockRef,
 

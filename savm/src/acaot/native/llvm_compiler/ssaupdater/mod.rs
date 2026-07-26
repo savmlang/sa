@@ -6,8 +6,9 @@ use crate::acaot::native::llvm_compiler::{
 };
 use llvm_sys::{
   core::{
-    LLVMGetInsertBlock, LLVMGetLastInstruction, LLVMInt64TypeInContext, LLVMPointerTypeInContext,
-    LLVMPositionBuilderAtEnd, LLVMPositionBuilderBefore,
+    LLVMConstInt, LLVMGetInsertBlock, LLVMGetLastInstruction, LLVMInt16TypeInContext,
+    LLVMInt64TypeInContext, LLVMPointerTypeInContext, LLVMPositionBuilderAtEnd,
+    LLVMPositionBuilderBefore,
   },
   prelude::{LLVMBasicBlockRef, LLVMBuilderRef, LLVMContextRef, LLVMTypeRef, LLVMValueRef},
 };
@@ -18,6 +19,7 @@ pub type ValueManaged = SsaResolver;
 
 pub struct VMRegManager {
   registers: [ValueManaged; 9],
+  counter: ValueManaged,
   rcm: ReducedCompilerMeta,
 }
 
@@ -73,6 +75,7 @@ impl VMRegManager {
 
     Self {
       rcm: compiler,
+      counter: initreg(usize::MAX),
       registers: [
         initreg(0),
         initreg(1),
@@ -85,6 +88,10 @@ impl VMRegManager {
         initreg(8),
       ],
     }
+  }
+
+  pub fn counter(&mut self) -> &mut SsaResolver {
+    &mut self.counter
   }
 
   fn initreg(
@@ -104,27 +111,35 @@ impl VMRegManager {
         let prologue_last = LLVMGetLastInstruction(prologue);
         LLVMPositionBuilderBefore(builder, prologue_last);
 
-        let (ty, offset_bytes) = match regof {
-          0..8 => (
-            LLVMInt64TypeInContext(ctx),
-            regof * size_of::<QuadPackedData>(),
-          ),
-          8 => (
-            LLVMPointerTypeInContext(ctx, 0),
-            offset_of!(VMTaskState, largepad),
-          ),
-          _ => unreachable!("Unknown Values"),
-        };
-        let value0 = offsetload(builder, ctx, ty, vmctx, OffsetBytes::U(offset_bytes as _));
+        let value0 = if regof != usize::MAX {
+          let (ty, offset_bytes) = match regof {
+            0..8 => (
+              LLVMInt64TypeInContext(ctx),
+              regof * size_of::<QuadPackedData>(),
+            ),
+            8 => (
+              LLVMPointerTypeInContext(ctx, 0),
+              offset_of!(VMTaskState, largepad),
+            ),
+            _ => unreachable!("Unknown Values"),
+          };
 
-        SsaResolver::new(
+          offsetload(builder, ctx, ty, vmctx, OffsetBytes::U(offset_bytes as _))
+        } else {
+          LLVMConstInt(LLVMInt16TypeInContext(ctx), 0, 0)
+        };
+
+        let resolver = SsaResolver::new(
           value0,
           match regof {
             0..8 => i64,
             8 => ptr,
+            usize::MAX => LLVMInt16TypeInContext(ctx),
             _ => unreachable!("Unable to get SSAValue"),
           },
-        )
+        );
+
+        resolver
       };
 
       // Restore
@@ -172,5 +187,10 @@ impl VMRegManager {
     self.registers.iter_mut().for_each(|x| {
       unsafe { x.finalize(self.rcm.ctx, self.rcm.fnval) };
     });
+
+    unsafe {
+      self.counter.fillphis(self.rcm.ctx, self.rcm.fnval);
+      self.counter.finalize(self.rcm.ctx, self.rcm.fnval);
+    }
   }
 }

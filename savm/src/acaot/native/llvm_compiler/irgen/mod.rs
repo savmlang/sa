@@ -3,19 +3,25 @@ use llvm_sys::{
   LLVMIntPredicate,
   core::{
     LLVMAddCase, LLVMBuildAnd, LLVMBuildCall2, LLVMBuildCondBr, LLVMBuildGEP2, LLVMBuildICmp,
-    LLVMBuildLoad2, LLVMBuildRetVoid, LLVMBuildStore, LLVMBuildSwitch, LLVMBuildUnreachable,
-    LLVMConstInt, LLVMGetIntrinsicDeclaration, LLVMGlobalGetValueType, LLVMInt8TypeInContext,
-    LLVMInt64TypeInContext, LLVMLookupIntrinsicID, LLVMPositionBuilderAtEnd, LLVMSetAlignment,
+    LLVMBuildLoad2, LLVMBuildMemCpy, LLVMBuildOr, LLVMBuildRetVoid, LLVMBuildStore,
+    LLVMBuildSwitch, LLVMBuildUnreachable, LLVMConstInt, LLVMGetIntrinsicDeclaration,
+    LLVMGlobalGetValueType, LLVMInt8TypeInContext, LLVMInt64TypeInContext, LLVMLookupIntrinsicID,
+    LLVMPositionBuilderAtEnd, LLVMSetAlignment,
   },
   prelude::{LLVMBuilderRef, LLVMContextRef, LLVMTypeRef, LLVMValueRef},
 };
 use sart::{
-  ctr::{FLAGS::FLAG_JUMP_TO_RESUME, OPCODES::OPCODE_OK, VMTaskState},
+  ctr::{
+    FLAGS::FLAG_JUMP_TO_RESUME,
+    OPCODES::{OPCODE_JIT_CHECK, OPCODE_OK},
+    VMTaskState,
+  },
   structures::QuadPackedData,
 };
 use std::mem::offset_of;
 
 pub(crate) mod almu;
+pub(super) mod mark;
 mod pickle;
 pub(crate) mod reg;
 
@@ -35,7 +41,7 @@ pub fn compile<const SENDBACK: bool>(meta: &mut CompilerMeta) {
         meta.vmctx,
         OffsetBytes::U(offset_of!(VMTaskState, scratchpad) as _),
       );
-      meta.scratchpad = scratchpad_ptr;
+      meta.scratchpad_ptr = scratchpad_ptr;
 
       let resume_flags = offsetload(
         builder,
@@ -65,6 +71,19 @@ pub fn compile<const SENDBACK: bool>(meta: &mut CompilerMeta) {
     {
       LLVMPositionBuilderAtEnd(builder, meta.jumpresolver);
 
+      // Scratchpad Copy
+      LLVMBuildMemCpy(
+        builder,
+        meta.scratchpad,
+        64,
+        meta.scratchpad_ptr,
+        64,
+        LLVMConstInt(meta.i64, 192, 0),
+      );
+
+      // Load(Hydrate) all regs
+      backload(meta_ptr, builder, ctx, vmctx);
+
       let val = offsetload(
         builder,
         ctx,
@@ -91,6 +110,72 @@ pub fn compile<const SENDBACK: bool>(meta: &mut CompilerMeta) {
     // Now we must compile pickles
     pickle::compile_pickle(meta);
 
+    // Epilogue (SYNC)
+    {
+      LLVMPositionBuilderAtEnd(builder, meta.sync_epilogue);
+      // Scratchpad Copy
+
+      LLVMBuildMemCpy(
+        builder,
+        meta.scratchpad_ptr,
+        64,
+        meta.scratchpad,
+        64,
+        LLVMConstInt(meta.i64, 192, 0),
+      );
+
+      // Add reentracy flag (FLAG_JMP)
+      {
+        let flags = offsetload(
+          builder,
+          ctx,
+          meta.i32,
+          vmctx,
+          OffsetBytes::U(offset_of!(VMTaskState, flags) as _),
+        );
+
+        let finalized = LLVMBuildOr(
+          builder,
+          flags,
+          LLVMConstInt(meta.i32, FLAG_JUMP_TO_RESUME as _, 0),
+          c"new_flags".as_ptr(),
+        );
+
+        offsetstore(
+          builder,
+          ctx,
+          finalized,
+          vmctx,
+          OffsetBytes::U(offset_of!(VMTaskState, flags) as _),
+        );
+      }
+
+      let marker = meta.regmnt.counter().read_variable(builder);
+
+      // marker = what we get
+      offsetstore(
+        builder,
+        ctx,
+        marker,
+        vmctx,
+        OffsetBytes::U(offset_of!(VMTaskState, curline_or_resume) as _),
+      );
+
+      // offset = JIT_CHECK
+      offsetstore(
+        builder,
+        ctx,
+        LLVMConstInt(meta.i32, OPCODE_JIT_CHECK as _, 0),
+        vmctx,
+        OffsetBytes::U(offset_of!(VMTaskState, opcode) as _),
+      );
+
+      // Sendback
+      sendback::<true>(meta_ptr, builder, ctx, vmctx);
+
+      LLVMBuildRetVoid(builder);
+    }
+
     // Epilogue
     {
       LLVMPositionBuilderAtEnd(builder, meta.epilogue);
@@ -104,29 +189,59 @@ pub fn compile<const SENDBACK: bool>(meta: &mut CompilerMeta) {
       );
 
       // Sendback
-      let regs = if SENDBACK {
-        &[0, 1, 2, 3, 4, 5, 6, 7usize] as &[usize]
-      } else {
-        &[6, 7usize] as &[usize]
-      };
-
-      regs.into_iter().for_each(|&regid| {
-        if let Some(regval) = (*meta_ptr).regmnt.try_usereg(regid) {
-          offsetstore(
-            builder,
-            ctx,
-            regval,
-            vmctx,
-            OffsetBytes::U(size_of::<QuadPackedData>() as u64 * regid as u64),
-          );
-        }
-      });
+      sendback::<SENDBACK>(meta_ptr, builder, ctx, vmctx);
 
       LLVMBuildRetVoid(builder);
     }
 
     meta.regmnt.finalize();
   }
+}
+
+fn backload(
+  meta_ptr: *mut CompilerMeta,
+  builder: LLVMBuilderRef,
+  ctx: LLVMContextRef,
+  vmctx: LLVMValueRef,
+) {
+  let regs = [0, 1, 2, 3, 4, 5, 6, 7usize];
+
+  regs.into_iter().for_each(|regid| unsafe {
+    let value = offsetload(
+      builder,
+      ctx,
+      (*meta_ptr).i64,
+      vmctx,
+      OffsetBytes::U(size_of::<QuadPackedData>() as u64 * regid as u64),
+    );
+
+    (*meta_ptr).regmnt.setreg(regid, value);
+  });
+}
+
+fn sendback<const SENDBACK: bool>(
+  meta_ptr: *mut CompilerMeta,
+  builder: LLVMBuilderRef,
+  ctx: LLVMContextRef,
+  vmctx: LLVMValueRef,
+) {
+  let regs = if SENDBACK {
+    &[0, 1, 2, 3, 4, 5, 6, 7usize] as &[usize]
+  } else {
+    &[6, 7usize] as &[usize]
+  };
+
+  regs.into_iter().for_each(|&regid| {
+    if let Some(regval) = unsafe { (*meta_ptr).regmnt.try_usereg(regid) } {
+      offsetstore(
+        builder,
+        ctx,
+        regval,
+        vmctx,
+        OffsetBytes::U(size_of::<QuadPackedData>() as u64 * regid as u64),
+      );
+    }
+  });
 }
 
 impl<'a> CompilerMeta<'a> {

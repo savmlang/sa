@@ -64,6 +64,7 @@ pub enum ClirLC {
   Trunc64,
   Nearest32,
   Nearest64,
+  Memcpy,
 }
 
 #[repr(C)]

@@ -13,8 +13,9 @@ use cranelift::{
   codegen::{
     Context, FinalizedRelocTarget,
     ir::{
-      ArgumentPurpose, ConstantPool, FuncRef, Function, LibCall, SigRef, StackSlot,
-      UserExternalName, UserExternalNameRef,
+      ArgumentPurpose, ConstantPool, FuncRef, Function, InstBuilderBase, LibCall, SigRef,
+      StackSlot, UserExternalName, UserExternalNameRef,
+      types::{I16, I64},
     },
   },
   native::builder,
@@ -135,9 +136,13 @@ impl<const T: bool> NativeCompiler<T> for SaVMCranelift {
 
       let blockv0 = builder.create_block();
       let jumpresolver = builder.create_block();
+      let hotness = builder.declare_var(I16);
 
       let (vmtaskstate, largepad) = {
         builder.switch_to_block(prologue);
+
+        let hotness_def = builder.ins().build_imm_const(I16, Imm64::new(0), false);
+        builder.def_var(hotness, hotness_def);
 
         let glob = builder.block_params(prologue)[0];
 
@@ -192,11 +197,11 @@ impl<const T: bool> NativeCompiler<T> for SaVMCranelift {
       }
 
       let trap = builder.create_block();
-
       let epilogue = builder.create_block();
 
       CompilerMeta {
         rel: !self.abs8,
+        hotness,
         scratchpad: builder.create_sized_stack_slot(StackSlotData::new(
           StackSlotKind::ExplicitDynamicSlot,
           192,
@@ -212,6 +217,13 @@ impl<const T: bool> NativeCompiler<T> for SaVMCranelift {
         jumpresolver,
         prologue,
         blockv0,
+        suspend_epilogue: {
+          let block = builder.create_block();
+
+          builder.append_block_param(block, I64);
+
+          block
+        },
         epilogue,
         vmtaskstate,
         trap,
@@ -234,7 +246,7 @@ impl<const T: bool> NativeCompiler<T> for SaVMCranelift {
       }
     };
 
-    compile::<T>(&mut builder, &mut ws, pickle.as_ref(), isa);
+    compile::<T>(&mut builder, &mut ws, pickle.as_ref(), isa, !self.abs8);
 
     // Compile
     builder.finalize(isa.frontend_config());
@@ -292,6 +304,7 @@ impl<const T: bool> NativeCompiler<T> for SaVMCranelift {
                   LibCall::TruncF64 => ClirLC::Trunc64,
                   LibCall::NearestF32 => ClirLC::Nearest32,
                   LibCall::NearestF64 => ClirLC::Nearest64,
+                  LibCall::Memcpy => ClirLC::Memcpy,
                   e => unreachable!("Unkexpected CLIR {e:?}"),
                 }),
               },
@@ -327,7 +340,10 @@ pub struct CompilerMeta<'a> {
   // Main Blocks
   pub prologue: Block,
   pub trap: Block,
+
   pub epilogue: Block,
+  pub suspend_epilogue: Block,
+
   pub blockv0: Block,
   pub jumpresolver: Block,
 
@@ -337,6 +353,9 @@ pub struct CompilerMeta<'a> {
   // scratchpad
   pub scratchpad: StackSlot,
   pub regspill: StackSlot,
+
+  // Hotness Scorer
+  pub hotness: Variable,
 
   // Largepad
   pub largepad: Variable,

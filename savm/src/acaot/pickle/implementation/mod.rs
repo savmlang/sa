@@ -365,11 +365,8 @@ pub fn call_reg(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut
 }
 
 #[inline(always)]
-pub fn call_jmp(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
-  let mut filled = [0u8; 8];
-  filled[0..6].copy_from_slice(unsafe { &(&(*ws).arr)[0..6] });
-  filled[6..8].copy_from_slice(&[pickle.u1, pickle.u2]);
-  let data = u64::from_ne_bytes(filled);
+pub fn call_jmp(_pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
+  let data = u64::from_ne_bytes(unsafe { &(&(*ws).arr)[0..8] }.try_into().unwrap());
 
   unsafe {
     if (*ws).jmp.0 == data {

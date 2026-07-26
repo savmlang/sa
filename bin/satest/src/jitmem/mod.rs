@@ -2,6 +2,8 @@ use std::{collections::HashMap, mem::forget, time::Duration};
 
 use savm::management::jitmem::JITMemoryManager;
 
+pub mod run;
+
 pub struct JITMemData {
   pub mem: Option<JITMemoryManager>,
   pub ptrstore: HashMap<(u64, &'static str), (*const (), Duration)>,

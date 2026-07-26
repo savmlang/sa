@@ -1,25 +1,29 @@
-use crate::acaot::{
-  native::llvm_compiler::{
-    CompilerMeta, LLVM_VAR_NAME,
-    irgen::{
-      almu::{
-        handle_add, handle_atomic, handle_cast, handle_div, handle_mov, handle_mul, handle_reg,
-        handle_rem, handle_sub, handle_vabs, handle_vbit, handle_vcmp, handle_vcnt, handle_vcopy,
-        handle_vfadd, handle_vfcast, handle_vfdiv, handle_vfma, handle_vfmul, handle_vfop,
-        handle_vfsub, handle_vminimax, handle_vneg, handle_vrot, handle_vsh,
+use crate::{
+  CacheLevel,
+  acaot::{
+    native::llvm_compiler::{
+      CompilerMeta, LLVM_VAR_NAME,
+      irgen::{
+        almu::{
+          handle_add, handle_atomic, handle_cast, handle_div, handle_mov, handle_mul, handle_reg,
+          handle_rem, handle_sub, handle_vabs, handle_vbit, handle_vcmp, handle_vcnt, handle_vcopy,
+          handle_vfadd, handle_vfcast, handle_vfdiv, handle_vfma, handle_vfmul, handle_vfop,
+          handle_vfsub, handle_vminimax, handle_vneg, handle_vrot, handle_vsh,
+        },
+        mark::mark_advanced,
+        reg::{LLVMTypeOrWidth, llvmresolve_location_src_load},
       },
-      reg::{LLVMTypeOrWidth, llvmresolve_location_src_load},
     },
-  },
-  pickle::def::{
-    PICKLE_OPCODE_ATOMIC, PICKLE_OPCODE_CAST, PICKLE_OPCODE_DIV, PICKLE_OPCODE_HINT,
-    PICKLE_OPCODE_JIF, PICKLE_OPCODE_JMP, PICKLE_OPCODE_MARK, PICKLE_OPCODE_MOV, PICKLE_OPCODE_REG,
-    PICKLE_OPCODE_REM, PICKLE_OPCODE_VABS, PICKLE_OPCODE_VADD, PICKLE_OPCODE_VADDF,
-    PICKLE_OPCODE_VBIT, PICKLE_OPCODE_VCMP, PICKLE_OPCODE_VCNT, PICKLE_OPCODE_VCOPY,
-    PICKLE_OPCODE_VDIVF, PICKLE_OPCODE_VFCAST, PICKLE_OPCODE_VFMA, PICKLE_OPCODE_VFOP,
-    PICKLE_OPCODE_VMINIMAX, PICKLE_OPCODE_VMUL, PICKLE_OPCODE_VMULF, PICKLE_OPCODE_VNEG,
-    PICKLE_OPCODE_VROT, PICKLE_OPCODE_VSH, PICKLE_OPCODE_VSUB, PICKLE_OPCODE_VSUBF,
-    PICKLE_OPCODE_WS_PUT,
+    pickle::def::{
+      PICKLE_OPCODE_ATOMIC, PICKLE_OPCODE_CAST, PICKLE_OPCODE_DIV, PICKLE_OPCODE_HINT,
+      PICKLE_OPCODE_JIF, PICKLE_OPCODE_JMP, PICKLE_OPCODE_MARK, PICKLE_OPCODE_MOV,
+      PICKLE_OPCODE_REG, PICKLE_OPCODE_REM, PICKLE_OPCODE_VABS, PICKLE_OPCODE_VADD,
+      PICKLE_OPCODE_VADDF, PICKLE_OPCODE_VBIT, PICKLE_OPCODE_VCMP, PICKLE_OPCODE_VCNT,
+      PICKLE_OPCODE_VCOPY, PICKLE_OPCODE_VDIVF, PICKLE_OPCODE_VFCAST, PICKLE_OPCODE_VFMA,
+      PICKLE_OPCODE_VFOP, PICKLE_OPCODE_VMINIMAX, PICKLE_OPCODE_VMUL, PICKLE_OPCODE_VMULF,
+      PICKLE_OPCODE_VNEG, PICKLE_OPCODE_VROT, PICKLE_OPCODE_VSH, PICKLE_OPCODE_VSUB,
+      PICKLE_OPCODE_VSUBF, PICKLE_OPCODE_WS_PUT,
+    },
   },
 };
 use llvm_sys::{
@@ -78,6 +82,10 @@ pub unsafe fn compile_pickle(meta: &mut CompilerMeta) {
           }
 
           LLVMPositionBuilderAtEnd(builder, newblock);
+
+          if !matches!(meta.cache_level, CacheLevel::LLVMEpitome) && marker & (1 << 63) > 0 {
+            mark_advanced(meta);
+          }
         }
 
         op if !current_block.is_null() => match op {
@@ -137,6 +145,7 @@ pub unsafe fn compile_pickle(meta: &mut CompilerMeta) {
           PICKLE_OPCODE_JMP => {
             let marker = u64::from_ne_bytes(meta.ws[0..8].try_into().unwrap());
 
+            println!("Locating marker : {marker}");
             let jmpaddr = meta.blockmap.get(&marker).unwrap().current;
             LLVMBuildBr(builder, jmpaddr);
 
