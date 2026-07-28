@@ -28,3 +28,5 @@ pro_standard = ["standard", "pro"]
 native = []
 cranelift = ["native", "savm/cranelift"]
 llvm = ["native", "savm/llvm"]
+
+printir = ["savm/printir"]

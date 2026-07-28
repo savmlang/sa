@@ -84,7 +84,7 @@ pub unsafe fn compile_pickle(meta: &mut CompilerMeta) {
           LLVMPositionBuilderAtEnd(builder, newblock);
 
           if !matches!(meta.cache_level, CacheLevel::LLVMEpitome) && marker & (1 << 63) > 0 {
-            mark_advanced(meta);
+            mark_advanced(meta, marker);
           }
         }
 
@@ -145,7 +145,6 @@ pub unsafe fn compile_pickle(meta: &mut CompilerMeta) {
           PICKLE_OPCODE_JMP => {
             let marker = u64::from_ne_bytes(meta.ws[0..8].try_into().unwrap());
 
-            println!("Locating marker : {marker}");
             let jmpaddr = meta.blockmap.get(&marker).unwrap().current;
             LLVMBuildBr(builder, jmpaddr);
 

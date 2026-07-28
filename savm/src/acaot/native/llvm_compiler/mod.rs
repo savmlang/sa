@@ -414,6 +414,14 @@ impl<const T: bool> NativeCompiler<T> for SaVMLLVM {
         }
       }
 
+      // Print Module
+      #[cfg(feature = "printir")]
+      {
+        use llvm_sys::core::LLVMDumpModule;
+
+        LLVMDumpModule(module);
+      }
+
       // Compile Pipeline
       let mut buf: LLVMMemoryBufferRef = null_mut();
       {

@@ -251,6 +251,11 @@ impl<const T: bool> NativeCompiler<T> for SaVMCranelift {
     // Compile
     builder.finalize(isa.frontend_config());
 
+    #[cfg(feature = "printir")]
+    {
+      println!("{:?}", f);
+    }
+
     let (bin, relocs) = {
       let mut ctx = Context::for_function(f);
 

@@ -6,9 +6,8 @@ use crate::acaot::native::llvm_compiler::{
 };
 use llvm_sys::{
   core::{
-    LLVMConstInt, LLVMGetInsertBlock, LLVMGetLastInstruction, LLVMInt16TypeInContext,
-    LLVMInt64TypeInContext, LLVMPointerTypeInContext, LLVMPositionBuilderAtEnd,
-    LLVMPositionBuilderBefore,
+    LLVMConstInt, LLVMGetInsertBlock, LLVMGetLastInstruction, LLVMInt64TypeInContext,
+    LLVMPointerTypeInContext, LLVMPositionBuilderAtEnd, LLVMPositionBuilderBefore,
   },
   prelude::{LLVMBasicBlockRef, LLVMBuilderRef, LLVMContextRef, LLVMTypeRef, LLVMValueRef},
 };
@@ -126,7 +125,7 @@ impl VMRegManager {
 
           offsetload(builder, ctx, ty, vmctx, OffsetBytes::U(offset_bytes as _))
         } else {
-          LLVMConstInt(LLVMInt16TypeInContext(ctx), 0, 0)
+          LLVMConstInt(LLVMInt64TypeInContext(ctx), 0, 0)
         };
 
         let resolver = SsaResolver::new(
@@ -134,7 +133,7 @@ impl VMRegManager {
           match regof {
             0..8 => i64,
             8 => ptr,
-            usize::MAX => LLVMInt16TypeInContext(ctx),
+            usize::MAX => LLVMInt64TypeInContext(ctx),
             _ => unreachable!("Unable to get SSAValue"),
           },
         );

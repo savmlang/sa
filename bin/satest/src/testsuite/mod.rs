@@ -1,20 +1,36 @@
+use std::mem::zeroed;
 #[cfg(feature = "native")]
 use std::{sync::Arc, time::Instant};
 
 use crate::ExpectedOutput;
 #[cfg(feature = "native")]
-use crate::jitmem::{
-  JITMemData,
-  run::{clean, run_jit},
-};
+use crate::jitmem::{JITMemData, run::run_jit};
 use console::Style;
-use savm::{BytecodeResolver, VM, sync::VMSTAT};
+use savm::{BytecodeResolver, VM, sart::ctr::FLAGS::FLAG_FIRST, sync::VMSTAT};
 #[cfg(feature = "native")]
 use savm::{
   CacheData, CacheLevel,
   acaot::{native::NativeCompiler, pickle::def::PickleInstruction},
   kvwrap::SaVMJumpWrapRef,
 };
+
+pub fn clean() {
+  VMSTAT.with(|x| {
+    let mt = unsafe { &mut *x.get() };
+
+    for (idx, ts) in mt.ts.iter_mut().enumerate() {
+      // Only preserve scratchpad
+      let scratchpad = ts.scratchpad;
+
+      *ts = unsafe { zeroed() };
+      if idx == 0 {
+        ts.flags |= FLAG_FIRST;
+      }
+
+      ts.scratchpad = scratchpad;
+    }
+  });
+}
 
 pub fn test_vm_interpreter<T: BytecodeResolver + Send + Sync + 'static>(
   vm: &VM<T>,

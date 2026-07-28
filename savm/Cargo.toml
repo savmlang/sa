@@ -58,7 +58,7 @@ default = []
 ffi_system = ["sart/ffi_system"]
 
 # Development mode (rust-analyzer)
-dev = ["cranelift", "llvm"]
+dev = ["cranelift", "llvm", "printir"]
 
 llvm = ["dep:llvm-sys", "dep:cc", "native", "sajit/llvm"]
 cranelift = ["dep:cranelift", "native"]
@@ -66,3 +66,6 @@ native = ["dep:sajit", "dep:crossbeam-channel", "dag"]
 
 # AcDAG support
 dag = []
+
+# Prints the IR
+printir = []

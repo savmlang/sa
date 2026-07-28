@@ -1,15 +1,12 @@
+#[cfg(feature = "native")]
+use crate::jitmem::{JITMemData, run::run_jit};
+use crate::testsuite::clean;
 use console::Style;
 use savm::{BytecodeResolver, VM};
 #[cfg(feature = "native")]
 use savm::{Executable, acaot::native::testing_compiler_infra};
 use statrs::statistics::{Data, Distribution, OrderStatistics};
 use std::time::Instant;
-
-#[cfg(feature = "native")]
-use crate::jitmem::{
-  JITMemData,
-  run::{clean, run_jit},
-};
 
 fn bench_report(median: &str, p75: &str, p99: &str, sd: &str, compile: Option<&str>) {
   print!(
