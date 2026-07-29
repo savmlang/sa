@@ -4,13 +4,16 @@ use std::{sync::Arc, time::Instant};
 
 use crate::ExpectedOutput;
 #[cfg(feature = "native")]
-use crate::jitmem::{JITMemData, run::run_jit};
+use crate::jitmem::{JITMemData, JITMems, run::run_jit};
 use console::Style;
 use savm::{BytecodeResolver, VM, sart::ctr::FLAGS::FLAG_FIRST, sync::VMSTAT};
 #[cfg(feature = "native")]
 use savm::{
   CacheData, CacheLevel,
-  acaot::{native::NativeCompiler, pickle::def::PickleInstruction},
+  acaot::{
+    native::{NativeCompiler, NativeCompilerBuilder, testing_epitier_compilers},
+    pickle::def::PickleInstruction,
+  },
   kvwrap::SaVMJumpWrapRef,
 };
 
@@ -60,7 +63,7 @@ pub fn test_vm_interpreter<T: BytecodeResolver + Send + Sync + 'static>(
 #[cfg(feature = "native")]
 pub fn test_jits<T: BytecodeResolver + Send + Sync + 'static>(
   vm: &VM<T>,
-  jitdata: &mut JITMemData,
+  jitdata: &mut JITMems,
   out: &ExpectedOutput,
   sectionid: u64,
   fail: &mut bool,
@@ -98,57 +101,67 @@ pub fn test_jits<T: BytecodeResolver + Send + Sync + 'static>(
     },
   );
 
-  for (name, builder) in testing_compiler_infra::<true>() {
-    println!(
-      "\n{:>14} Start TestID #{sectionid} ({name})",
-      Style::new().yellow().apply_to("Test"),
-    );
+  let mut runtest =
+    |jitdata: &mut JITMemData,
+     compilers: &[(&'static str, &'static dyn NativeCompilerBuilder<true>)]| {
+      for (name, builder) in compilers {
+        println!(
+          "\n{:>14} Start TestID #{sectionid} ({name})",
+          Style::new().yellow().apply_to("Test"),
+        );
 
-    let t0 = Instant::now();
-    let mut compiler: Box<dyn NativeCompiler<true>> = builder.get();
-    let compiled = compiler.compile(&out2, SaVMJumpWrapRef(&jumps2));
+        let t0 = Instant::now();
+        let mut compiler: Box<dyn NativeCompiler<true>> = builder.get();
+        let compiled = compiler.compile(&out2, SaVMJumpWrapRef(&jumps2));
 
-    let tf = t0.elapsed();
-    let (exec, _) = match compiled {
-      savm::CacheData::JITCache {
-        level,
-        binary,
-        reloc: _reloc,
-      } => match level {
-        #[cfg(feature = "cranelift")]
-        CacheLevel::CraneliftCrafter => {
-          use savm::management::jitmem::calculate_relocation_abs;
+        let tf = t0.elapsed();
+        let (exec, _) = match compiled {
+          savm::CacheData::JITCache {
+            level,
+            binary,
+            reloc: _reloc,
+          } => match level {
+            #[cfg(feature = "cranelift")]
+            CacheLevel::CraneliftCrafter | CacheLevel::CraneliftEpicenter => {
+              use savm::management::jitmem::calculate_relocation_abs;
 
-          let reloc = calculate_relocation_abs(&_reloc);
+              let reloc = calculate_relocation_abs(&_reloc);
 
-          jitdata.mem().write_quick(&binary, &reloc)
+              jitdata.mem().write_quick(&binary, &reloc)
+            }
+            #[cfg(feature = "llvm")]
+            CacheLevel::LLVMCinder | CacheLevel::LLVMCrater | CacheLevel::LLVMEpitome => jitdata
+              .mem()
+              .write_llvm(&binary, |_x| {
+                panic!("Resolver asked for {}!", unsafe { &*_x });
+              })
+              .expect("Unable to get rest"),
+            _ => err("Unsupported CacheLevel"),
+          },
+          _ => err("Unsupported Compiler Output"),
+        };
+
+        jitdata.ptrstore.insert((sectionid, *name), (exec as _, tf));
+
+        clean();
+        run_jit(vm, exec);
+
+        let localfailure = assertchecks(out, fail);
+
+        if !localfailure {
+          println!(
+            "{:>14} {} TestID #{sectionid} ({name})",
+            Style::new().blue().apply_to("Test"),
+            Style::new().green().apply_to("Success")
+          );
         }
-        #[cfg(feature = "llvm")]
-        CacheLevel::LLVMCinder | CacheLevel::LLVMCrater => jitdata
-          .mem()
-          .write_llvm(&binary, |_x| {
-            panic!("Resolver asked for {}!", unsafe { &*_x });
-          })
-          .expect("Unable to get rest"),
-        _ => err("Unsupported CacheLevel"),
-      },
-      _ => err("Unsupported Compiler Output"),
+      }
     };
 
-    jitdata.ptrstore.insert((sectionid, *name), (exec as _, tf));
+  runtest(&mut jitdata.general, testing_compiler_infra::<true>());
 
-    clean();
-    run_jit(vm, exec);
-
-    let localfailure = assertchecks(out, fail);
-
-    if !localfailure {
-      println!(
-        "{:>14} {} TestID #{sectionid} ({name})",
-        Style::new().blue().apply_to("Test"),
-        Style::new().green().apply_to("Success")
-      );
-    }
+  for (idx, &compiler) in testing_epitier_compilers::<true>().iter().enumerate() {
+    runtest(&mut jitdata.epitier[idx], &[compiler]);
   }
 }
 

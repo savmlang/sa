@@ -106,11 +106,7 @@ impl<const T: bool> NativeCompiler<T> for SaVMCranelift {
     let isa = self.isa.as_ref();
 
     let mainsig = {
-      let mut sig = Signature::new(if self.abs8 {
-        isa.default_call_conv()
-      } else {
-        CallConv::Fast
-      });
+      let mut sig = Signature::new(isa.default_call_conv());
 
       sig.params.push(AbiParam::special(
         isa.pointer_type(),

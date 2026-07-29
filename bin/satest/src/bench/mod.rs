@@ -1,10 +1,13 @@
 #[cfg(feature = "native")]
-use crate::jitmem::{JITMemData, run::run_jit};
+use crate::jitmem::{JITMemData, JITMems, run::run_jit};
 use crate::testsuite::clean;
 use console::Style;
 use savm::{BytecodeResolver, VM};
 #[cfg(feature = "native")]
-use savm::{Executable, acaot::native::testing_compiler_infra};
+use savm::{
+  Executable,
+  acaot::native::{NativeCompilerBuilder, testing_compiler_infra, testing_epitier_compilers},
+};
 use statrs::statistics::{Data, Distribution, OrderStatistics};
 use std::time::Instant;
 
@@ -58,37 +61,47 @@ pub fn interpreter_benchmark<T: BytecodeResolver + Send + Sync + 'static>(
 #[cfg(feature = "native")]
 pub fn jit_benchmark<T: BytecodeResolver + Send + Sync + 'static>(
   vm: &VM<T>,
-  jit: &mut JITMemData,
+  jitdata: &mut JITMems,
   sectionid: u64,
   rounds: u64,
 ) {
   let mut store = Vec::with_capacity(rounds as usize);
 
-  for &(name, _) in testing_compiler_infra::<true>() {
-    let (exec, compile) = jit.ptrstore.get(&(sectionid, name)).unwrap();
+  let mut runtest =
+    |jit: &mut JITMemData,
+     compilers: &[(&'static str, &'static dyn NativeCompilerBuilder<true>)]| {
+      for &(name, _) in compilers {
+        let (exec, compile) = jit.ptrstore.get(&(sectionid, name)).unwrap();
 
-    for _ in 0..rounds {
-      clean();
+        for _ in 0..rounds {
+          clean();
 
-      let t0 = Instant::now();
-      run_jit(vm, *exec as *const Executable);
-      let tf = t0.elapsed();
-      store.push(tf.as_secs_f64());
-    }
+          let t0 = Instant::now();
+          run_jit(vm, *exec as *const Executable);
+          let tf = t0.elapsed();
+          store.push(tf.as_secs_f64());
+        }
 
-    let mut statdata = Data::new(store.as_mut_slice());
+        let mut statdata = Data::new(store.as_mut_slice());
 
-    let p99 = format_duration(statdata.percentile(99));
-    let p75 = format_duration(statdata.percentile(75));
-    let median = format_duration(statdata.median());
-    let sd = format_duration(statdata.std_dev().unwrap_or(f64::NEG_INFINITY));
-    let compile = format_duration(compile.as_secs_f64());
+        let p99 = format_duration(statdata.percentile(99));
+        let p75 = format_duration(statdata.percentile(75));
+        let median = format_duration(statdata.median());
+        let sd = format_duration(statdata.std_dev().unwrap_or(f64::NEG_INFINITY));
+        let compile = format_duration(compile.as_secs_f64());
 
-    println!(
-      "{:>14} Tier : {name}",
-      Style::new().green().apply_to("Bench")
-    );
-    bench_report(&median, &p75, &p99, &sd, Some(&compile));
+        println!(
+          "{:>14} Tier : {name}",
+          Style::new().green().apply_to("Bench")
+        );
+        bench_report(&median, &p75, &p99, &sd, Some(&compile));
+      }
+    };
+
+  runtest(&mut jitdata.general, testing_compiler_infra::<true>());
+
+  for (idx, &compiler) in testing_epitier_compilers::<true>().iter().enumerate() {
+    runtest(&mut jitdata.epitier[idx], &[compiler]);
   }
 }
 

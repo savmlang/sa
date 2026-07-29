@@ -66,11 +66,6 @@ pub fn testing_compiler_infra<const SENDBACK: bool>()
 pub fn testing_epitier_compilers<const SENDBACK: bool>()
 -> &'static [(&'static str, &'static dyn NativeCompilerBuilder<SENDBACK>)] {
   &[
-    // #[cfg(feature = "llvm")]
-    // (
-    //   "Epitome - LLVM JIT",
-    //   &CompilerBuilder(SaVMLLVMBuilder::create_epitome, CacheLevel::LLVMEpitome),
-    // ),
     #[cfg(feature = "cranelift")]
     (
       "Epicenter - Cranelift JIT",
@@ -78,6 +73,11 @@ pub fn testing_epitier_compilers<const SENDBACK: bool>()
         SaVMCranelift::create_rel_optimized,
         CacheLevel::CraneliftEpicenter,
       ),
+    ),
+    #[cfg(feature = "llvm")]
+    (
+      "Epitome - LLVM JIT",
+      &CompilerBuilder(SaVMLLVMBuilder::create_epitome, CacheLevel::LLVMEpitome),
     ),
   ]
 }
