@@ -333,26 +333,32 @@ jobs:
 
         config:
           - target: x86_64-unknown-linux-musl
+            ctarget: x86_64-linux-musl
             platform: linux/amd64
             os: ubuntu-latest
 
           - target: i686-unknown-linux-musl
+            ctarget: i686-linux-musl
             platform: linux/386
             os: ubuntu-latest
 
           - target: aarch64-unknown-linux-musl
+            ctarget: aarch64-linux-musl
             platform: linux/arm64/v8
             os: ubuntu-24.04-arm
 
           - target: armv7-unknown-linux-musleabihf
+            ctarget: armv7-linux-musleabihf
             platform: linux/arm/v7
             os: ubuntu-24.04-arm
 
           - target: riscv64gc-unknown-linux-musl
+            ctarget: riscv64gc-linux-musl
             platform: linux/riscv64
             os: ubuntu-24.04-arm
 
           - target: powerpc64le-unknown-linux-musl
+            ctarget: powerpc64le-linux-musl
             platform: linux/ppc64le
             os: ubuntu-24.04-arm
 
@@ -363,6 +369,7 @@ jobs:
 
             config:
               target: x86_64-unknown-linux-musl
+              ctarget: x86_64-linux-musl
               platform: linux/amd64
               os: ubuntu-latest
 
@@ -371,6 +378,7 @@ jobs:
 
             config:
               target: x86_64-unknown-linux-musl
+              ctarget: x86_64-linux-musl
               platform: linux/amd64
               os: ubuntu-latest
 
@@ -380,6 +388,7 @@ jobs:
 
             config:
               target: aarch64-unknown-linux-musl
+              ctarget: aarch64-linux-musl
               platform: linux/arm64/v8
               os: ubuntu-24.04-arm
 
@@ -388,6 +397,7 @@ jobs:
 
             config:
               target: aarch64-unknown-linux-musl
+              ctarget: aarch64-linux-musl
               platform: linux/arm64/v8
               os: ubuntu-24.04-arm
 
@@ -397,6 +407,7 @@ jobs:
 
             config:
               target: riscv64gc-unknown-linux-musl
+              ctarget: riscv64gc-linux-musl
               platform: linux/riscv64
               os: ubuntu-24.04-arm
 
@@ -405,6 +416,7 @@ jobs:
 
             config:
               target: riscv64gc-unknown-linux-musl
+              ctarget: riscv64gc-linux-musl
               platform: linux/riscv64
               os: ubuntu-24.04-arm
 
@@ -434,14 +446,14 @@ jobs:
           key: savm_${{ matrix.config.target }}_${{ matrix.feature.build }}
 
       - name: Build
-        working-directory: muslbuilds
         run: |
-          sudo podman build --platform "${{ matrix.config.platform }}" -t ahqrt-build-base:latest .
-
+          export TARGET="${{ matrix.config.target }}"
+          export CTARGET="${{ matrix.config.ctarget }}"
           export TARGET_PLATFORM="${{ matrix.config.platform }}"
           export FEATURES=',savmrunshared/${{ matrix.feature.build }},satest/${{ matrix.feature.build }}${{ matrix.feature.c }}'
 
-          bash ./build.sh
+          bash ./scripts/muslbuilds/sysroot.sh
+          bash ./scripts/muslbuilds/build.sh
 
       - name: Package
         shell: pwsh

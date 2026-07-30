@@ -3,6 +3,9 @@
 debug
 target
 
+# Sysroots
+sysroot.tar.gz
+
 # LLVM Directory
 llvm
 llvm__

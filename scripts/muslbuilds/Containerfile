@@ -1,0 +1,20 @@
+FROM alpine:3.24
+
+# Generate sysroot
+RUN apk update && apk add --no-cache \
+    llvm-dev \
+    llvm-static \
+    clang22-dev \
+    build-base \
+    alpine-sdk \
+    \
+    libxml2-dev \
+    libxml2-static \
+    \
+    sqlite-dev \
+    sqlite-static \
+    \
+    libffi-dev \
+    \
+    zlib-dev \
+    zstd-dev
