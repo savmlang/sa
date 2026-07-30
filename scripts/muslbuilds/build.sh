@@ -22,6 +22,7 @@ export RUSTFLAGS="-C linker=clang \
   -C link-arg=-fuse-ld=lld \
   -C link-arg=--target=$CTARGET \
   -C link-arg=--sysroot=$SYSROOT \
+  -C target-feature=-crt-static \
   -L target/debug \
   -L target/release \
   -L target/$TARGET/debug \
