@@ -72,7 +72,7 @@ runs:
 
     - name: Install zstd
       shell: bash
-      if: runner.is == 'macOS'
+      if: runner.os == 'macOS'
       run: |
         brew install zstd
 
