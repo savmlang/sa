@@ -31,6 +31,7 @@ cranelift = { version = "^0.134", features = [
 llvm-sys = { version = "=221.0.1", default-features = false, features = [
   "force-static",
   "disable-alltargets-init",
+  "no-llvm-linking",
 ], optional = true }
 
 # Sa Runtime

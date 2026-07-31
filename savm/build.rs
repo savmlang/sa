@@ -14,7 +14,7 @@ fn main() {
 }
 
 #[cfg(feature = "llvm")]
-fn llvm_config(args: &[&str]) -> String {
+fn llvm_config(args: &[&str], prepend: bool) -> String {
   use std::{borrow::Cow, env::var, ffi::OsStr, process::Command};
 
   let vars = [
@@ -67,7 +67,7 @@ fn llvm_config(args: &[&str]) -> String {
     );
   }
 
-  if let Some(sysroot) = sysroot {
+  if prepend && let Some(sysroot) = sysroot {
     sysroot + str::from_utf8(&out.stdout).expect("Invalid UTF8")
   } else {
     String::from_utf8(out.stdout).expect("Invalid UTF8 was provided")
@@ -77,27 +77,68 @@ fn llvm_config(args: &[&str]) -> String {
 #[cfg(feature = "llvm")]
 fn build_ssaupdater() {
   use cc::Build;
+  use std::env::var;
 
   println!("cargo::rerun-if-changed=srcxx");
+  println!("cargo::rerun-if-env-changed=SAJIT_SYSROOT");
 
-  let include_llvm = llvm_config(&["--includedir"]);
+  let include_llvm = llvm_config(&["--includedir"], false);
 
-  let mut build = Build::new();
+  // `srcxx` building
+  {
+    let mut build = Build::new();
+    build
+      .cpp(true)
+      .std("c++20")
+      .file("./srcxx/blockpreds.cpp")
+      .include("srcxx")
+      .include(include_llvm.trim());
+    let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+    if target_os == "linux" || target_os == "darwin" || target_os == "macos" {
+      build.flag("-fno-rtti");
+    }
 
-  build
-    .cpp(true)
-    .std("c++20")
-    .file("./srcxx/blockpreds.cpp")
-    .include("srcxx")
-    .include(include_llvm.trim());
+    let cxxflags = llvm_config(&["--cxxflags"], false);
 
-  let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+    // 2. Parse flags from llvm-config --cxxflags (macro definitions & RTTI settings)
+    for flag in cxxflags.split_whitespace() {
+      if flag.starts_with("-D") {
+        let mut parts = flag[2..].splitn(2, '=');
+        let name = parts.next().unwrap();
+        let value = parts.next();
+        build.define(name, value);
+      } else if flag == "-fno-rtti" || flag == "-fno-exceptions" {
+        build.flag(flag);
+      }
+    }
 
-  if target_os == "linux" || target_os == "darwin" || target_os == "macos" {
-    build.flag("-fno-rtti");
+    build.compile("srcxx");
   }
 
-  build.compile("srcxx");
+  // LLVM CRITICAL
+  {
+    let sysroot = var("SAJIT_SYSROOT").unwrap_or_default();
+    let ldflags = llvm_config(&["--ldflags"], false);
+    for flag in ldflags.split_whitespace() {
+      if let Some(path) = flag.strip_prefix("-L") {
+        println!("cargo:rustc-link-search=native={}/{}", sysroot, path);
+      }
+    }
+
+    let libs = llvm_config(&["--link-static", "--libs"], false);
+    for lib in libs.split_whitespace() {
+      if let Some(name) = lib.strip_prefix("-l") {
+        println!("cargo:rustc-link-lib=static={}", name);
+      }
+    }
+
+    let libs = llvm_config(&["--link-static", "--system-libs"], false);
+    for lib in libs.split_whitespace() {
+      if let Some(name) = lib.strip_prefix("-l") {
+        println!("cargo:rustc-link-lib={}", name);
+      }
+    }
+  }
 
   println!("cargo:rustc-link-lib=static=srcxx");
 }
