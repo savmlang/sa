@@ -8,7 +8,9 @@ export CXX="clang++"
 export AR="llvm-ar"
 
 # cc flags
-export CFLAGS="--sysroot=$SYSROOT -fuse-ld=lld -stdlib=libc++ -rtlib=compiler-rt -unwindlib=none"
+export CFLAGS="--sysroot=$SYSROOT -fuse-ld=lld \
+  -I$SYSROOT/usr/include \
+  -rtlib=compiler-rt -unwindlib=none"
 export CXXFLAGS="--sysroot=$SYSROOT -fuse-ld=lld -stdlib=libc++ -rtlib=compiler-rt -unwindlib=none"
 export CXXSTDLIB="c++"
 export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=$SYSROOT -fuse-ld=lld --target=$CTARGET"
