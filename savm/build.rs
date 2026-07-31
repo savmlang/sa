@@ -79,6 +79,9 @@ fn build_ssaupdater() {
   use cc::Build;
   use std::env::var;
 
+  #[cfg(target_os = "macos")]
+  use std::path::Path;
+
   println!("cargo::rerun-if-changed=srcxx");
   println!("cargo::rerun-if-env-changed=SAJIT_SYSROOT");
 
@@ -113,6 +116,23 @@ fn build_ssaupdater() {
     }
 
     build.compile("srcxx");
+  }
+
+  // macOS
+  #[cfg(target_os = "macos")]
+  {
+    let brew_paths = [
+      "/opt/homebrew/opt/zstd/lib", // Apple Silicon Homebrew location
+      "/usr/local/opt/zstd/lib",    // Intel Homebrew location
+      "/opt/homebrew/lib",          // Apple Silicon default lib
+      "/usr/local/lib",             // Intel default lib
+    ];
+
+    for path in brew_paths {
+      if Path::new(path).exists() {
+        println!("cargo:rustc-link-search=native={path}");
+      }
+    }
   }
 
   // LLVM CRITICAL
