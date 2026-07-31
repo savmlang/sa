@@ -1,4 +1,4 @@
-sudo apt update && sudo apt install -y clang lld llvm symlinks qemu-user-static binfmt-support
+sudo apt update && sudo apt install -y clang lld llvm symlinks qemu-user-binfmt binfmt-support
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 

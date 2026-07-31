@@ -1,6 +1,6 @@
 #! /usr/bin/bash
 
-sudo apt update && sudo apt install -y clang lld llvm debootstrap symlinks qemu-user-static binfmt-support
+sudo apt update && sudo apt install -y clang lld llvm debootstrap symlinks qemu-user-binfmt binfmt-support
 
 export SYSROOT=$HOME/sysroot/
 export DISTRO=trixie
