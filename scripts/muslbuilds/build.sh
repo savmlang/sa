@@ -8,8 +8,9 @@ export CXX="clang++"
 export AR="llvm-ar"
 
 # cc flags
-export CFLAGS="--sysroot=$SYSROOT -fuse-ld=lld"
-export CXXFLAGS="--sysroot=$SYSROOT -fuse-ld=lld"
+export CFLAGS="--sysroot=$SYSROOT -fuse-ld=lld -stdlib=libc++"
+export CXXFLAGS="--sysroot=$SYSROOT -fuse-ld=lld -stdlib=libc++"
+export CXXSTDLIB="c++"
 export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=$SYSROOT -fuse-ld=lld"
 
 # libffi
