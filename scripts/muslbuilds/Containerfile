@@ -6,6 +6,7 @@ RUN apk update && apk add --no-cache \
     llvm-static \
     \
     g++ libstdc++-dev \
+    libc++-dev \
     \
     musl-dev \
     libgcc \
