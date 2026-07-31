@@ -17,6 +17,9 @@ export PKG_CONFIG_SYSROOT_DIR="$SYSROOT"
 export PKG_CONFIG_PATH="$SYSROOT/usr/lib/$CTARGET/pkgconfig"
 export PKG_CONFIG_ALLOW_CROSS=1
 
+# sajit
+export SAJIT_SYSROOT="$HOME/sysroot"
+
 # use lld linker
 export RUSTFLAGS="-C linker=clang \
   -C link-arg=-fuse-ld=lld \
