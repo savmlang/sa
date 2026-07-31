@@ -11,8 +11,8 @@ export AR="llvm-ar"
 export CFLAGS="--sysroot=$SYSROOT -fuse-ld=lld \
   -I$SYSROOT/usr/include \
   -rtlib=compiler-rt -unwindlib=none"
-export CXXFLAGS="--sysroot=$SYSROOT -fuse-ld=lld -stdlib=libc++ -rtlib=compiler-rt -unwindlib=none"
-export CXXSTDLIB="c++"
+export CXXFLAGS="--sysroot=$SYSROOT -fuse-ld=lld -stdlib=libstdc++ -rtlib=compiler-rt -unwindlib=none"
+export CXXSTDLIB="stdc++"
 export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=$SYSROOT -fuse-ld=lld --target=$CTARGET"
 
 # libffi
