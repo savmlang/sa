@@ -7,11 +7,20 @@ export CC="clang"
 export CXX="clang++"
 export AR="llvm-ar"
 
+export GCC_VER="15.2.0"
+
 # cc flags
-export CFLAGS="--sysroot=$SYSROOT -fuse-ld=lld \
+export CFLAGS="--sysroot=$SYSROOT \
   -I$SYSROOT/usr/include \
   -rtlib=compiler-rt -unwindlib=none"
-export CXXFLAGS="--sysroot=$SYSROOT -fuse-ld=lld -stdlib=libstdc++ -rtlib=compiler-rt -unwindlib=none"
+
+export CXXFLAGS="--sysroot=$SYSROOT \
+  -I$SYSROOT/usr/include \
+  -I$SYSROOT/usr/include/c++/$GCC_VER \
+  -I$SYSROOT/usr/include/c++/$GCC_VER/$CTARGET \
+  -stdlib=libstdc++ \
+  -rtlib=compiler-rt -unwindlib=none"
+
 export CXXSTDLIB="stdc++"
 export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=$SYSROOT -fuse-ld=lld --target=$CTARGET"
 

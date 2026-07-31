@@ -9,7 +9,7 @@ RUN apk update && apk add --no-cache \
     libunwind-dev \
     \
     g++ gcc \
-    libstdc++-dev \
+    libstdc++-dev libc++-dev \
     \
     musl-dev \
     libgcc \
