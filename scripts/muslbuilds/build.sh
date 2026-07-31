@@ -10,20 +10,23 @@ export AR="llvm-ar"
 GCC_VER="15.2.0"
 
 # Find any target-specific c++ header directory inside /usr/include/c++/$GCC_VER/
-TARGET_CXX_DIR=$(ls -d $SYSROOT/usr/include/c++/$GCC_VER/*-linux-musl 2>/dev/null | head -n1)
+TARGET_CXX_DIR=$(ls -d $SYSROOT/usr/include/c++/$GCC_VER/*-linux-musl* 2>/dev/null | head -n1)
 # Find any target-specific c++ header directory inside /usr/lib/gcc/
-GCC_LIB_CXX_DIR=$(ls -d $SYSROOT/usr/lib/gcc/*-linux-musl/$GCC_VER/include/c++/*-linux-musl 2>/dev/null | head -n1)
+GCC_LIB_CXX_DIR=$(ls -d $SYSROOT/usr/lib/gcc/*-linux-musl*/$GCC_VER/include/c++/*-linux-musl* 2>/dev/null | head -n1)
 
 # cc flags
 export CFLAGS="--sysroot=$SYSROOT \
   -I$SYSROOT/usr/include \
+  -I$SYSROOT/usr/include/c++/$GCC_VER \
+  ${TARGET_CXX_DIR:+-I$TARGET_CXX_DIR} \
+  ${GCC_LIB_CXX_DIR:+-I$GCC_LIB_CXX_DIR} \
   -rtlib=compiler-rt -unwindlib=none"
 
 export CXXFLAGS="--sysroot=$SYSROOT \
   -I$SYSROOT/usr/include \
   -I$SYSROOT/usr/include/c++/$GCC_VER \
-  "${TARGET_CXX_DIR:+-I$TARGET_CXX_DIR}" \
-  "${GCC_LIB_CXX_DIR:+-I$GCC_LIB_CXX_DIR}" \
+  ${TARGET_CXX_DIR:+-I$TARGET_CXX_DIR} \
+  ${GCC_LIB_CXX_DIR:+-I$GCC_LIB_CXX_DIR} \
   -stdlib=libstdc++ \
   -rtlib=compiler-rt -unwindlib=none"
 
@@ -38,6 +41,8 @@ export PKG_CONFIG_ALLOW_CROSS=1
 # sajit
 export SAJIT_SYSROOT="$HOME/sysroot"
 
+GCC_LIB_DIR=$(ls -d $SYSROOT/usr/lib/gcc/*/$GCC_VER 2>/dev/null | head -n1)
+
 # use lld linker
 export RUSTFLAGS="-C linker=clang \
   -C link-arg=-fuse-ld=lld \
@@ -50,7 +55,9 @@ export RUSTFLAGS="-C linker=clang \
   -L target/debug \
   -L target/release \
   -L target/$TARGET/debug \
-  -L target/$TARGET/release"
+  -L target/$TARGET/release \
+  -L $SYSROOT/usr/include/c++/$GCC_VER \
+  ${GCC_LIB_DIR:+-L $GCC_LIB_DIR}"
 
 if [[ "$TARGET" == "armv7-unknown-linux-gnueabihf" ]]; then
   export RUSTFLAGS="$RUSTFLAGS \
