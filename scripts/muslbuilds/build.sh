@@ -7,7 +7,12 @@ export CC="clang"
 export CXX="clang++"
 export AR="llvm-ar"
 
-export GCC_VER="15.2.0"
+GCC_VER="15.2.0"
+
+# Find any target-specific c++ header directory inside /usr/include/c++/$GCC_VER/
+TARGET_CXX_DIR=$(ls -d $SYSROOT/usr/include/c++/$GCC_VER/*-linux-musl 2>/dev/null | head -n1)
+# Find any target-specific c++ header directory inside /usr/lib/gcc/
+GCC_LIB_CXX_DIR=$(ls -d $SYSROOT/usr/lib/gcc/*-linux-musl/$GCC_VER/include/c++/*-linux-musl 2>/dev/null | head -n1)
 
 # cc flags
 export CFLAGS="--sysroot=$SYSROOT \
@@ -17,7 +22,8 @@ export CFLAGS="--sysroot=$SYSROOT \
 export CXXFLAGS="--sysroot=$SYSROOT \
   -I$SYSROOT/usr/include \
   -I$SYSROOT/usr/include/c++/$GCC_VER \
-  -I$SYSROOT/usr/include/c++/$GCC_VER/$CTARGET \
+  ${TARGET_CXX_DIR:+-I$TARGET_CXX_DIR} \
+  ${GCC_LIB_CXX_DIR:+-I$GCC_LIB_CXX_DIR}"
   -stdlib=libstdc++ \
   -rtlib=compiler-rt -unwindlib=none"
 
