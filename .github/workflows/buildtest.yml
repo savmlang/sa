@@ -438,6 +438,8 @@ jobs:
         run: |
           sudo apt update
           sudo apt install bubblewrap podman qemu-user-static binfmt-support
+          sudo sysctl -w kernel.unprivileged_userns_clone=1
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
