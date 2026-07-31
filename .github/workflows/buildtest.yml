@@ -437,7 +437,7 @@ jobs:
       - name: Install Podman + QEMU
         run: |
           sudo apt update
-          sudo apt install podman qemu-user-static binfmt-support
+          sudo apt install bubblewrap podman qemu-user-static binfmt-support
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
