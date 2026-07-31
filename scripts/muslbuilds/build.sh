@@ -10,25 +10,20 @@ export AR="llvm-ar"
 GCC_VER="15.2.0"
 
 # Find any target-specific c++ header directory inside /usr/include/c++/$GCC_VER/
-TARGET_CXX_DIR=$(ls -d $SYSROOT/usr/include/c++/$GCC_VER/*-linux-musl* 2>/dev/null | head -n1)
-# Find any target-specific c++ header directory inside /usr/lib/gcc/
-GCC_LIB_CXX_DIR=$(ls -d $SYSROOT/usr/lib/gcc/*-linux-musl*/$GCC_VER/include/c++/*-linux-musl* 2>/dev/null | head -n1)
+TARGET_CXX_DIR=$(ls -d $SYSROOT/usr/include/c++/$GCC_VER/*-alpine-linux-musl* 2>/dev/null | head -n1)
 
 # cc flags
 export CFLAGS="--sysroot=$SYSROOT \
+  -std=c11 \
   -I$SYSROOT/usr/include \
   -I$SYSROOT/usr/include/c++/$GCC_VER \
-  ${TARGET_CXX_DIR:+-I$TARGET_CXX_DIR} \
-  ${GCC_LIB_CXX_DIR:+-I$GCC_LIB_CXX_DIR} \
-  -rtlib=compiler-rt -unwindlib=none"
+  ${TARGET_CXX_DIR:+-I$TARGET_CXX_DIR}"
 
 export CXXFLAGS="--sysroot=$SYSROOT \
   -I$SYSROOT/usr/include \
   -I$SYSROOT/usr/include/c++/$GCC_VER \
   ${TARGET_CXX_DIR:+-I$TARGET_CXX_DIR} \
-  ${GCC_LIB_CXX_DIR:+-I$GCC_LIB_CXX_DIR} \
-  -stdlib=libstdc++ \
-  -rtlib=compiler-rt -unwindlib=none"
+  -stdlib=libstdc++"
 
 export CXXSTDLIB="stdc++"
 export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=$SYSROOT -fuse-ld=lld --target=$CTARGET"
@@ -41,7 +36,7 @@ export PKG_CONFIG_ALLOW_CROSS=1
 # sajit
 export SAJIT_SYSROOT="$HOME/sysroot"
 
-GCC_LIB_DIR=$(ls -d $SYSROOT/usr/lib/gcc/*/$GCC_VER 2>/dev/null | head -n1)
+GCC_LIB_DIR=$(ls -d $SYSROOT/usr/lib/gcc/*-alpine-linux-musl*/$GCC_VER 2>/dev/null | head -n1)
 
 # use lld linker
 export RUSTFLAGS="-C linker=clang \
