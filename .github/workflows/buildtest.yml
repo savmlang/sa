@@ -146,6 +146,11 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Install LLD
+        run: |
+          sudo apt update
+          sudo apt install lld
+
       - name: Build SaVM
         uses: ./.github/actions/build-savm
         env:

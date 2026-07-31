@@ -70,6 +70,12 @@ runs:
       env:
         LLVMENV_VERSION: ${{ inputs.llvmver }}
 
+    - name: Install zstd
+      shell: bash
+      if: runner.is == 'macOS'
+      run: |
+        brew install zstd
+
     - name: Chmod
       if: runner.os == 'Linux' || runner.os == 'macOS'
       shell: bash

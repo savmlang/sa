@@ -117,25 +117,46 @@ fn build_ssaupdater() {
 
   // LLVM CRITICAL
   {
-    let sysroot = var("SAJIT_SYSROOT").unwrap_or_default();
+    let sysroot = var("SAJIT_SYSROOT").map(|x| format!("{x}/")).unwrap_or_default();
     let ldflags = llvm_config(&["--ldflags"], false);
+
     for flag in ldflags.split_whitespace() {
-      if let Some(path) = flag.strip_prefix("-L") {
-        println!("cargo:rustc-link-search=native={}/{}", sysroot, path);
+      if let Some(path) = flag.strip_prefix("-LIBPATH:").or_else(|| flag.strip_prefix("-L")) {
+        println!("cargo:rustc-link-search=native={}{}", sysroot, path);
       }
     }
 
     let libs = llvm_config(&["--link-static", "--libs"], false);
     for lib in libs.split_whitespace() {
-      if let Some(name) = lib.strip_prefix("-l") {
-        println!("cargo:rustc-link-lib=static={}", name);
+      #[cfg(windows)]
+      if let Some((dir, name)) = lib.rsplit_once("\\") {
+        println!("cargo:rustc-link-search={}", dir);
+
+        if let Some(name) = name.strip_suffix(".lib") {
+          println!("cargo:rustc-link-lib=static={}", name);
+        }
+      }
+
+      #[cfg(not(windows))]
+      if let Some(dir) = lib.strip_prefix("-L") {
+        println!("cargo:rustc-link-search=native={}", dir);
+      } else if let Some(name) = lib.strip_prefix("-l") {
+        println!("cargo:rustc-link-lib=static={}", name);    
       }
     }
 
     let libs = llvm_config(&["--link-static", "--system-libs"], false);
     for lib in libs.split_whitespace() {
-      if let Some(name) = lib.strip_prefix("-l") {
+      #[cfg(windows)]
+      if let Some(name) = lib.strip_suffix(".lib") {
         println!("cargo:rustc-link-lib={}", name);
+      }
+
+      #[cfg(not(windows))]
+      if let Some(dir) = lib.strip_prefix("-L") {
+        println!("cargo:rustc-link-search=native={}", dir);
+      } else if let Some(name) = lib.strip_prefix("-l") {
+        println!("cargo:rustc-link-lib={}", name);    
       }
     }
   }
