@@ -36,10 +36,28 @@ fn llvm_config(args: &[&str]) -> String {
     Cow::Borrowed(OsStr::new("llvm-config"))
   };
 
-  let out = Command::new(&program)
-    .args(args)
-    .output()
-    .expect("llvm-config not found in PATH");
+  let sysroot = var("SAJIT_SYSROOT").ok();
+  let out = if let Some(sysroot) = &sysroot {
+    Command::new("bwrap")
+      .args(&[
+        "--ro-bind",
+        &sysroot,
+        "/",
+        "--proc",
+        "/proc",
+        "--dev",
+        "/dev",
+      ])
+      .arg(&program)
+      .args(args)
+      .output()
+      .expect("llvm-config not found in PATH")
+  } else {
+    Command::new(&program)
+      .args(args)
+      .output()
+      .expect("llvm-config not found in PATH")
+  };
 
   if !out.status.success() {
     panic!(
@@ -49,7 +67,11 @@ fn llvm_config(args: &[&str]) -> String {
     );
   }
 
-  String::from_utf8(out.stdout).expect("Invalid UTF8 was provided")
+  if let Some(sysroot) = sysroot {
+    sysroot + str::from_utf8(&out.stdout).expect("Invalid UTF8")
+  } else {
+    String::from_utf8(out.stdout).expect("Invalid UTF8 was provided")
+  }
 }
 
 #[cfg(feature = "llvm")]
