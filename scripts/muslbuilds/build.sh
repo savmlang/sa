@@ -22,8 +22,8 @@ export CFLAGS="--sysroot=$SYSROOT \
 export CXXFLAGS="--sysroot=$SYSROOT \
   -I$SYSROOT/usr/include \
   -I$SYSROOT/usr/include/c++/$GCC_VER \
-  ${TARGET_CXX_DIR:+-I$TARGET_CXX_DIR} \
-  ${GCC_LIB_CXX_DIR:+-I$GCC_LIB_CXX_DIR}"
+  "${TARGET_CXX_DIR:+-I$TARGET_CXX_DIR}" \
+  "${GCC_LIB_CXX_DIR:+-I$GCC_LIB_CXX_DIR}" \
   -stdlib=libstdc++ \
   -rtlib=compiler-rt -unwindlib=none"
 
