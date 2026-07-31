@@ -7,7 +7,6 @@ RUN apk update && apk add --no-cache \
     compiler-rt \
     \
     llvm-libunwind-dev \
-    libunwind-dev \
     \
     g++ gcc \
     libstdc++-dev libc++-dev \
