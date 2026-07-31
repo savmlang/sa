@@ -49,12 +49,12 @@ export RUSTFLAGS="-C linker=clang \
   -L target/release \
   -L target/$TARGET/debug \
   -L target/$TARGET/release \
-  -L $SYSROOT/usr/include/c++/$GCC_VER \
+  -L $SYSROOT/usr/lib \
   ${GCC_LIB_DIR:+-L $GCC_LIB_DIR}"
 
-if [[ "$TARGET" == "armv7-unknown-linux-gnueabihf" ]]; then
+if [[ "$TARGET" == "i686-unknown-linux-musl" ]]; then
   export RUSTFLAGS="$RUSTFLAGS \
-    -C link-arg=-Wl,--allow-shlib-undefined"
+    -C link-arg=-lssp_nonshared"
 fi
 
 echo "Building C Libraries"
