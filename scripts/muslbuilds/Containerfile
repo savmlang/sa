@@ -4,6 +4,10 @@ FROM alpine:3.24
 RUN apk update && apk add --no-cache \
     llvm-dev \
     llvm-static \
+    \
+    musl-dev \
+    libgcc \
+    \
     clang22-dev \
     build-base \
     alpine-sdk \
