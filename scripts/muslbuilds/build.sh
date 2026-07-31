@@ -8,10 +8,10 @@ export CXX="clang++"
 export AR="llvm-ar"
 
 # cc flags
-export CFLAGS="--sysroot=$SYSROOT -fuse-ld=lld -stdlib=libc++"
-export CXXFLAGS="--sysroot=$SYSROOT -fuse-ld=lld -stdlib=libc++"
+export CFLAGS="--sysroot=$SYSROOT -fuse-ld=lld -stdlib=libc++ -rtlib=compiler-rt -unwindlib=none"
+export CXXFLAGS="--sysroot=$SYSROOT -fuse-ld=lld -stdlib=libc++ -rtlib=compiler-rt -unwindlib=none"
 export CXXSTDLIB="c++"
-export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=$SYSROOT -fuse-ld=lld"
+export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=$SYSROOT -fuse-ld=lld --target=$CTARGET"
 
 # libffi
 export PKG_CONFIG_SYSROOT_DIR="$SYSROOT"
@@ -27,7 +27,9 @@ export RUSTFLAGS="-C linker=clang \
   -C link-arg=--target=$CTARGET \
   -C link-arg=--sysroot=$SYSROOT \
   -C link-arg=-rtlib=compiler-rt \
+  -C link-arg=-unwindlib=none \
   -C target-feature=-crt-static \
+  -C panic=abort \
   -L target/debug \
   -L target/release \
   -L target/$TARGET/debug \
