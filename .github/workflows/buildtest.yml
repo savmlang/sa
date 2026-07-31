@@ -128,7 +128,7 @@ jobs:
           ]
 
         include:
-          - os: ubuntu-24.04-arm
+          - os: ubuntu-26.04-arm
             target: [aarch64-unknown-linux-gnu, aarch64-linux-gnu]
 
         exclude:
@@ -138,7 +138,7 @@ jobs:
           - target: [i686-unknown-linux-gnu, i686-linux-gnu]
             feature: pro_standard
 
-    runs-on: ${{ matrix.os || 'ubuntu-latest' }}
+    runs-on: ${{ matrix.os || 'ubuntu-26.04' }}
 
     steps:
       - name: Checkout
@@ -171,7 +171,7 @@ jobs:
   linux_crosscompile:
     name: Build SaVM ${{ matrix.target.feature }} (${{ matrix.target.rust }})
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     strategy:
       fail-fast: false
@@ -335,32 +335,32 @@ jobs:
           - target: x86_64-unknown-linux-musl
             ctarget: x86_64-linux-musl
             platform: linux/amd64
-            os: ubuntu-latest
+            os: ubuntu-26.04
 
           - target: i686-unknown-linux-musl
             ctarget: i686-linux-musl
             platform: linux/386
-            os: ubuntu-latest
+            os: ubuntu-26.04
 
           - target: aarch64-unknown-linux-musl
             ctarget: aarch64-linux-musl
             platform: linux/arm64/v8
-            os: ubuntu-24.04-arm
+            os: ubuntu-26.04-arm
 
           - target: armv7-unknown-linux-musleabihf
             ctarget: armv7-linux-musleabihf
             platform: linux/arm/v7
-            os: ubuntu-24.04-arm
+            os: ubuntu-26.04-arm
 
           - target: riscv64gc-unknown-linux-musl
             ctarget: riscv64-linux-musl
             platform: linux/riscv64
-            os: ubuntu-24.04-arm
+            os: ubuntu-26.04-arm
 
           - target: powerpc64le-unknown-linux-musl
             ctarget: powerpc64le-linux-musl
             platform: linux/ppc64le
-            os: ubuntu-24.04-arm
+            os: ubuntu-26.04-arm
 
         include:
           # X64
@@ -371,7 +371,7 @@ jobs:
               target: x86_64-unknown-linux-musl
               ctarget: x86_64-linux-musl
               platform: linux/amd64
-              os: ubuntu-latest
+              os: ubuntu-26.04
 
           - feature:
               build: pro_standard
@@ -380,7 +380,7 @@ jobs:
               target: x86_64-unknown-linux-musl
               ctarget: x86_64-linux-musl
               platform: linux/amd64
-              os: ubuntu-latest
+              os: ubuntu-26.04
 
           # ARM64
           - feature:
@@ -390,7 +390,7 @@ jobs:
               target: aarch64-unknown-linux-musl
               ctarget: aarch64-linux-musl
               platform: linux/arm64/v8
-              os: ubuntu-24.04-arm
+              os: ubuntu-26.04-arm
 
           - feature:
               build: pro_standard
@@ -399,7 +399,7 @@ jobs:
               target: aarch64-unknown-linux-musl
               ctarget: aarch64-linux-musl
               platform: linux/arm64/v8
-              os: ubuntu-24.04-arm
+              os: ubuntu-26.04-arm
 
           # RISCV64
           - feature:
@@ -409,7 +409,7 @@ jobs:
               target: riscv64gc-unknown-linux-musl
               ctarget: riscv64-linux-musl
               platform: linux/riscv64
-              os: ubuntu-24.04-arm
+              os: ubuntu-26.04-arm
 
           - feature:
               build: pro_standard
@@ -418,7 +418,7 @@ jobs:
               target: riscv64gc-unknown-linux-musl
               ctarget: riscv64-linux-musl
               platform: linux/riscv64
-              os: ubuntu-24.04-arm
+              os: ubuntu-26.04-arm
 
     runs-on: ${{ matrix.config.os }}
 
@@ -574,7 +574,7 @@ jobs:
     if: inputs.artifact != 'true'
 
     name: Package Installers
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     needs: [win32, linux_crosscompile, linux, linux_musl, package_m, package_w]
 
