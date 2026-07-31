@@ -28,7 +28,7 @@ jobs:
 
     strategy:
       fail-fast: true
-      max-parallel: 1 #10
+      max-parallel: 10
       matrix:
         target:
           [
@@ -76,7 +76,7 @@ jobs:
 
     strategy:
       fail-fast: true
-      max-parallel: 1 #4
+      max-parallel: 4
       matrix:
         target:
           [
@@ -117,7 +117,7 @@ jobs:
 
     strategy:
       fail-fast: true
-      max-parallel: 1 #5
+      max-parallel: 4
       matrix:
         feature: [nano, standard, pro, pro_standard]
         target:
@@ -175,7 +175,7 @@ jobs:
 
     strategy:
       fail-fast: false
-      max-parallel: 1 #5
+      max-parallel: 4
       matrix:
         target:
           # Armv7 (HF)
@@ -324,7 +324,7 @@ jobs:
 
     strategy:
       fail-fast: false
-      max-parallel: 20 #6
+      max-parallel: 6
       matrix:
         feature:
           - build: nano
@@ -335,32 +335,26 @@ jobs:
           - target: x86_64-unknown-linux-musl
             ctarget: x86_64-linux-musl
             platform: linux/amd64
-            os: ubuntu-26.04
 
           - target: i686-unknown-linux-musl
             ctarget: i686-linux-musl
             platform: linux/386
-            os: ubuntu-26.04
 
           - target: aarch64-unknown-linux-musl
             ctarget: aarch64-linux-musl
             platform: linux/arm64/v8
-            os: ubuntu-26.04-arm
 
           - target: armv7-unknown-linux-musleabihf
             ctarget: armv7-linux-musleabihf
             platform: linux/arm/v7
-            os: ubuntu-26.04-arm
 
           - target: riscv64gc-unknown-linux-musl
             ctarget: riscv64-linux-musl
             platform: linux/riscv64
-            os: ubuntu-26.04-arm
 
           - target: powerpc64le-unknown-linux-musl
             ctarget: powerpc64le-linux-musl
             platform: linux/ppc64le
-            os: ubuntu-26.04-arm
 
         include:
           # X64
@@ -371,7 +365,6 @@ jobs:
               target: x86_64-unknown-linux-musl
               ctarget: x86_64-linux-musl
               platform: linux/amd64
-              os: ubuntu-26.04
 
           - feature:
               build: pro_standard
@@ -380,7 +373,6 @@ jobs:
               target: x86_64-unknown-linux-musl
               ctarget: x86_64-linux-musl
               platform: linux/amd64
-              os: ubuntu-26.04
 
           # ARM64
           - feature:
@@ -390,7 +382,6 @@ jobs:
               target: aarch64-unknown-linux-musl
               ctarget: aarch64-linux-musl
               platform: linux/arm64/v8
-              os: ubuntu-26.04-arm
 
           - feature:
               build: pro_standard
@@ -399,7 +390,6 @@ jobs:
               target: aarch64-unknown-linux-musl
               ctarget: aarch64-linux-musl
               platform: linux/arm64/v8
-              os: ubuntu-26.04-arm
 
           # RISCV64
           - feature:
@@ -409,7 +399,6 @@ jobs:
               target: riscv64gc-unknown-linux-musl
               ctarget: riscv64-linux-musl
               platform: linux/riscv64
-              os: ubuntu-26.04-arm
 
           - feature:
               build: pro_standard
@@ -418,11 +407,40 @@ jobs:
               target: riscv64gc-unknown-linux-musl
               ctarget: riscv64-linux-musl
               platform: linux/riscv64
-              os: ubuntu-26.04-arm
 
-    runs-on: ${{ matrix.config.os }}
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:resolute
 
     steps:
+      - name: Install Podman + QEMU + More Tools
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+
+          apt-get update && apt-get install -y \
+            wget \
+            apt-transport-https \
+            software-properties-common
+          sudo rm -rf /var/lib/apt/lists/*
+
+          wget -q https://microsoft.com
+          dpkg -i packages-microsoft-prod.deb
+          rm packages-microsoft-prod.deb
+
+          sudo rm -rf /var/lib/apt/lists/*
+
+          sudo apt update
+          sudo apt install -y powershell
+
+          sudo apt-get update && apt-get install -y --no-install-recommends \
+            ca-certificates curl git gnupg jq tar unzip nodejs build-essential \
+            llvm lld clang clang++ rustup
+
+          sudo apt install bubblewrap podman qemu-user-binfmt binfmt-support
+
+          sudo sysctl -w kernel.unprivileged_userns_clone=1
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
       - name: Checkout
         uses: actions/checkout@v6
         with:
@@ -433,13 +451,6 @@ jobs:
         with:
           components: rust-src,rustfmt
           toolchain: nightly
-
-      - name: Install Podman + QEMU
-        run: |
-          sudo apt update
-          sudo apt install bubblewrap podman qemu-user-binfmt binfmt-support
-          sudo sysctl -w kernel.unprivileged_userns_clone=1
-          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
