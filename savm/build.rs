@@ -82,7 +82,7 @@ fn build_ssaupdater() {
   println!("cargo::rerun-if-changed=srcxx");
   println!("cargo::rerun-if-env-changed=SAJIT_SYSROOT");
 
-  let include_llvm = llvm_config(&["--includedir"], false);
+  let include_llvm = llvm_config(&["--includedir"], true);
 
   // `srcxx` building
   {
