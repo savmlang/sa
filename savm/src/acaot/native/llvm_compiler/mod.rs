@@ -257,8 +257,8 @@ impl SaVMLLVMBuilder {
     Box::new(
       Self::create(
         LLVMCodeGenOptLevel::LLVMCodeGenLevelAggressive,
-        LLVMRelocMode::LLVMRelocPIC,
-        LLVMCodeModel::LLVMCodeModelMedium,
+        LLVMRelocMode::LLVMRelocStatic,
+        LLVMCodeModel::LLVMCodeModelSmall,
         CacheLevel::LLVMEpitome,
         c"default<O3>".as_ptr(),
       )

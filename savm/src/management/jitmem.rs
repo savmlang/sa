@@ -154,10 +154,10 @@ impl JITMemoryManager {
     let mut jitwrite = |mexec: &mut MemoryExecutable, _symbpool: &LLVMSymbolPool| {
       #[allow(unused_mut)]
       let mut resolver_full = |d: *const str| match unsafe { &*d } {
-        "fmaf" => (llvm::fmaf as *const ()).addr(),
-        "fma" => (llvm::fma as *const ()).addr(),
-        "memcpy" => (memcpy as *const ()).addr(),
-        "memmove" => (llvm::memmove as *const ()).addr(),
+        "_fmaf" | "fmaf" => (llvm::fmaf as *const ()).addr(),
+        "_fma" | "fma" => (llvm::fma as *const ()).addr(),
+        "_memcpy" | "memcpy" => (memcpy as *const ()).addr(),
+        "_memmove" | "memmove" => (llvm::memmove as *const ()).addr(),
         _ => resolver(d),
       };
 
