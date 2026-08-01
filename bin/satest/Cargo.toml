@@ -27,6 +27,9 @@ pro_standard = ["standard", "pro"]
 
 native = []
 cranelift = ["native", "savm/cranelift"]
-llvm = ["native", "savm/llvm"]
+llvm = ["native", "savm/llvm", "dep:savmbuild"]
 
 printir = ["savm/printir"]
+
+[build-dependencies]
+savmbuild = { version = "0.1.0", path = "../../savm_build", optional = true }

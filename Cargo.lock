@@ -1507,6 +1507,7 @@ dependencies = [
  "indicatif",
  "sasm",
  "savm",
+ "savmbuild",
  "serde",
  "serde_json",
  "statrs",
