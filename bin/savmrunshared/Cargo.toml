@@ -15,7 +15,7 @@ default = []
 
 # SaVM Run VM Flavours!!
 pro_standard = ["pro", "standard"]
-pro = ["interpreter", "jit", "savm/llvm", "dep:savmbuild"]
+pro = ["interpreter", "jit", "savm/llvm"]
 standard = ["interpreter", "jit", "savm/cranelift"]
 nano = ["interpreter"]
 
@@ -26,6 +26,3 @@ jit = ["savm/native"]
 #
 # NOTE: The savmcache folder is still created, but not written to
 nocache = []
-
-[build-dependencies]
-savmbuild = { version = "0.1.0", path = "../../savm_build", optional = true }

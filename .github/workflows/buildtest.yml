@@ -161,6 +161,7 @@ jobs:
           feature: ${{ matrix.feature }}
           rusttarget: ${{ matrix.target[0] }}
           argv: --target ${{ matrix.target[0] }}
+          rustflags: -C link-arg=-fuse-ld=lld
 
       - name: Dryrun satest
         shell: pwsh
