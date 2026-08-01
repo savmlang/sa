@@ -148,6 +148,8 @@ fn build_ssaupdater() {
 
     let libs = llvm_config(&["--link-static", "--libs"], false);
     
+    
+    panic!("{libs}");
     for lib in libs.split_whitespace() {
       let lib = lib.trim();
       #[cfg(windows)]
