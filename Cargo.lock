@@ -1531,6 +1531,7 @@ dependencies = [
  "saffine",
  "sajit",
  "sart",
+ "savmbuild",
  "serde",
 ]
 
@@ -1546,6 +1547,10 @@ dependencies = [
 
 [[package]]
 name = "savmasync-sys"
+version = "0.1.0"
+
+[[package]]
+name = "savmbuild"
 version = "0.1.0"
 
 [[package]]

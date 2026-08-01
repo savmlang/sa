@@ -52,6 +52,7 @@ saffine = { path = "../internal/saffine" }
 
 [build-dependencies]
 cc = { version = "^1", optional = true }
+savmbuild = { path = "../savm_build", optional = true }
 
 [features]
 default = []
@@ -61,7 +62,7 @@ ffi_system = ["sart/ffi_system"]
 # Development mode (rust-analyzer)
 dev = ["cranelift", "llvm", "printir"]
 
-llvm = ["dep:llvm-sys", "dep:cc", "native", "sajit/llvm"]
+llvm = ["dep:llvm-sys", "dep:cc", "dep:savmbuild", "native", "sajit/llvm"]
 cranelift = ["dep:cranelift", "native"]
 native = ["dep:sajit", "dep:crossbeam-channel", "dag"]
 

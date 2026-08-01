@@ -59,7 +59,7 @@ members = [
   "libs/sair",
 
   # Internal Crates - saffine (sa affinity)
-  "internal/saffine",
+  "internal/saffine", "savm_build",
 ]
 resolver = "3"
 
