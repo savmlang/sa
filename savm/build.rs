@@ -17,6 +17,7 @@ fn main() {
 fn build_ssaupdater() {
   use cc::Build;
   use std::env::var;
+  use savmbuild::llvm_config;
 
   #[cfg(target_os = "macos")]
   use std::path::Path;
@@ -24,7 +25,7 @@ fn build_ssaupdater() {
   println!("cargo::rerun-if-changed=srcxx");
   println!("cargo::rerun-if-env-changed=SAJIT_SYSROOT");
 
-  let include_llvm = savmbuild::llvm_config(&["--includedir"], true);
+  let include_llvm = llvm_config(&["--includedir"], true);
 
   // `srcxx` building
   {
