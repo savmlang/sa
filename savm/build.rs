@@ -147,6 +147,7 @@ fn build_ssaupdater() {
     }
 
     let libs = llvm_config(&["--link-static", "--libs"], false);
+    panic!("LLVM Libs : {libs}");
     for lib in libs.split_whitespace() {
       #[cfg(windows)]
       if let Some((dir, name)) = lib.rsplit_once("\\") {
