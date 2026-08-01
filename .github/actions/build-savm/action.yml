@@ -130,6 +130,7 @@ runs:
           /usr/loongarch64-unknown-linux-gnu/include
       run: |
         ./devenv.ps1
+        $env:RUSTFLAGS = "${{ inputs.rustflags }}"
 
         if ("${{ inputs.rusttarget }}" -eq "i686-unknown-linux-gnu") {
           $env:CFLAGS="-fno-stack-protector"
