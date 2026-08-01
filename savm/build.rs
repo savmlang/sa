@@ -161,7 +161,7 @@ fn build_ssaupdater() {
 
       #[cfg(not(windows))]
       if let Some(dir) = lib.strip_prefix("-L") {
-        println!("cargo:rustc-link-search=native={}", dir);
+        println!("cargo:rustc-link-search=native={}{}", sysroot, dir);
       } else if let Some(name) = lib.strip_prefix("-l") {
         println!("cargo:rustc-link-lib=static={}", name);    
       }
@@ -177,7 +177,7 @@ fn build_ssaupdater() {
 
       #[cfg(not(windows))]
       if let Some(dir) = lib.strip_prefix("-L") {
-        println!("cargo:rustc-link-search=native={}", dir);
+        println!("cargo:rustc-link-search=native={}{}", sysroot, dir);
       } else if let Some(name) = lib.strip_prefix("-l") {
         println!("cargo:rustc-link-lib={}", name);    
       }
