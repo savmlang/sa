@@ -59,7 +59,6 @@ pub fn llvm_config(args: &[&str], prepend: bool) -> String {
 }
 
 pub fn link_llvm() {
-  use cc::Build;
   use std::env::var;
 
   #[cfg(target_os = "macos")]
@@ -111,7 +110,7 @@ pub fn link_llvm() {
         }
       }
     };
-    
+
     for lib in libs.split_whitespace() {
       let lib = lib.trim();
       #[cfg(windows)]
