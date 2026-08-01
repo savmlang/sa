@@ -147,8 +147,9 @@ fn build_ssaupdater() {
     }
 
     let libs = llvm_config(&["--link-static", "--libs"], false);
-    panic!("LLVM Libs : {libs}");
+    
     for lib in libs.split_whitespace() {
+      let lib = lib.trim();
       #[cfg(windows)]
       if let Some((dir, name)) = lib.rsplit_once("\\") {
         println!("cargo:rustc-link-search={}", dir);
@@ -168,6 +169,7 @@ fn build_ssaupdater() {
 
     let libs = llvm_config(&["--link-static", "--system-libs"], false);
     for lib in libs.split_whitespace() {
+      let lib = lib.trim();
       #[cfg(windows)]
       if let Some(name) = lib.strip_suffix(".lib") {
         println!("cargo:rustc-link-lib={}", name);
