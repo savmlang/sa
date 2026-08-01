@@ -16,7 +16,6 @@ fn main() {
 #[cfg(feature = "llvm")]
 fn build_ssaupdater() {
   use cc::Build;
-  use std::env::var;
   use savmbuild::llvm_config;
 
   #[cfg(target_os = "macos")]
