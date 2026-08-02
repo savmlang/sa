@@ -12,8 +12,8 @@ importers:
         specifier: ^1.7.0
         version: 1.7.0
       tar:
-        specifier: ^7.5.22
-        version: 7.5.22
+        specifier: ^7.5.21
+        version: 7.5.21
     devDependencies:
       '@types/node':
         specifier: ^26.1.2
@@ -60,8 +60,8 @@ packages:
   sisteransi@1.0.5:
     resolution: {integrity: sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg==}
 
-  tar@7.5.22:
-    resolution: {integrity: sha512-MFO/QzvtAOmJbkhOaCTvbGcFN9L9b+JunIsDwaKljSOdcLMea3NJ1k9Usz/rjdfSXTq4dfzfeS7W4p4YOAAHeA==}
+  tar@7.5.21:
+    resolution: {integrity: sha512-XdhtCvlMywwxpCW8YEq3lOXBJpUPTR2OHHcwLPO3HwsJqOHa2Ok/oJ7ruGzp+JrKoRPVCzJwAdEjqLW/vNRPHA==}
     engines: {node: '>=18'}
 
   undici-types@8.3.0:
@@ -113,7 +113,7 @@ snapshots:
 
   sisteransi@1.0.5: {}
 
-  tar@7.5.22:
+  tar@7.5.21:
     dependencies:
       '@isaacs/fs-minipass': 4.0.1
       chownr: 3.0.0
