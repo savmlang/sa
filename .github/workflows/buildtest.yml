@@ -78,15 +78,10 @@ jobs:
       fail-fast: true
       max-parallel: 4
       matrix:
-        target:
-          [
-            [x86_64-apple-darwin, x86_64-apple-darwin],
-            [aarch64-apple-darwin, arm64-apple-darwin],
-          ]
+        target: [[aarch64-apple-darwin, arm64-apple-darwin]]
         feature: [nano, standard, pro, pro_standard]
 
-    runs-on: ${{ matrix.target[0] == 'aarch64-apple-darwin' && 'macos-15' ||
-      'macos-15-intel' }}
+    runs-on: macos-15
 
     steps:
       - name: Checkout

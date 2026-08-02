@@ -138,6 +138,7 @@ impl JITMemoryManager {
   where
     T: FnMut(*const str) -> usize,
   {
+    eprintln!("Saw write_llvm");
     use sajit::LLVMDryRun;
 
     let guaranteed =
@@ -242,23 +243,24 @@ impl JITMemoryManager {
 
 #[rustfmt::skip]
 fn prefer_jitlink() -> bool {
-  cfg!(
-    any(
-      all(
-        target_os = "linux", 
-        any(
-          target_arch = "x86_64",
-          target_arch = "aarch64",
-          target_arch = "riscv64",
-          target_arch = "powerpc64"
-        )
-      ),
-      all(
-        target_os = "macos",
-        target_arch = "aarch64"
-      )
-    )
-  )
+  true
+  // cfg!(
+  //   any(
+  //     all(
+  //       target_os = "linux", 
+  //       any(
+  //         target_arch = "x86_64",
+  //         target_arch = "aarch64",
+  //         target_arch = "riscv64",
+  //         target_arch = "powerpc64"
+  //       )
+  //     ),
+  //     all(
+  //       target_os = "macos",
+  //       target_arch = "aarch64"
+  //     )
+  //   )
+  // )
 }
 
 impl Drop for JITMemoryManager {
