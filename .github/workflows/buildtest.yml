@@ -113,7 +113,7 @@ jobs:
           ${{ github.workspace }}/target/${{ matrix.target[0] }}/release/satest
 
   linux:
-    name: Build SaVM ${{ matrix.feature }} (${{ matrix.target[0] }})
+    name: Build SaVM ${{ matrix.feature }} (${{ matrix.target.rust }})
 
     strategy:
       fail-fast: false
@@ -121,21 +121,32 @@ jobs:
       matrix:
         feature: [nano, standard, pro, pro_standard]
         target:
-          [
-            [aarch64-unknown-linux-gnu, aarch64-linux-gnu],
-            [x86_64-unknown-linux-gnu, x86_64-linux-gnu],
-            [i686-unknown-linux-gnu, i686-linux-gnu],
-          ]
+          - rust: aarch64-unknown-linux-gnu
+            c: aarch64-linux-gnu
+
+          - rust: x86_64-unknown-linux-gnu
+            c: x86_64-linux-gnu
+            cflags: -march=x86-64 -mtune=generic
+            cxxflags: -march=x86-64 -mtune=generic
+
+          - rust: i686-unknown-linux-gnu
+            c: i686-linux-gnu
 
         include:
           - os: ubuntu-26.04-arm
-            target: [aarch64-unknown-linux-gnu, aarch64-linux-gnu]
+            target:
+              rust: aarch64-unknown-linux-gnu
+              c: aarch64-linux-gnu
 
         exclude:
-          - target: [i686-unknown-linux-gnu, i686-linux-gnu]
+          - target:
+              rust: i686-unknown-linux-gnu
+              c: i686-linux-gnu
             feature: standard
 
-          - target: [i686-unknown-linux-gnu, i686-linux-gnu]
+          - target:
+              rust: i686-unknown-linux-gnu
+              c: i686-linux-gnu
             feature: pro_standard
 
     runs-on: ${{ matrix.os || 'ubuntu-26.04' }}
@@ -156,23 +167,25 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          llvmargs: --llvm-build=llvm-static-${{ matrix.target[1] }}.tar.gz
+          llvmargs: --llvm-build=llvm-static-${{ matrix.target.c }}.tar.gz
           llvmver: llvm-static-${{ matrix.target }}.tar.gz
           feature: ${{ matrix.feature }}
-          rusttarget: ${{ matrix.target[0] }}
-          argv: --target ${{ matrix.target[0] }}
+          rusttarget: ${{ matrix.target.rust }}
+          argv: --target ${{ matrix.target.rust }}
           rustflags: -C link-arg=-fuse-ld=lld
+          cflags: ${{ matrix.target.cflags }}
+          cxxflags: ${{ matrix.target.cxxflags }}
 
       - name: Dryrun satest
         shell: pwsh
         continue-on-error: true
         working-directory: bin/satest
         run: |
-          sudo cp ${{ github.workspace }}/target/${{ matrix.target[0] }}/release/libsalloc.so /usr/lib/libsalloc.so
-          sudo cp ${{ github.workspace }}/target/${{ matrix.target[0] }}/release/libsavmasync.so /usr/lib/libsavmasync.so
+          sudo cp ${{ github.workspace }}/target/${{ matrix.target.rust }}/release/libsalloc.so /usr/lib/libsalloc.so
+          sudo cp ${{ github.workspace }}/target/${{ matrix.target.rust }}/release/libsavmasync.so /usr/lib/libsavmasync.so
           sudo ldconfig
 
-          ${{ github.workspace }}/target/${{ matrix.target[0] }}/release/satest
+          ${{ github.workspace }}/target/${{ matrix.target.rust }}/release/satest
 
   linux_crosscompile:
     name: Build SaVM ${{ matrix.target.feature }} (${{ matrix.target.rust }})
