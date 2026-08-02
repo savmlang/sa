@@ -474,7 +474,7 @@ jobs:
         shell: pwsh
         env:
           PACKAGE: savm-${{ matrix.config.target }}-${{ matrix.feature.build }}
-          TARGET: matrix.config.target
+          TARGET: ${{ matrix.config.target }}
         continue-on-error: true
         run: |
           cargo install --force cargo-expand
