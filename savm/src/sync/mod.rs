@@ -124,6 +124,7 @@ pub(crate) mod preps {
   }
 
   #[inline(always)]
+  #[allow(dead_code)]
   pub fn prep_jit(ts: *mut VMTaskState, marker: Option<u64>) {
     unsafe {
       // Add the JUMP entry

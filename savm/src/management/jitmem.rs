@@ -243,24 +243,23 @@ impl JITMemoryManager {
 
 #[rustfmt::skip]
 fn prefer_jitlink() -> bool {
-  true
-  // cfg!(
-  //   any(
-  //     all(
-  //       target_os = "linux", 
-  //       any(
-  //         target_arch = "x86_64",
-  //         target_arch = "aarch64",
-  //         target_arch = "riscv64",
-  //         target_arch = "powerpc64"
-  //       )
-  //     ),
-  //     all(
-  //       target_os = "macos",
-  //       target_arch = "aarch64"
-  //     )
-  //   )
-  // )
+  cfg!(
+    any(
+      all(
+        target_os = "linux", 
+        any(
+          target_arch = "x86_64",
+          target_arch = "aarch64",
+          target_arch = "riscv64",
+          target_arch = "powerpc64"
+        )
+      ),
+      all(
+        target_os = "macos",
+        target_arch = "aarch64"
+      )
+    )
+  )
 }
 
 impl Drop for JITMemoryManager {
