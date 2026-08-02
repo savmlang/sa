@@ -138,7 +138,6 @@ impl JITMemoryManager {
   where
     T: FnMut(*const str) -> usize,
   {
-    eprintln!("Saw write_llvm");
     use sajit::LLVMDryRun;
 
     let guaranteed =
