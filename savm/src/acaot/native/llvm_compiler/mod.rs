@@ -258,7 +258,11 @@ impl SaVMLLVMBuilder {
       Self::create(
         LLVMCodeGenOptLevel::LLVMCodeGenLevelAggressive,
         LLVMRelocMode::LLVMRelocStatic,
-        LLVMCodeModel::LLVMCodeModelSmall,
+        if cfg!(target_arch = "riscv64") {
+          LLVMCodeModel::LLVMCodeModelMedium
+        } else {
+          LLVMCodeModel::LLVMCodeModelSmall
+        },
         CacheLevel::LLVMEpitome,
         c"default<O3>".as_ptr(),
       )

@@ -336,7 +336,7 @@ jobs:
             path: |
               savm-${{ matrix.target.rust }}-${{ matrix.target.feature }}.zip
             archive: true
-            compression-level: 7
+            compression-level: 9
 
   linux_musl:
     name: Build SaVM ${{ matrix.feature.build }} (${{ matrix.config.target }})
@@ -474,7 +474,7 @@ jobs:
         shell: pwsh
         env:
           PACKAGE: savm-${{ matrix.config.target }}-${{ matrix.feature.build }}
-          TARGET: ""
+          TARGET: matrix.config.target
         continue-on-error: true
         run: |
           cargo install --force cargo-expand
@@ -493,7 +493,7 @@ jobs:
             path: |
               savm-${{ matrix.config.target }}-${{ matrix.feature.build }}.zip
             archive: true
-            compression-level: 7
+            compression-level: 9
 
   package_m:
     name: Package Installers (macOS)

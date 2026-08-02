@@ -35,7 +35,7 @@ license: "AGPL-3.0 With SaVM Linking Exception"
 
 contents:
   - # Copy fully
-    src: ${SAVM_EXPANDED}/
+    src: ${SAVM_EXPANDED}
     dst: /opt/savm
     expand: true
     type: tree
