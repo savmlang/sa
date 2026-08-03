@@ -82,6 +82,7 @@ const main = () => {
   recipe.split("\n").forEach((line) => {
     if (line.trim() == "!#RELEASE") {
       release = true;
+      return;
     }
 
     if (!release) {

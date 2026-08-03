@@ -6,6 +6,8 @@ target
 # Sysroots
 sysroot.tar.gz
 
+key.gpg
+
 # LLVM Directory
 llvm
 llvm__*
