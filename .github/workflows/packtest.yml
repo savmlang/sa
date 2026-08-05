@@ -106,3 +106,9 @@ jobs:
           RELEASE: true
         continue-on-error: true
         working-directory: scripts/build
+
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          path: |
+            ./scripts/build/

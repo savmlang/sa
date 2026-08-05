@@ -66,7 +66,12 @@ foreach ($tech in $iter) {
         }
 
         $packgers | ForEach-Object -Parallel {
-          nfpm pkg -p $_ --target ../outputs/ 2>&1
+          $output = nfpm pkg -p $_ --target ../outputs/ 2>&1
+          $output
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "nfpm failed for package: $_"
+          }
         }
         
         Set-Location ..
