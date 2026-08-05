@@ -1,5 +1,4 @@
 use crate::mir::{block::BlockId, function::ssa::ValueId, value::BaseType};
-use const_str::convert_ascii_case;
 use std::fmt::Formatter;
 
 pub mod loc;
@@ -11,6 +10,7 @@ macro_rules! instloader {
       $name:ident $({ $( $imm:ident: $ty:ty ),* })? ($($arg:ident),*) -> ($($out:ident),*)
     )*
   ) => {
+    pastey::paste!{
     /// `V*` instructions support BOTH vector and scalar values
     /// non `V` prefixed instructions are scalar only
     ///
@@ -51,7 +51,7 @@ macro_rules! instloader {
                 $imm,
               )*)?
             } => {
-              let name = convert_ascii_case!(lower, stringify!($name));
+              let name = stringify!([<$name:lower>]);
 
               // Show output if available
               #[allow(unused)]
@@ -149,6 +149,7 @@ macro_rules! instloader {
           ),*
         }
       }
+    }
     }
   };
 }
@@ -288,11 +289,17 @@ impl Register for ValueId {
   }
 }
 
-trait AHQF {
+pub(crate) trait AHQF {
   fn f(&self, f: &mut Formatter<'_>) -> std::fmt::Result;
 }
 
 impl AHQF for u64 {
+  fn f(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{self}")
+  }
+}
+
+impl AHQF for u32 {
   fn f(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     write!(f, "{self}")
   }

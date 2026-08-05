@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-const-str = "^1"
 dashmap = "^6"
+pastey = "^0.2"
 rapidhash = "^4"
+
+# Link against SaRT too
+sart = { path = "../../sart" }

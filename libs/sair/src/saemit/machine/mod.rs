@@ -1,8 +1,9 @@
 use crate::{
   StringStore,
+  llir::instr::loc::VMLoc,
   mir::{
     Module,
-    block::instr::loc::{LocSrc, VMRegister},
+    block::instr::loc::LocSrc,
     function::{Function, ssa::ValueId},
     value::{Alignment, ValueType, ValueTypeArray, ValueTypeRef},
   },
@@ -48,7 +49,7 @@ pub(crate) fn sabi_map<T: StringStore>(
     1..=8 => {
       output = Some(LocSrc {
         offset: 0,
-        reg: VMRegister::R7,
+        reg: VMLoc::R7,
 
         count: 1,
         width: 8,
@@ -57,7 +58,7 @@ pub(crate) fn sabi_map<T: StringStore>(
     9..=16 => {
       output = Some(LocSrc {
         offset: 0,
-        reg: VMRegister::R7,
+        reg: VMLoc::R7,
 
         count: 2,
         width: 8,
@@ -70,7 +71,7 @@ pub(crate) fn sabi_map<T: StringStore>(
       if size >= 64 {
         output = Some(LocSrc {
           offset: 0,
-          reg: VMRegister::Largepad,
+          reg: VMLoc::Largepad,
 
           count: 1,
           width: size,
@@ -78,7 +79,7 @@ pub(crate) fn sabi_map<T: StringStore>(
       } else {
         output = Some(LocSrc {
           offset: 0,
-          reg: VMRegister::Scratchpad,
+          reg: VMLoc::Scratchpad,
 
           count: 1,
           width: size,
