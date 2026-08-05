@@ -66,7 +66,7 @@ foreach ($tech in $iter) {
         }
 
         $packgers | ForEach-Object -Parallel {
-          nfpm pkg -p $_ --target ../outputs/
+          nfpm pkg -p $_ --target ../outputs/ 2>&1
         }
         
         Set-Location ..
