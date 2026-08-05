@@ -76,6 +76,7 @@ jobs:
 
       - name: Unencrypt data
         id: unencrypt
+        working-directory: scripts/build
         run: |
           keyid=$(echo -n "${{ needs.begin.outputs.GPG_KEY_ID }}" | openssl enc -d -aes-256-cbc -pbkdf2 -a -A -k "${{ secrets.CROSS_WORKFLOW_ENCRYPT_TEST }}")
           passphrase=$(echo -n "${{ needs.begin.outputs.GPG_PASSPHRASE }}" | openssl enc -d -aes-256-cbc -pbkdf2 -a -A -k "${{ secrets.CROSS_WORKFLOW_ENCRYPT_TEST }}")
@@ -89,7 +90,7 @@ jobs:
       - name: Download & Build Installers
         shell: pwsh
         run: |
-          gh run download 30831245521 --pattern *x86_64* --dir release
+          gh run download 30831245521 --pattern *x86_64-unknown-linux-gnu* --dir release
 
           echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
           sudo apt update
@@ -105,10 +106,3 @@ jobs:
           RELEASE: true
         continue-on-error: true
         working-directory: scripts/build
-
-      - uses: AlexGidarakos/upload-encrypted-artifact@v1
-        with:
-          source: |
-            ./scripts/build/**/*
-          password: ${{ secrets.CROSS_WORKFLOW_ENCRYPT_TEST }}
-          retention-days: 1
