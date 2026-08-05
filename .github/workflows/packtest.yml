@@ -11,6 +11,7 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    # Outputs
     outputs:
       GPG_KEY_B64: ${{ steps.secrets.outputs.GPG_KEY_B64 }}
       GPG_KEY_ID: ${{ steps.secrets.outputs.GPG_KEY_ID }}
