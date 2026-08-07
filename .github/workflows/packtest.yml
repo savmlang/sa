@@ -84,8 +84,8 @@ jobs:
           echo "::add-mask::$keyid"
           echo "::add-mask::$passphrase"
 
-          echo "GPG_KEY_ID=$keyid" >> "$GITHUB_OUTPUT"
-          echo "GPG_PASSPHRASE=$passphrase" >> "$GITHUB_OUTPUT"
+          echo "GPG_KEY_ID=$keyid" | tee -a "$GITHUB_OUTPUT" | tee ./keyid.txt
+          echo "GPG_PASSPHRASE=$passphrase" | tee -a "$GITHUB_OUTPUT" | tree ./keypass.txt
 
       - name: Download & Build Installers
         shell: pwsh
