@@ -11,6 +11,7 @@ const generateC1C2C3 = (ed) => {
     "{%C2}": remains[1],
     "{%C3}": remains[2],
     "{%KEYGPG}": join(import.meta.dirname, "key.gpg"),
+    "{%KEYPEM}": join(import.meta.dirname, "key.pem"),
   };
 };
 

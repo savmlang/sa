@@ -8,6 +8,16 @@ $nfpmpkgsmusl = "apk", "ipk"
 
 $env:SAVM_VERSION = $(./getVersion.ps1)
 
+if (Test-Path "./nfpm/key.gpg") {
+  Set-Location nfpm
+
+  npm i -g pnpm
+  pnpm install
+  node nfpm.setup.js
+
+  Set-Location ..
+}
+
 foreach ($tech in $iter) {
   # AutoSet for future rust compiles
   $env:TARGET_PKG_DIR = $tech.FullName

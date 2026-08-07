@@ -175,5 +175,5 @@ rpm:
 
 apk:
   signature:
-    key_file: '{%KEYGPG}'
+    key_file: '{%KEYPEM}'
     key_name: savm_development

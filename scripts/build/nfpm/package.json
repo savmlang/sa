@@ -1,0 +1,16 @@
+{
+  "name": "nfpm",
+  "version": "1.0.0",
+  "description": "NFPM management tools",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^11.9.0",
+      "onFail": "download"
+    }
+  },
+  "type": "module",
+  "dependencies": {
+    "openpgp": "^6"
+  }
+}
