@@ -2,8 +2,8 @@ name: Build SaVM for Release
 
 on:
   push:
-    # tags:
-    #   - v*
+    tags:
+      - v*
 
 permissions:
   contents: write
@@ -39,16 +39,16 @@ jobs:
           echo "GPG_PASSPHRASE=$gpgpassphrase" >> "$GITHUB_OUTPUT"
 
   # Builds can start while approval awaits
-  # build:
-  #   name: Build SaVM
-  #   uses: ./.github/workflows/buildtest.yml
+  build:
+    name: Build SaVM
+    uses: ./.github/workflows/buildtest.yml
 
-  #   with:
-  #     artifact: "true"
+    with:
+      artifact: "true"
 
   publish:
     name: Publish Official SaVM
-    needs: [begin] #, build]
+    needs: [begin, build]
 
     runs-on: ubuntu-latest
 
@@ -97,8 +97,7 @@ jobs:
       - name: Download & Build Installers
         shell: pwsh
         run: |
-          # gh run download ${{ github.run_id }} --dir release
-          gh run download 31179821351 --dir release --pattern *-unknown-linux-musl*
+          gh run download ${{ github.run_id }} --dir release
 
           echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
           sudo apt update
