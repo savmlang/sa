@@ -90,7 +90,7 @@ jobs:
       - name: Download & Build Installers
         shell: pwsh
         run: |
-          gh run download 30831245521 --pattern *x86_64-unknown-linux-gnu* --dir release
+          gh run download 30831245521 --pattern *x86_64-unknown-linux-gnu-nano* --dir release
 
           echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
           sudo apt update
