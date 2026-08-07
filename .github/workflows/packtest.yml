@@ -21,25 +21,15 @@ jobs:
       - name: Pass Secrets
         id: secrets
         run: |
+          echo "::add-mask::${{ secrets.GPG_KEY }}"
           echo "::add-mask::${{ secrets.GPG_KEY_ID }}"
           echo "::add-mask::${{ secrets.GPG_PASSPHRASE }}"
 
-          # Use multiline to pass strings
-          cat << 'EOF' > key.gpg
-          ${{ secrets.GPG_KEY }}
-          EOF
-
-          base64key=$(cat key.gpg | base64 | tr -d '\n')
-
-          base64enc=$(echo -n "$base64key" | openssl enc -aes-256-cbc -pbkdf2 -a -A -k "${{ secrets.CROSS_WORKFLOW_ENCRYPT_TEST }}")
+          base64enc=$(echo -n "${{ secrets.GPG_KEY }}" | openssl enc -aes-256-cbc -pbkdf2 -a -A -k "${{ secrets.CROSS_WORKFLOW_ENCRYPT_TEST }}")
           gpgkeyid=$(echo -n "${{ secrets.GPG_KEY_ID }}" | openssl enc -aes-256-cbc -pbkdf2 -a -A -k "${{ secrets.CROSS_WORKFLOW_ENCRYPT_TEST }}")
           gpgpassphrase=$(echo -n "${{ secrets.GPG_PASSPHRASE }}" | openssl enc -aes-256-cbc -pbkdf2 -a -A -k "${{ secrets.CROSS_WORKFLOW_ENCRYPT_TEST }}")
 
-          echo "::add-mask::$base64key"
           echo "GPG_KEY_B64=$base64enc" >> "$GITHUB_OUTPUT"
-
-          rm key.gpg
-
           echo "GPG_KEY_ID=$gpgkeyid" >> "$GITHUB_OUTPUT"
           echo "GPG_PASSPHRASE=$gpgpassphrase" >> "$GITHUB_OUTPUT"
 
@@ -84,8 +74,8 @@ jobs:
           echo "::add-mask::$keyid"
           echo "::add-mask::$passphrase"
 
-          echo "GPG_KEY_ID=$keyid" | tee -a "$GITHUB_OUTPUT" | tee ./keyid.txt
-          echo "GPG_PASSPHRASE=$passphrase" | tee -a "$GITHUB_OUTPUT" | tee ./keypass.txt
+          echo "GPG_KEY_ID=$keyid" >> "$GITHUB_OUTPUT"
+          echo "GPG_PASSPHRASE=$passphrase" >> "$GITHUB_OUTPUT"
 
       - name: Download & Build Installers
         shell: pwsh
@@ -106,9 +96,3 @@ jobs:
           RELEASE: true
         continue-on-error: true
         working-directory: scripts/build
-
-      - name: Upload
-        uses: actions/upload-artifact@v7
-        with:
-          path: |
-            ./scripts/build/
