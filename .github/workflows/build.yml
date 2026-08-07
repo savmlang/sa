@@ -30,9 +30,9 @@ jobs:
           echo "::add-mask::${{ secrets.GPG_KEY_ID }}"
           echo "::add-mask::${{ secrets.GPG_PASSPHRASE }}"
 
-          base64enc=$(echo -n "${{ secrets.GPG_KEY }}" | openssl enc -aes-256-cbc -pbkdf2 -a -A -k "${{ secrets.CROSS_WORKFLOW_ENCRYPT_TEST }}")
-          gpgkeyid=$(echo -n "${{ secrets.GPG_KEY_ID }}" | openssl enc -aes-256-cbc -pbkdf2 -a -A -k "${{ secrets.CROSS_WORKFLOW_ENCRYPT_TEST }}")
-          gpgpassphrase=$(echo -n "${{ secrets.GPG_PASSPHRASE }}" | openssl enc -aes-256-cbc -pbkdf2 -a -A -k "${{ secrets.CROSS_WORKFLOW_ENCRYPT_TEST }}")
+          base64enc=$(echo -n "${{ secrets.GPG_KEY }}" | openssl enc -aes-256-cbc -pbkdf2 -a -A -k "${{ secrets.CROSS_WORKFLOW_ENCRYPT }}")
+          gpgkeyid=$(echo -n "${{ secrets.GPG_KEY_ID }}" | openssl enc -aes-256-cbc -pbkdf2 -a -A -k "${{ secrets.CROSS_WORKFLOW_ENCRYPT }}")
+          gpgpassphrase=$(echo -n "${{ secrets.GPG_PASSPHRASE }}" | openssl enc -aes-256-cbc -pbkdf2 -a -A -k "${{ secrets.CROSS_WORKFLOW_ENCRYPT }}")
 
           echo "GPG_KEY_B64=$base64enc" >> "$GITHUB_OUTPUT"
           echo "GPG_KEY_ID=$gpgkeyid" >> "$GITHUB_OUTPUT"
