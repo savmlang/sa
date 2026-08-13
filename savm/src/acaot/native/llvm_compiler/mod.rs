@@ -227,27 +227,14 @@ impl SaVMLLVMBuilder {
     }
   }
 
-  pub fn create_cinder<const T: bool>() -> Box<dyn NativeCompiler<T>> {
+  pub fn create_crater<const T: bool>() -> Box<dyn NativeCompiler<T>> {
     Box::new(
       Self::create(
         LLVMCodeGenOptLevel::LLVMCodeGenLevelLess,
         LLVMRelocMode::LLVMRelocStatic,
         LLVMCodeModel::LLVMCodeModelLarge,
-        CacheLevel::LLVMCinder,
-        c"default<O1>".as_ptr(),
-      )
-      .expect("Unable to initialize LLVM"),
-    )
-  }
-
-  pub fn create_crater<const T: bool>() -> Box<dyn NativeCompiler<T>> {
-    Box::new(
-      Self::create(
-        LLVMCodeGenOptLevel::LLVMCodeGenLevelDefault,
-        LLVMRelocMode::LLVMRelocStatic,
-        LLVMCodeModel::LLVMCodeModelLarge,
         CacheLevel::LLVMCrater,
-        c"default<O2>".as_ptr(),
+        c"default<O1>".as_ptr(),
       )
       .expect("Unable to initialize LLVM"),
     )
@@ -338,7 +325,7 @@ impl<const T: bool> NativeCompiler<T> for SaVMLLVM {
           llvmctx: ctx,
           llvmmodule: module,
           llvmfn: function_val,
-          rel: matches!(self.cache, CacheLevel::LLVMCinder | CacheLevel::LLVMCrater),
+          rel: matches!(self.cache, CacheLevel::LLVMEpitome),
           ws: [0; 20],
           prologue,
           trap: LLVMAppendBasicBlockInContext(ctx, function_val, c"trap".as_ptr()),

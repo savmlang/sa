@@ -39,6 +39,7 @@ sart = { path = "../sart" }
 
 # SaVM Native Linker and CodeAllocator
 sajit = { path = "../sajit", optional = true }
+savmbuild_cinder = { path = "../savm_build_cinder", optional = true }
 serde = { version = "^1", features = ["derive"] }
 
 # Lexical
@@ -53,6 +54,7 @@ saffine = { path = "../internal/saffine" }
 [build-dependencies]
 cc = { version = "^1", optional = true }
 savmbuild = { path = "../savm_build", optional = true }
+savmbuild_cinder = { path = "../savm_build_cinder", optional = true }
 
 [features]
 default = []
@@ -62,9 +64,15 @@ ffi_system = ["sart/ffi_system"]
 # Development mode (rust-analyzer)
 dev = ["cranelift", "llvm", "printir"]
 
-llvm = ["dep:llvm-sys", "dep:cc", "dep:savmbuild", "native", "sajit/llvm"]
+llvm = ["dep:llvm-sys", "dep:savmbuild", "native", "sajit/llvm"]
 cranelift = ["dep:cranelift", "native"]
-native = ["dep:sajit", "dep:crossbeam-channel", "dag"]
+native = [
+  "dep:sajit",
+  "dep:crossbeam-channel",
+  "dep:cc",
+  "dep:savmbuild_cinder",
+  "dag",
+]
 
 # AcDAG support
 dag = []

@@ -419,8 +419,16 @@ fn process_jit<T: BytecodeResolver + Send + Sync + 'static>(
               CacheLevel::LLVMEpitome => {
                 todo!("Soon");
               }
+              #[cfg(all(
+                feature = "native",
+                any(target_arch = "x86_64", target_arch = "x86"),
+                any(target_os = "windows", target_os = "linux")
+              ))]
+              CacheLevel::ACAoTCinder => {
+                todo!("Soon");
+              }
               #[cfg(feature = "llvm")]
-              CacheLevel::LLVMCinder | CacheLevel::LLVMCrater => {
+              CacheLevel::LLVMCrater => {
                 let (bin, parent_counter) = sajit
                   .write_llvm(&binary, |_| {
                     panic!("Crater and Cinder need not resolve pointers.");

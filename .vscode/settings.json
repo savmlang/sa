@@ -44,7 +44,7 @@
     }
   },
   "terminal.integrated.defaultProfile.osx": "SaVM Development",
-  "C_Cpp.default.intelliSenseMode": "windows-msvc-x64",
+  "C_Cpp.default.intelliSenseMode": "windows-clang-x64",
   "yaml.disableSchemaDetection": [
     "**/.github/workflows/*.yml",
     "**/.github/workflows/*.yaml",
@@ -53,5 +53,8 @@
     "**/.forgejo/workflows/*.yml",
     "**/.forgejo/workflows/*.yaml",
     "file:///e%3A/GitHub/ahqrt-asm-sa/.github/actions/build-savm/action.yml"
-  ]
+  ],
+  "C_Cpp.default.compilerPath": "clang",
+  "C_Cpp.default.cStandard": "c23",
+  "C_Cpp.default.cppStandard": "c++23"
 }

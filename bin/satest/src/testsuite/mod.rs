@@ -130,7 +130,7 @@ pub fn test_jits<T: BytecodeResolver + Send + Sync + 'static>(
               jitdata.mem().write_quick(&binary, &reloc)
             }
             #[cfg(feature = "llvm")]
-            CacheLevel::LLVMCinder | CacheLevel::LLVMCrater | CacheLevel::LLVMEpitome => jitdata
+             CacheLevel::LLVMCrater | CacheLevel::LLVMEpitome => jitdata
               .mem()
               .write_llvm(&binary, |_x| {
                 panic!("Resolver asked for {}!", unsafe { &*_x });

@@ -45,11 +45,15 @@ impl<const T: bool> NativeCompilerBuilder<T> for CompilerBuilder<T> {
 pub fn testing_compiler_infra<const SENDBACK: bool>()
 -> &'static [(&'static str, &'static dyn NativeCompilerBuilder<SENDBACK>)] {
   &[
-    #[cfg(feature = "llvm")]
-    (
-      "Cinder - LLVM JIT",
-      &CompilerBuilder(SaVMLLVMBuilder::create_cinder, CacheLevel::LLVMCinder),
-    ),
+    // #[cfg(all(
+    //   feature = "native",
+    //   any(target_arch = "x86_64", target_arch = "x86"),
+    //   any(target_os = "windows", target_os = "linux")
+    // ))]
+    // (
+    //   "Cinder - ACAoT JIT",
+    //   &CompilerBuilder(SaVMLLVMBuilder::create_cinder, CacheLevel::LLVMCinder),
+    // ),
     #[cfg(feature = "cranelift")]
     (
       "Crafter - Cranelift JIT",
@@ -85,8 +89,12 @@ pub fn testing_epitier_compilers<const SENDBACK: bool>()
 pub fn compiler_infra<const SENDBACK: bool>()
 -> &'static [&'static dyn NativeCompilerBuilder<SENDBACK>] {
   &[
-    #[cfg(all(feature = "llvm", not(feature = "cranelift")))]
-    &CompilerBuilder(SaVMLLVMBuilder::create_cinder, CacheLevel::LLVMCinder),
+    // #[cfg(all(
+    //   feature = "native",
+    //   any(target_arch = "x86_64", target_arch = "x86"),
+    //   any(target_os = "windows", target_os = "linux")
+    // ))]
+    // &CompilerBuilder(SaVMLLVMBuilder::create_cinder, CacheLevel::LLVMCinder),
     #[cfg(feature = "cranelift")]
     &CompilerBuilder(SaVMCranelift::create_abs8, CacheLevel::CraneliftCrafter),
     #[cfg(feature = "llvm")]

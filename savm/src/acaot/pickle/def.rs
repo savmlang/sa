@@ -1,4 +1,7 @@
-use crate::{BytecodeResolver, acaot::pickle::implementation::*};
+use crate::{
+  BytecodeResolver,
+  acaot::pickle::{VMTaskState, implementation::*},
+};
 
 /// Pickle is our own internal NE implementation
 /// for converting variable width bytecode into pickle
@@ -37,6 +40,12 @@ macro_rules! opcodes {
           ),*
         ]
       }
+
+      $(
+        pub extern "C" fn [<c_call_ $opcode:lower>]$(<$generic: BytecodeResolver + Send + Sync + 'static>)?(pickle: *mut PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
+          return [<call_ $opcode:lower>]$(::<$generic>)?(unsafe { &*pickle }, ws, taskstate);
+        }
+      )*
     }
   };
 }

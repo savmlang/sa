@@ -80,9 +80,9 @@ unsafe impl Sync for CacheData {}
 #[derive(Debug, Clone, Copy)]
 pub enum CacheLevel {
   Pickle,
+  ACAoTCinder,
   CraneliftCrafter,
   CraneliftEpicenter,
-  LLVMCinder,
   LLVMCrater,
   LLVMEpitome,
 }
@@ -93,7 +93,7 @@ impl CacheLevel {
   pub fn to_int(&self) -> u8 {
     match self {
       Self::Pickle => 0,
-      Self::LLVMCinder => 1,
+      Self::ACAoTCinder => 1,
       Self::CraneliftCrafter => 2,
       Self::CraneliftEpicenter => 3,
       Self::LLVMCrater => 4,
@@ -104,7 +104,7 @@ impl CacheLevel {
   pub fn from_int(cachelevel: i64) -> Option<Self> {
     Some(match cachelevel {
       0 => Self::Pickle,
-      1 => Self::LLVMCinder,
+      1 => Self::ACAoTCinder,
       2 => Self::CraneliftCrafter,
       3 => Self::CraneliftEpicenter,
       4 => Self::LLVMCrater,

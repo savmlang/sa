@@ -4,11 +4,17 @@ on:
   push:
     branches:
       - main
+      - feat-*
+
     paths:
       - ./bin/**/*
       - ./savm/**/*
 
   pull_request:
+    branches:
+      - main
+      - v*
+
   workflow_dispatch:
   workflow_call:
     inputs:

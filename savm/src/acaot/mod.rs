@@ -6,9 +6,14 @@
 //! with static deterministic optimization.
 //!
 //! ACAoT has the [pickle] subsystem to convert Sa Bytecode to its own Pickle format
-//! (which is used by chocolate interpreter) and compilers like Crafter [cranelift]
-//! and Crater [llvm-sys] converts that to reality for SaVMJIT Tiers like Crafter, Crater, Epicenter, Epitome.
+//! (which is used by chocolate interpreter)
 //!
+//! ACAoT Features compilers:
+//! - Cranelift [cranelift]: Crafter, Epicenter
+//! - LLVM [llvm_sys]: Crater, Epitome
+//!
+//! ACAoT Featured Copy-Patch JIT:
+//! - ACAoT Cinder: Cinder
 //!
 //! # Meet ACAoT
 //! The compiler toolchain backend for SaVM
@@ -21,13 +26,19 @@
 //!
 //! Powering Chocolate, Crafter and Crater!
 //!
-//! ## Meet the project
-//! Designed for years, written in days!
 
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "dag")]
 pub mod acdag;
+
+#[cfg(all(
+  feature = "native",
+  any(target_arch = "x86_64", target_arch = "x86"),
+  any(target_os = "windows", target_os = "linux")
+))]
+pub mod cinder;
+
 #[cfg(feature = "native")]
 pub mod native;
 pub mod pickle;
