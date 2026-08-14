@@ -4,21 +4,22 @@ use std::{
   ptr::{self, addr_of_mut, null_mut},
 };
 
+use sart::ctr::{CVMTaskState, VMTaskState};
+
+#[cfg(feature = "libffi")]
 use sart::structures::ffi::{
-  LFFITypeMap, VReg,
+  COut, CallSig, LFFITypeMap, VReg,
   libffi_sys::{
     FFI_TYPE_STRUCT, ffi_abi_FFI_DEFAULT_ABI, ffi_call, ffi_cif, ffi_prep_cif, ffi_type,
     ffi_type_uint8, ffi_type_uint16, ffi_type_uint32, ffi_type_uint64, ffi_type_void,
   },
 };
-use sart::{
-  ctr::{CVMTaskState, VMTaskState},
-  structures::ffi::{COut, CallSig},
-};
+
+#[cfg(feature = "libffi")]
+use crate::FNCALL_DISPATCH;
 
 use crate::{
-  BytecodeResolver, CODE_CACHE, FNCALL_DISPATCH, SymbolMapTable, SymbolMapTableInfo, ThreadSafe,
-  VM,
+  BytecodeResolver, CODE_CACHE, SymbolMapTable, SymbolMapTableInfo, ThreadSafe, VM,
   acaot::pickle::{def::PickleInstruction, implementation::WorkingSet},
   arrcastint, resolve_location_src,
 };
@@ -51,6 +52,12 @@ pub extern "C" fn ffi_synccall_sectionid<T: BytecodeResolver + Send + Sync + 'st
 }
 
 pub extern "C" fn ffi_libcall_sectionid(taskstate: *mut VMTaskState, sectionid: u64) {
+  #[cfg(not(feature = "libffi"))]
+  {
+    unreachable!("cdecl requires libffi and that is disabled");
+  }
+
+  #[cfg(feature = "libffi")]
   {
     // let vm = (*taskstate).engine.pt as *const _ as *const VM;
 
@@ -84,6 +91,7 @@ pub fn call_synccall<T: BytecodeResolver + Send + Sync + 'static>(
 
     return match (*vm).resolve.as_ref().learn_data(sectionid) {
       SymbolMapTableInfo::MixedSizedBytecode => dispatch(),
+      #[cfg(feature = "libffi")]
       SymbolMapTableInfo::NativePointer => {
         FNCALL_DISPATCH.get()
           .map_or_else(|| {
@@ -103,6 +111,7 @@ pub fn call_synccall<T: BytecodeResolver + Send + Sync + 'static>(
   }
 }
 
+#[cfg(feature = "libffi")]
 static mut BITS128_ELEMENTS: [*mut ffi_type; 3] = {
   [
     addr_of_mut!(ffi_type_uint64),
@@ -111,6 +120,7 @@ static mut BITS128_ELEMENTS: [*mut ffi_type; 3] = {
   ]
 };
 
+#[cfg(feature = "libffi")]
 static FFI_TYPE_BITS128: ThreadSafe<ffi_type> = ThreadSafe(ffi_type {
   size: 0,      // libffi fills this
   alignment: 0, // libffi fills this
@@ -118,6 +128,7 @@ static FFI_TYPE_BITS128: ThreadSafe<ffi_type> = ThreadSafe(ffi_type {
   elements: { &raw mut BITS128_ELEMENTS as *mut _ },
 });
 
+#[cfg(feature = "libffi")]
 fn run_cdecl(fnptr: *const (), cdecl: &CallSig, taskstate: *mut VMTaskState) {
   match cdecl {
     CallSig::SaFFI(_) => unsafe {
@@ -125,6 +136,7 @@ fn run_cdecl(fnptr: *const (), cdecl: &CallSig, taskstate: *mut VMTaskState) {
 
       fcall(taskstate as _);
     },
+
     CallSig::CDef(cdef) => unsafe {
       let mut bits128 = FFI_TYPE_BITS128.0;
 

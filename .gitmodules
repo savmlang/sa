@@ -10,3 +10,6 @@
 [submodule "mixedradix"]
 	path = mixedradix
 	url = https://github.com/savmlang/mixedradix.git
+[submodule "saw"]
+	path = saw
+	url = https://github.com/savmlang/saw

@@ -1,12 +1,17 @@
 use crate::{
-  BytecodeResolver, CODE_CACHE, CacheData, FNCALL_DISPATCH, SaVMJumps, SymbolMapTable, ThreadSafe,
+  BytecodeResolver, CODE_CACHE, CacheData, SaVMJumps, SymbolMapTable, ThreadSafe,
   acaot::pickle::{PickleWorker, def::PickleInstruction},
 };
 use ahash::{HashMap, HashMapExt};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 #[cfg(feature = "native")]
 use sajit::Executable;
+
+#[cfg(feature = "libffi")]
+use crate::FNCALL_DISPATCH;
+#[cfg(feature = "libffi")]
 use sart::structures::ffi::CallSig;
+
 use std::sync::Arc;
 
 // Native (JIT) layers
@@ -33,6 +38,7 @@ use jitmem::JITMemoryManager;
 
 enum ProcessResult {
   Pickle(u64, Arc<[PickleInstruction]>, SaVMJumps, Arc<[u64]>),
+  #[cfg(feature = "libffi")]
   Native(u64, ThreadSafe<*const ()>, CallSig),
   None,
 }
@@ -124,6 +130,7 @@ pub fn schedule<
 pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(resolve: Arc<T>) {
   let last = resolve.as_ref().last_section_id();
 
+  #[cfg(feature = "libffi")]
   let mut nativeptr = HashMap::new();
   (0..=last)
     .into_par_iter()
@@ -150,6 +157,7 @@ pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(resolve: Arc
           _ => ProcessResult::None,
         }
       }
+      #[cfg(feature = "libffi")]
       SymbolMapTable::NativePointer { fnptr, cdecl } => {
         ProcessResult::Native(id, ThreadSafe(fnptr), cdecl)
       }
@@ -171,12 +179,14 @@ pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(resolve: Arc
           },
         );
       }
+      #[cfg(feature = "libffi")]
       ProcessResult::Native(module, fnptr, csig) => {
         _ = nativeptr.insert(module, (fnptr, csig));
       }
       _ => {}
     });
 
+  #[cfg(feature = "libffi")]
   let _nptr = FNCALL_DISPATCH.get_or_init(|| nativeptr);
 
   #[cfg(feature = "native")]

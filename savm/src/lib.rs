@@ -14,6 +14,8 @@ use std::{
 
 use ahash::HashMap;
 use moka::sync::{CacheBuilder, SegmentedCache};
+
+#[cfg(feature = "libffi")]
 use sart::structures::ffi::CallSig;
 
 pub use sart;
@@ -36,12 +38,19 @@ pub static TOTAL_THREADS: LazyLock<usize> =
 static VMMADE: OnceLock<()> = OnceLock::new();
 
 pub enum SymbolMapTable<T> {
-  NativePointer { fnptr: *const (), cdecl: CallSig },
-  MixedSizedBytecode { bytecode: T },
+  #[cfg(feature = "libffi")]
+  NativePointer {
+    fnptr: *const (),
+    cdecl: CallSig,
+  },
+  MixedSizedBytecode {
+    bytecode: T,
+  },
 }
 
 #[repr(C)]
 pub enum SymbolMapTableInfo {
+  #[cfg(feature = "libffi")]
   NativePointer,
   MixedSizedBytecode,
 }
@@ -170,6 +179,7 @@ pub trait BytecodeResolver: Any {
   fn update_cache(&self, section: u64, cache: CacheData);
 }
 
+#[cfg(feature = "libffi")]
 pub(crate) static FNCALL_DISPATCH: OnceLock<HashMap<u64, (ThreadSafe<*const ()>, CallSig)>> =
   OnceLock::new();
 

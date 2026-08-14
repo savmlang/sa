@@ -57,9 +57,10 @@ savmbuild = { path = "../savm_build", optional = true }
 savmbuild_cinder = { path = "../savm_build_cinder", optional = true }
 
 [features]
-default = []
+default = ["libffi"]
 
-ffi_system = ["sart/ffi_system"]
+libffi = ["sart/libffi"]
+ffi_system = ["libffi", "sart/ffi_system"]
 
 # Development mode (rust-analyzer)
 dev = ["cranelift", "llvm", "printir"]
@@ -79,3 +80,6 @@ dag = []
 
 # Prints the IR
 printir = []
+
+# WASM Compat
+wasm = ["sart/wasm"]
