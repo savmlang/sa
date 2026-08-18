@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <stdalign.h>
+#include <stddef.h>
 
 #if defined(_MSC_VER)
 #define FORCE_INLINE static __forceinline
@@ -35,7 +36,7 @@ typedef struct IVM
   uint64_t r2, r3, r4, r5, r6, r7, r8;
 
   // scratchpad, largepad, ame
-  uint64_t _, _1, _2;
+  alignas(8) void *scratchpad, *largepad, *ame;
 
   uint32_t flags, opcodes;
 

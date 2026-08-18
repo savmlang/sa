@@ -1,6 +1,6 @@
 use savm::{
-  BytecodeResolver, Executable, VM, acaot::pickle::def::PickleInstruction,
-  sart::ctr::OPCODES::OPCODE_JIT_CHECK,
+  acaot::pickle::def::PickleInstruction, sart::ctr::OPCODES::OPCODE_JIT_CHECK, BytecodeResolver,
+  Executable, VM,
 };
 
 pub fn run_jit<T: BytecodeResolver + Send + Sync + 'static>(
@@ -15,7 +15,7 @@ pub fn run_jit<T: BytecodeResolver + Send + Sync + 'static>(
     if name == "Cinder - ACAoT JIT" {
       #[cfg(all(
         feature = "native",
-        any(target_arch = "x86_64", target_arch = "x86"),
+        any(target_arch = "x86_64", target_arch = "aarch64"),
         any(target_os = "windows", target_os = "linux")
       ))]
       {

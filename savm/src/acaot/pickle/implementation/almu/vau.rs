@@ -27,13 +27,14 @@ fn arithprelude(
 ) {
   let ARITH {
     datatype,
-    count,
-    instdefined,
     src1,
-    of_src1,
     src2,
-    of_src2,
     tgt,
+    count,
+
+    instdefined,
+    of_src1,
+    of_src2,
     of_tgt,
   } = parse_arith(unsafe { (*ws).arr });
 

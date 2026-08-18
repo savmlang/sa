@@ -82,13 +82,19 @@ pub fn emit<T: BytecodeResolver + Send + Sync + 'static>(
         _ = entries.insert(marker, idx as _);
       }
 
-      // JMP-ABLE
-      PICKLE_OPCODE_JMP | PICKLE_OPCODE_JIF | PICKLE_OPCODE_TASK => {
-        let marker = match opcode {
-          PICKLE_OPCODE_JMP => {
-            u64::from_ne_bytes(unsafe { ws.get_unchecked(0..8).try_into().unwrap_unchecked() })
-          }
+      PICKLE_OPCODE_JMP => {
+        let marker =
+          u64::from_ne_bytes(unsafe { ws.get_unchecked(0..8).try_into().unwrap_unchecked() });
 
+        comptime.mapping.push(stencilify(&[StencilMap {
+          stencil: &inst_nop,
+          resolve: stencilify(&[("NEXT", Resolved::ResolveLaterStencilID { marker })]),
+        }]));
+      }
+
+      // JMP-ABLE
+      PICKLE_OPCODE_JIF | PICKLE_OPCODE_TASK => {
+        let marker = match opcode {
           PICKLE_OPCODE_JIF => {
             u64::from_ne_bytes(unsafe { ws.get_unchecked(4..12).try_into().unwrap_unchecked() })
           }

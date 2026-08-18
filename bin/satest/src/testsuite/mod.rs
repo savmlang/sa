@@ -5,20 +5,20 @@ use std::{sync::Arc, time::Instant};
 use crate::ExpectedOutput;
 #[cfg(feature = "native")]
 use crate::{
+  jitmem::{run::run_jit, JITMemData, JITMems},
   Resolver,
-  jitmem::{JITMemData, JITMems, run::run_jit},
 };
 use console::Style;
-use savm::{BytecodeResolver, VM, sart::ctr::FLAGS::FLAG_FIRST, sync::VMSTAT};
 #[cfg(feature = "native")]
 use savm::{
-  CacheData, CacheLevel,
   acaot::{
-    native::{NativeCompiler, NativeCompilerBuilder, testing_epitier_compilers},
+    native::{testing_epitier_compilers, NativeCompiler, NativeCompilerBuilder},
     pickle::def::PickleInstruction,
   },
   kvwrap::SaVMJumpWrapRef,
+  CacheData, CacheLevel,
 };
+use savm::{sart::ctr::FLAGS::FLAG_FIRST, sync::VMSTAT, BytecodeResolver, VM};
 
 pub fn clean() {
   VMSTAT.with(|x| {
@@ -73,8 +73,8 @@ pub fn test_jits<T: BytecodeResolver + Send + Sync + 'static>(
 ) {
   use crate::err;
   use savm::{
-    SymbolMapTable,
     acaot::{native::testing_compiler_infra, pickle::PickleWorker},
+    SymbolMapTable,
   };
 
   let mut worker = PickleWorker {
@@ -143,7 +143,7 @@ pub fn test_jits<T: BytecodeResolver + Send + Sync + 'static>(
         },
         #[cfg(all(
           feature = "native",
-          any(target_arch = "x86_64", target_arch = "x86"),
+          any(target_arch = "x86_64", target_arch = "aarch64"),
           any(target_os = "windows", target_os = "linux")
         ))]
         savm::CacheData::CinderTempCache { entrymap, binary } => {

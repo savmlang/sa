@@ -29,7 +29,7 @@ fn build_cinder() {
 
   let arch = var("CARGO_CFG_TARGET_ARCH").unwrap();
 
-  let supported = ["x86_64", "x86"];
+  let supported = ["x86_64"];
 
   if supported.contains(&&*arch) {
     let mut defcompiler = Build::new();

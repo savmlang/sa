@@ -14,7 +14,7 @@ use sart::structures::ffi::CallSig;
 
 #[cfg(all(
   feature = "native",
-  any(target_arch = "x86_64", target_arch = "x86"),
+  any(target_arch = "x86_64", target_arch = "aarch64"),
   any(target_os = "windows", target_os = "linux")
 ))]
 pub mod cinder;
@@ -423,7 +423,7 @@ fn process_jit<T: BytecodeResolver + Send + Sync + 'static>(
         } => {
           #[cfg(all(
             feature = "native",
-            any(target_arch = "x86_64", target_arch = "x86"),
+            any(target_arch = "x86_64", target_arch = "aarch64"),
             any(target_os = "windows", target_os = "linux")
           ))]
           {
