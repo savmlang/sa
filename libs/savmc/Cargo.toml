@@ -8,5 +8,5 @@ crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
 postcard = { version = "^1", features = ["alloc"], default-features = false }
-savm = { path = "../../savm", default-features = false }
+savm = { path = "../../savm" }
 cprelude = { path = "../cprelude" }

@@ -1,17 +1,18 @@
-use std::{collections::HashMap, mem::forget, time::Duration};
+use std::{collections::HashMap, mem::forget, sync::Arc, time::Duration};
 
-use savm::management::jitmem::JITMemoryManager;
+use savm::{acaot::pickle::def::PickleInstruction, management::jitmem::JITMemoryManager};
 
 pub mod run;
 
 pub struct JITMemData {
   pub mem: Option<JITMemoryManager>,
+
   pub ptrstore: HashMap<(u64, &'static str), (*const (), Duration)>,
 }
 
 pub struct JITMems {
   pub general: JITMemData,
-
+  pub picklestore: HashMap<u64, Arc<[PickleInstruction]>>,
   pub epitier: [JITMemData; 2],
 }
 
@@ -38,5 +39,6 @@ pub fn default() -> JITMems {
   JITMems {
     general: default_mem(),
     epitier: [default_mem(), default_mem()],
+    picklestore: Default::default(),
   }
 }

@@ -15,6 +15,7 @@ macro_rules! instloader {
     /// non `V` prefixed instructions are scalar only
     ///
     /// `V_` prefixed instructions mean that they selectively accept vectors
+    #[derive(Debug, Clone)]
     pub enum HLInstruction<T: Register> {
       $(
         $(#[$meta])*
@@ -147,6 +148,34 @@ macro_rules! instloader {
               )*
             }
           ),*
+        }
+      }
+
+      pub fn map<U: Register, F: FnMut(&T) -> U>(&self, mut f: F) -> HLInstruction<U> {
+        match self {
+          $(
+            Self::$name {
+              $(
+                $arg,
+              )*
+              $(
+                $out,
+              )*
+              $($(
+                $imm,
+              )*)?
+            } => HLInstruction::$name {
+              $(
+                $arg: f($arg),
+              )*
+              $(
+                $out: f($out),
+              )*
+              $($(
+                $imm: $imm.clone(),
+              )*)?
+            },
+          )*
         }
       }
     }

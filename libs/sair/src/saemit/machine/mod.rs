@@ -8,16 +8,33 @@ use crate::{
     value::{Alignment, ValueType, ValueTypeArray, ValueTypeRef},
   },
 };
-use std::{fmt::Debug, rc::Rc};
+use std::{fmt::Debug, rc::Rc, marker::PhantomData};
 
 pub mod v0;
+
+pub struct DummyTGTVM<T: StringStore>(pub PhantomData<T>);
+
+impl<T: StringStore> Debug for DummyTGTVM<T> {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "dummy-dummy-dummy")
+  }
+}
+
+impl<T: StringStore> TargetVM for DummyTGTVM<T> {
+  type T = T;
+
+  fn regalloc(&self, func: &Function<'_, Self::T>, module: &Module<'_, Self::T>) -> crate::mir::regalloc::RegAllocResult {
+    crate::mir::regalloc::allocate(func, module)
+  }
+}
 
 pub trait TargetVM: Debug {
   type T: StringStore;
 
-  fn regalloc(&self, func: &Function<'_, Self::T>, module: &Module<'_, Self::T>);
+  fn regalloc(&self, func: &Function<'_, Self::T>, module: &Module<'_, Self::T>) -> crate::mir::regalloc::RegAllocResult;
 }
 
+#[allow(dead_code)]
 pub(crate) fn sabi_map<T: StringStore>(
   args: &[ValueId],
   func: &Function<'_, T>,
@@ -67,8 +84,8 @@ pub(crate) fn sabi_map<T: StringStore>(
     _ => {
       let size = argstruct.size(module);
 
-      // If above 64, we must be doing an allocation passing
-      if size >= 64 {
+      // Scratchpad has a max size of 192 bytes; overflow uses Largepad
+      if size > 192 {
         output = Some(LocSrc {
           offset: 0,
           reg: VMLoc::Largepad,

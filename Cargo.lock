@@ -1540,6 +1540,7 @@ dependencies = [
  "cc",
  "cranelift",
  "crossbeam-channel",
+ "indexmap",
  "lexical-core",
  "llvm-sys",
  "mixedradix",

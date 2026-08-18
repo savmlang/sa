@@ -12,13 +12,20 @@ use crate::FNCALL_DISPATCH;
 #[cfg(feature = "libffi")]
 use sart::structures::ffi::CallSig;
 
+#[cfg(all(
+  feature = "native",
+  any(target_arch = "x86_64", target_arch = "x86"),
+  any(target_os = "windows", target_os = "linux")
+))]
+pub mod cinder;
+
 use std::sync::Arc;
 
 // Native (JIT) layers
 #[cfg(feature = "native")]
 use crate::{
   CacheLevel, JIT_CACHE,
-  acaot::native::{NativeCompilerBuilder, store::SwappableCodeSpace},
+  acaot::native::store::{Exec, SwappableCodeSpace},
   management::jitmem::calculate_relocation_abs,
 };
 #[cfg(feature = "native")]
@@ -61,7 +68,7 @@ pub fn schedule<
   others: &mut Peekable<I3>,
   compiler_fastlane: &mut usize,
   compiler_public: &mut usize,
-  compilers: &[&dyn NativeCompilerBuilder<false>],
+  compilers_len: usize,
   important_s: F,
   others_iter: E,
 ) {
@@ -72,7 +79,7 @@ pub fn schedule<
   'critical_loop: while let Some(x) = critical.peek() {
     // Note: **x implies x is a reference to a reference/pointer
     if tx_critical
-      .try_send((**x, compilers.len() - 1, false))
+      .try_send((**x, compilers_len - 1, false))
       .is_ok()
     {
       _ = critical.next();
@@ -109,7 +116,7 @@ pub fn schedule<
   }
 
   if important.peek().is_none() {
-    if *compiler_fastlane + 1 == compilers.len() {
+    if *compiler_fastlane + 1 == compilers_len {
       _ = tx_fastlane.try_send((0, 0, true));
     } else {
       *compiler_fastlane += 1;
@@ -118,7 +125,7 @@ pub fn schedule<
   }
 
   if others.peek().is_none() {
-    if *compiler_public + 1 == compilers.len() {
+    if *compiler_public + 1 == compilers_len {
       _ = tx_public.try_send((0, 0, true));
     } else {
       *compiler_public += 1;
@@ -208,9 +215,9 @@ pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(resolve: Arc
       let evmap = unsafe { JIT_CACHE.get().unwrap_unchecked() };
 
       let rs = resolve.as_ref();
-      let compilers = compiler_infra();
+      let compilers_len = compiler_infra::<false, T>().len();
 
-      if compilers.is_empty() {
+      if compilers_len == 0 {
         return;
       }
 
@@ -254,7 +261,7 @@ pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(resolve: Arc
         while !tx.is_full()
           && let Some(x) = critical.next()
         {
-          tx.try_send((*x, compilers.len() - 1, false))
+          tx.try_send((*x, compilers_len - 1, false))
             .expect("This cannot actually error");
         }
 
@@ -283,7 +290,7 @@ pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(resolve: Arc
         while !tx.is_full()
           && let Some(x) = important.next()
         {
-          tx.try_send((*x, compilers.len() - 1, false))
+          tx.try_send((*x, compilers_len - 1, false))
             .expect("This cannot actually error");
         }
 
@@ -313,7 +320,7 @@ pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(resolve: Arc
         while !tx.is_full()
           && let Some(x) = others.next()
         {
-          tx.try_send((x, compilers.len() - 1, false))
+          tx.try_send((x, compilers_len - 1, false))
             .expect("This cannot actually error");
         }
 
@@ -348,13 +355,13 @@ pub fn management_main<T: BytecodeResolver + Send + Sync + 'static>(resolve: Arc
               }
             }
 
-            schedule(&tx_critical, &tx_fastlane, &tx_public, &mut critical, &mut important, &mut others, &mut compiler_fastlane, &mut compiler_public, compilers, || ShuffledSliceIter::new_panicking(important_s).peekable(), others_iter);
+            schedule(&tx_critical, &tx_fastlane, &tx_public, &mut critical, &mut important, &mut others, &mut compiler_fastlane, &mut compiler_public, compilers_len, || ShuffledSliceIter::new_panicking(important_s).peekable(), others_iter);
           }
 
 
           recv(timer) -> _ => {
             // Redundant, but JustInCase
-            schedule(&tx_critical, &tx_fastlane, &tx_public, &mut critical, &mut important, &mut others, &mut compiler_fastlane, &mut compiler_public, compilers, || ShuffledSliceIter::new_panicking(important_s).peekable(), others_iter);
+            schedule(&tx_critical, &tx_fastlane, &tx_public, &mut critical, &mut important, &mut others, &mut compiler_fastlane, &mut compiler_public, compilers_len, || ShuffledSliceIter::new_panicking(important_s).peekable(), others_iter);
 
             // Break JIT if all modules are processes
             // Now we get into well - nicely linking all of them
@@ -391,8 +398,39 @@ fn process_jit<T: BytecodeResolver + Send + Sync + 'static>(
     cache => {
       resolver.update_cache(moduleid, cache.clone());
 
+      // Logical Safety : To the same thread that has `set` the value - it will never ever
+      // be out of date on that exact core.
+      // If it gets context switched to a different core - the updates will still be flushed.
+      let write = |cinder: bool, bin: *const Executable, parent_counter: *mut usize| {
+        if let Some(jitblob) = evmap.get(moduleid) {
+          // Case `usize` back into the `*mut JIT`
+
+          _ = unsafe { jitblob.set(0, Exec { exec: bin, cinder }, parent_counter, None) };
+        } else {
+          let mgr = SwappableCodeStore::new(Exec { exec: bin, cinder }, parent_counter);
+
+          _ = unsafe { mgr.set(0, Exec { exec: bin, cinder }, parent_counter, None) };
+
+          unsafe { evmap.set(moduleid, mgr) };
+        }
+      };
+
       match cache {
         CacheData::None | CacheData::Pickle { .. } => {}
+        CacheData::CinderTempCache {
+          binary: _stencil,
+          entrymap: _entries,
+        } => {
+          #[cfg(all(
+            feature = "native",
+            any(target_arch = "x86_64", target_arch = "x86"),
+            any(target_os = "windows", target_os = "linux")
+          ))]
+          {
+            let (bin, ctr) = cinder::link(_entries, _stencil, sajit);
+            write(true, bin, ctr);
+          }
+        }
         CacheData::JITCache {
           level,
           binary,
@@ -402,60 +440,36 @@ fn process_jit<T: BytecodeResolver + Send + Sync + 'static>(
             // How did Jesus allow this honestly?
             abort();
           }
-          level => {
-            // Logical Safety : To the same thread that has `set` the value - it will never ever
-            // be out of date on that exact core.
-            // If it gets context switched to a different core - the updates will still be flushed.
-            let write = |bin: *const Executable, parent_counter: *mut usize| {
-              if let Some(jitblob) = evmap.get(moduleid) {
-                // Case `usize` back into the `*mut JIT`
-
-                _ = unsafe { jitblob.set(0, bin, parent_counter, None) };
-              } else {
-                let mgr = SwappableCodeStore::new(bin, parent_counter);
-
-                _ = unsafe { mgr.set(0, bin, parent_counter, None) };
-
-                unsafe { evmap.set(moduleid, mgr) };
-              }
-            };
-
-            match level {
-              #[cfg(feature = "cranelift")]
-              CacheLevel::CraneliftEpicenter => {
-                todo!("Soon")
-              }
-              #[cfg(feature = "llvm")]
-              CacheLevel::LLVMEpitome => {
-                todo!("Soon");
-              }
-              #[cfg(all(
-                feature = "native",
-                any(target_arch = "x86_64", target_arch = "x86"),
-                any(target_os = "windows", target_os = "linux")
-              ))]
-              CacheLevel::ACAoTCinder => {
-                todo!("Soon");
-              }
-              #[cfg(feature = "llvm")]
-              CacheLevel::LLVMCrater => {
-                let (bin, parent_counter) = sajit
-                  .write_llvm(&binary, |_| {
-                    panic!("Crater and Cinder need not resolve pointers.");
-                  })
-                  .expect("Unable to write LLVM JIT Memory");
-                write(bin, parent_counter);
-              }
-              #[cfg(feature = "cranelift")]
-              CacheLevel::CraneliftCrafter => {
-                let relocs = calculate_relocation_abs(&reloc);
-
-                let (bin, parent_counter) = sajit.write_quick(&binary, &relocs);
-                write(bin, parent_counter);
-              }
-              e => unreachable!("Found an unknown tier for current feature set : {e:?}"),
+          level => match level {
+            #[cfg(feature = "cranelift")]
+            CacheLevel::CraneliftEpicenter => {
+              todo!("Soon")
             }
-          }
+            #[cfg(feature = "llvm")]
+            CacheLevel::LLVMEpitome => {
+              todo!("Soon");
+            }
+            CacheLevel::ACAoTCinder => {
+              unreachable!();
+            }
+            #[cfg(feature = "llvm")]
+            CacheLevel::LLVMCrater => {
+              let (bin, parent_counter) = sajit
+                .write_llvm(&binary, |_| {
+                  panic!("Crater and Cinder need not resolve pointers.");
+                })
+                .expect("Unable to write LLVM JIT Memory");
+              write(false, bin, parent_counter);
+            }
+            #[cfg(feature = "cranelift")]
+            CacheLevel::CraneliftCrafter => {
+              let relocs = calculate_relocation_abs(&reloc);
+
+              let (bin, parent_counter) = sajit.write_quick(&binary, &relocs);
+              write(false, bin, parent_counter);
+            }
+            e => unreachable!("Found an unknown tier for current feature set : {e:?}"),
+          },
         },
       }
     }

@@ -27,7 +27,16 @@
 //! Powering Chocolate, Crafter and Crater!
 //!
 
+use std::sync::Arc;
+
 use serde::{Deserialize, Serialize};
+
+#[cfg(all(
+  feature = "native",
+  any(target_arch = "x86_64", target_arch = "x86"),
+  any(target_os = "windows", target_os = "linux")
+))]
+use crate::acaot::cinder::{StencilMap, StencilVec};
 
 #[cfg(feature = "dag")]
 pub mod acdag;
@@ -38,6 +47,20 @@ pub mod acdag;
   any(target_os = "windows", target_os = "linux")
 ))]
 pub mod cinder;
+
+#[cfg(all(
+  feature = "native",
+  any(target_arch = "x86_64", target_arch = "x86"),
+  any(target_os = "windows", target_os = "linux")
+))]
+pub type Stencils = Arc<[StencilVec<StencilMap>]>;
+
+#[cfg(not(all(
+  feature = "native",
+  any(target_arch = "x86_64", target_arch = "x86"),
+  any(target_os = "windows", target_os = "linux")
+)))]
+pub type Stencils = Arc<[()]>;
 
 #[cfg(feature = "native")]
 pub mod native;

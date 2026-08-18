@@ -1,19 +1,20 @@
 #include "module.h"
 
-extern JitFn NEXT;
+extern void NEXT(DispatchStarter *dsp);
+extern void TAKEN_JUMP(DispatchStarter *dsp);
+
 extern CRTFn CALL;
-extern uintptr_t PICKLE_IDX;
-extern uint64_t VERIFY;
-extern JitFn ELSE_JUMP;
+extern char PICKLE_IDX[];
+extern char VERIFY[];
 
 JITFN
 void cinderjit_call_jumpable(DispatchStarter *state)
 {
-  CALL(state->pickle + PICKLE_IDX, state->ws, state->taskstate);
+  CALL(state->pickle + (uintptr_t)PICKLE_IDX, state->ws, state->taskstate);
 
-  if (state->taskstate->curline_or_resume == VERIFY)
+  if (state->taskstate->curline_or_resume == (uint64_t)VERIFY)
   {
-    BECOME(ELSE_JUMP(state));
+    BECOME(TAKEN_JUMP(state));
   }
 
   BECOME(NEXT(state));

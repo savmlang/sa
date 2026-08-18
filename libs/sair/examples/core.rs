@@ -9,13 +9,13 @@ use sair::{
       sig::Signature,
     },
   },
-  saemit::machine::{TargetVM, v0::IsaV0},
+  saemit::machine::DummyTGTVM,
 };
 use std::rc::Rc;
 
 fn main() {
   let store = SingleThreadedStringStore::new();
-  let v0 = IsaV0::generate();
+  let v0 = DummyTGTVM(std::marker::PhantomData);
 
   let mut module = Module::new(&store, "MyModule", &v0);
 
@@ -82,8 +82,6 @@ fn main() {
 
     builder.position_end(BLOCK_0);
     builder.jump(block2, &[]).unwrap();
-
-    v0.regalloc(&myfn, &module);
 
     _ = module.add_function(myfn);
   }

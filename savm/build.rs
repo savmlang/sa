@@ -1,4 +1,7 @@
 fn main() {
+  println!("cargo:rerun-if-changed=build.rs");
+  println!("cargo:rerun-if-changed=src_cinder");
+
   #[cfg(all(
     feature = "cranelift",
     not(any(
@@ -13,6 +16,7 @@ fn main() {
   #[cfg(feature = "native")]
   build_cinder();
 
+  // LLVM SSAUpdater
   #[cfg(feature = "llvm")]
   build_ssaupdater();
 }
@@ -22,8 +26,6 @@ fn build_cinder() {
   use cc::Build;
   use savmbuild_cinder::TargetMachine;
   use std::{env::var, fs};
-
-  println!("cargo::rerun-if-changed=src_cinder");
 
   let arch = var("CARGO_CFG_TARGET_ARCH").unwrap();
 

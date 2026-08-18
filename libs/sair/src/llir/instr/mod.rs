@@ -127,7 +127,7 @@ instloader! {
 
   /// The vadd instruction
   Vadd { .IntTy, count: u32 } (src1, src2) -> (out)
-  lower { INSTRUCTION_VADD } (|buf, typedata, count, src1, src2, out| {
+  lower { INSTRUCTION_VADD } (|_buf, _typedata, _count, _src1, _src2, _out| {
 
   })
 }

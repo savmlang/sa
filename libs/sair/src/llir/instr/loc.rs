@@ -22,7 +22,7 @@ impl AHQF for LocSrc {
 }
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum VMLoc {
   R1 = 0,
   R2 = 1,

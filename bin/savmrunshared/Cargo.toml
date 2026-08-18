@@ -8,7 +8,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 savmruntypes = { path = "../savmruntypes" }
-savm = { path = "../../savm", default-features = false }
+savm = { path = "../../savm" }
 
 [features]
 default = []

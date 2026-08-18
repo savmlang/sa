@@ -23,7 +23,7 @@ pub use sart;
 #[cfg(feature = "native")]
 use crate::acaot::native::store::SwappableCodeSpace;
 use crate::{
-  acaot::{JITReloc, pickle::def::PickleInstruction},
+  acaot::{JITReloc, Stencils, pickle::def::PickleInstruction},
   management::management_main,
 };
 
@@ -79,6 +79,10 @@ pub enum CacheData {
     level: CacheLevel,
     binary: Arc<[u8]>,
     reloc: JITRelocs,
+  },
+  CinderTempCache {
+    entrymap: Arc<[Box<[u8]>]>,
+    binary: Stencils,
   },
 }
 

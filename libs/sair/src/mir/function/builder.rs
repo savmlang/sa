@@ -42,7 +42,11 @@ impl<'a, 'b, T: StringStore> FunctionBuilder<'a, 'b, T> {
 
     if empty_blocks {
       if let Some(arg) = sig.args {
-        out.block(&[arg]);
+        if let Some(ValueType::Composite { composition, .. }) = module.type_data(arg) {
+          out.block(composition.as_ref());
+        } else {
+          out.block(&[arg]);
+        }
       } else {
         out.block(&[]);
       }
@@ -72,6 +76,16 @@ impl<'a, 'b, T: StringStore> FunctionBuilder<'a, 'b, T> {
     });
 
     BlockId(newid)
+  }
+
+  /// Get the params of the specified block
+  pub fn block_params(&self, block: BlockId) -> Option<&[ValueId]> {
+    self.parent.blocks.get(block.0).map(|b| b.params.as_slice())
+  }
+
+  /// Get the entry block parameters
+  pub fn entry_params(&self) -> &[ValueId] {
+    self.parent.blocks.first().map(|b| b.params.as_slice()).unwrap_or(&[])
   }
 
   /// Get the total [HLInstruction] at the current moment for the supplied block id

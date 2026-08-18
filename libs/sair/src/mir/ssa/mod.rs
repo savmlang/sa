@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use crate::mir::{block::BlockId, function::ssa::ValueId, value::ValueTypeRef};
 
+#[allow(dead_code)]
 pub struct SSAResolver {
   pub typetag: ValueTypeRef,
 

@@ -7,7 +7,6 @@ use std::{
   ptr::{null, null_mut},
 };
 
-use sajit::relcar::RELCAR_BASIC;
 use sajit::relocations::RelocKind;
 #[cfg(feature = "llvm")]
 use sajit::symbpool::LLVMSymbolPool;
@@ -15,6 +14,7 @@ use sajit::{
   Executable, MemoryExecutableApi, WriteFnResult, advanced::MemoryExecutable,
   relocations::Relocation,
 };
+use sajit::{SizeCheck, relcar::RELCAR_BASIC};
 
 use crate::{
   acaot::{
@@ -40,7 +40,7 @@ pub struct JITMemoryManager {
 impl JITMemoryManager {
   pub fn new() -> Self {
     // Get a 32MB Chunk for TEMP Storage
-    let a = MemoryExecutable::new_slab(Some(NonZeroU8::new(2).unwrap()));
+    let a = Self::alloc_def();
 
     Self {
       #[cfg(feature = "llvm")]
@@ -48,6 +48,10 @@ impl JITMemoryManager {
       quick: vec![Box::pin(a)],
       epitier: None,
     }
+  }
+
+  fn alloc_def() -> MemoryExecutable {
+    MemoryExecutable::new_slab(Some(NonZeroU8::new(2).unwrap()))
   }
 
   pub fn gc(&mut self) {
@@ -111,22 +115,53 @@ impl JITMemoryManager {
       return out;
     }
 
-    // This means - we need a specialized system
-    // aka, a SINGLE slab to rule it all
-    if data.len() > Self::MAX_EXEC_SIZE {
-      let size = data.len();
+    // Find the optimal Slab Size
+    let size = data.len();
 
-      let m = Self::alloc_sized(&mut self.quick, size);
+    let m = Self::alloc_sized(&mut self.quick, size.max(Self::MAX_EXEC_SIZE));
+    let out = match m.write_fn(data, relocs, &RELCAR_BASIC) {
+      WriteFnResult::Executable(ex) => (ex, m.stored.as_ptr()),
+      _ => panic!("Reached a position where calculation is not idompotent"),
+    };
 
-      let out = match m.write_fn(data, relocs, &RELCAR_BASIC) {
-        WriteFnResult::Executable(ex) => (ex, m.stored.as_ptr()),
-        _ => panic!("Reached a position where calculation is not idompotent"),
-      };
+    return out;
+  }
 
+  pub fn get_sajit_hwnd<F: Fn(&mut MemoryExecutable) -> Option<(*const Executable, *mut usize)>>(
+    &mut self,
+    size_req: usize,
+    call: F,
+  ) -> (*const Executable, *mut usize) {
+    // Try to fit larger ones
+    // optimistically
+    //
+    // If it pays off separately - we'll think
+    let mut out = (null(), null_mut());
+    let succ = self
+      .quick
+      .iter_mut()
+      .filter(|x| x.under_size(size_req).unwrap_or_default())
+      .any(|x| {
+        call(&mut *x).map_or(false, |x| {
+          out = x;
+          true
+        })
+      });
+
+    if succ {
       return out;
     }
 
-    return self.write_quick(data, relocs);
+    // Calculate the size requirement
+    let size = size_req;
+
+    let m = Self::alloc_sized(&mut self.quick, size.max(Self::MAX_EXEC_SIZE));
+    let out = match call(&mut *m) {
+      Some(t) => t,
+      _ => panic!("Reached a position where calculation is not idompotent"),
+    };
+
+    return out;
   }
 
   #[cfg(feature = "llvm")]
@@ -209,7 +244,10 @@ impl JITMemoryManager {
 
     let mexec = match memexec {
       Some(m) => m,
-      None => Self::alloc_sized(&mut self.quick, size_needed),
+      None => Self::alloc_sized(
+        &mut self.quick,
+        size_needed.max(MemoryExecutable::DEFAULT_SLAB_SIZE),
+      ),
     };
 
     let (out, mexec) = {

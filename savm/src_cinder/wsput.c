@@ -2,17 +2,15 @@
 
 #include "module.h"
 
-extern JitFn NEXT;
+extern void NEXT(DispatchStarter *dsp);
 
-extern uint8_t *SRC;
-extern uintptr_t SIZE;
-
-extern MemCpy MEMCPY;
+extern char SRC[];
+extern char SIZE[];
 
 JITFN
 void cinderjit_wsput(DispatchStarter *state)
 {
-  MEMCPY(state->wsarr, SRC, (size_t)SIZE);
+  state->wsarr(state->ws, (uint8_t *)SRC, (uintptr_t)SIZE);
 
   BECOME(NEXT(state));
 }

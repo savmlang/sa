@@ -171,6 +171,14 @@ impl<'a, 'b, T: StringStore> FunctionBuilder<'a, 'b, T> {
         Instruction { id, out }
       }
     }
+
+    fn r#return(ctx, out) {
+      verify: {},
+      process: {
+        let id = ctx.inst_process(HLInstruction::Return { out });
+        Instruction { id, out: () }
+      }
+    }
   }
 }
 

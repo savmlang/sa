@@ -39,7 +39,10 @@ typedef struct IVM
 
   uint32_t flags, opcodes;
 
-  uint64_t curline_or_resume, engine, ws, _padding;
+  uint64_t curline_or_resume, engine;
+  alignas(8) void *misc;
+
+  uint64_t _padding;
 } VMTaskState;
 
 typedef struct IInst
@@ -47,8 +50,14 @@ typedef struct IInst
   uint8_t opcode, u1, u2, u3;
 } PickleInstruction;
 
+typedef void (*SetWSArr)(void *ws, uint8_t *ptr, uintptr_t len);
+
 typedef struct IDispatch
 {
+  /// @brief A hotness or resume counter
+  uint64_t hotnessOrResume;
+
+  /// Pointer to the WS structure
   void *ws;
 
   /// @brief Pointer to the current pickle instruction
@@ -58,7 +67,7 @@ typedef struct IDispatch
   VMTaskState *taskstate;
 
   /// @brief  WorkingSet Array - C pointer marshalled to allow effective mutability
-  uint8_t *wsarr;
+  SetWSArr wsarr;
 } DispatchStarter;
 
 typedef void (*JitFn)(DispatchStarter *dsp);
@@ -66,20 +75,13 @@ typedef void (*JitFn)(DispatchStarter *dsp);
 typedef struct IMarker
 {
   uint64_t marker;
-  JitFn loc;
+  uint64_t _internal;
+  alignas(8) JitFn loc;
 } Marker;
 
-typedef struct IIndex
-{
-  uintptr_t index;
-  JitFn loc;
-} Index;
-
 typedef void (*CRTFn)(PickleInstruction *pki, void *ws, VMTaskState *taskstate);
-typedef void (*MemCpy)(void *_Dst, const void *_Src, size_t _Size);
 
 DEFINE_SLICE(Marker, MarkerList);
-DEFINE_SLICE(Index, MarkerIndexList);
 
 static_assert(sizeof(VMTaskState) == 128, "Size mismatch: Expected 128 bytes");
 static_assert(alignof(VMTaskState) == 64, "Alignment mismatch: Expected 64-byte alignment");

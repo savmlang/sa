@@ -7,7 +7,7 @@ use crate::{
       builder::FunctionBuilder,
       ssa::{SSA, ValueId},
     },
-    value::sig::SignatureRef,
+    value::{ValueTypeRef, sig::SignatureRef},
   },
 };
 
@@ -40,8 +40,24 @@ impl<'a, T: StringStore> Function<'a, T> {
     self.ssa.get(ssa.0)
   }
 
+  pub fn sig(&self) -> SignatureRef {
+    self.sig
+  }
+
+  pub fn return_type(&self, module: &Module<'a, T>) -> Option<ValueTypeRef> {
+    module.signature_data(self.sig).and_then(|s| s.returns)
+  }
+
   pub fn builder<'b>(&'b mut self, module: &'b Module<'a, T>) -> FunctionBuilder<'a, 'b, T> {
     FunctionBuilder::new(self, module)
+  }
+
+  pub fn blocks(&self) -> &[Block<'a, T>] {
+    &self.blocks
+  }
+
+  pub fn regalloc(&self, module: &Module<'a, T>) -> crate::mir::regalloc::RegAllocResult {
+    crate::mir::regalloc::allocate(self, module)
   }
 }
 

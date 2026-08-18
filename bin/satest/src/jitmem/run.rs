@@ -1,8 +1,29 @@
-use savm::{BytecodeResolver, Executable, VM, sart::ctr::OPCODES::OPCODE_JIT_CHECK};
+use savm::{
+  BytecodeResolver, Executable, VM, acaot::pickle::def::PickleInstruction,
+  sart::ctr::OPCODES::OPCODE_JIT_CHECK,
+};
 
-pub fn run_jit<T: BytecodeResolver + Send + Sync + 'static>(vm: &VM<T>, exec: *const Executable) {
+pub fn run_jit<T: BytecodeResolver + Send + Sync + 'static>(
+  vm: &VM<T>,
+  pickle: &[PickleInstruction],
+  exec: *const Executable,
+  name: &str,
+) {
   loop {
-    let opcode = vm.exec_jit(exec);
+    #[allow(unused_assignments)]
+    let mut opcode = 0;
+    if name == "Cinder - ACAoT JIT" {
+      #[cfg(all(
+        feature = "native",
+        any(target_arch = "x86_64", target_arch = "x86"),
+        any(target_os = "windows", target_os = "linux")
+      ))]
+      {
+        opcode = vm.exec_jit_cinder(pickle, exec);
+      }
+    } else {
+      opcode = vm.exec_jit(exec);
+    }
 
     if opcode == OPCODE_JIT_CHECK {
       continue;

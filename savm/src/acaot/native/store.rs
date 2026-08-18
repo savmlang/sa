@@ -3,8 +3,14 @@ use sajit::Executable;
 use sart::{code::SwappableCodeStore, salloc};
 use std::sync::atomic::{AtomicPtr, Ordering};
 
-pub type CodeStore = SwappableCodeStore<*const Executable>;
+pub type CodeStore = SwappableCodeStore<Exec>;
 pub type Base = *mut CodeStore;
+
+#[derive(Clone, Copy)]
+pub struct Exec {
+  pub exec: *const Executable,
+  pub cinder: bool,
+}
 
 #[derive(Debug)]
 pub struct SwappableCodeSpace {

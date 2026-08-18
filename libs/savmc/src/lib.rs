@@ -236,7 +236,7 @@ impl BytecodeResolver for SAVMC_IBytecodeResolver {
 
   fn update_cache(&self, section: u64, cache: CacheData) {
     let cache = match &cache {
-      CacheData::None => ICacheData::None,
+      CacheData::CinderTempCache { .. } | CacheData::None => ICacheData::None,
       CacheData::JITCache {
         level,
         binary,

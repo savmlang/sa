@@ -16,6 +16,7 @@ use crate::{
 
 pub mod block;
 pub mod function;
+pub mod regalloc;
 pub mod ssa;
 pub mod value;
 
@@ -117,6 +118,10 @@ impl<'a, T: StringStore> Module<'a, T> {
 
   pub fn type_data(&self, id: ValueTypeRef) -> Option<&ValueType<'_>> {
     self.typemap.get(id.index())
+  }
+
+  pub fn signature_data(&self, sig: SignatureRef) -> Option<&Signature> {
+    self.sigs.get(sig.0)
   }
 
   /// Mark the function symbol to be exported

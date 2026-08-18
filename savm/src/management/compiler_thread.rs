@@ -17,7 +17,7 @@ pub fn compiler<const SENDBACK: bool, E: BytecodeResolver + Send + Sync + 'stati
   rx: Receiver<(u64, usize, bool)>,
   tx: Sender<JITOut>,
 ) {
-  let compilers = compiler_infra::<SENDBACK>();
+  let compilers = compiler_infra::<SENDBACK, E>();
   while let Ok((moduleid, compilerindex, stop)) = rx.recv() {
     if stop {
       _ = tx.send(JITOut::Stopped);
@@ -56,11 +56,18 @@ pub fn compiler<const SENDBACK: bool, E: BytecodeResolver + Send + Sync + 'stati
     let jitdata;
     let (inst, jmp) = bytecode;
     {
+      let compile = || {
+        let mut compiler = builder.get();
+
+        compiler.compile(inst.as_ref(), SaVMJumpWrapRef(&jmp))
+      };
+
       match resolve.as_ref().get_cache(moduleid, builder.cache()) {
         CacheData::None => {
-          let mut compiler = builder.get();
-
-          jitdata = compiler.compile(inst.as_ref(), SaVMJumpWrapRef(&jmp));
+          jitdata = compile();
+        }
+        CacheData::JITCache { level, .. } if matches!(level, CacheLevel::ACAoTCinder) => {
+          jitdata = compile();
         }
         e => {
           jitdata = e;

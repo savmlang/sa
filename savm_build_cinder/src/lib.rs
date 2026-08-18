@@ -20,6 +20,7 @@ pub struct SymbolReloc {
   pub reloc: RelocKind,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct SymbolRelocStatic {
   pub symbol: &'static str,
   pub offset: u32,
@@ -45,7 +46,7 @@ pub fn stenload<'a>(path: &PathBuf, name: &'a str, mc: TargetMachine) -> Stencil
       .expect("Unable to get uncompressed MC Emission data"),
   );
 
-  let relocs = jitfn
+  let mut relocs = jitfn
     .relocations()
     .map(|(reloc_address, reloc)| {
       let symbol = match reloc.target() {
@@ -73,6 +74,7 @@ pub fn stenload<'a>(path: &PathBuf, name: &'a str, mc: TargetMachine) -> Stencil
       }
     })
     .collect::<Box<_>>();
+  relocs.sort_unstable_by(|a, b| a.symbol.cmp(&b.symbol));
 
   Stencil {
     name,

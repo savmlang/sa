@@ -248,7 +248,7 @@ pub fn hint_common(
     // Fetch WS_PUTs and decode
     (*ws).arr = {
       std::slice::from_raw_parts(
-        ((*taskstate).engine.pt as *const PickleInstruction).add(pic + 1) as *const u8,
+        ((*taskstate).ws.pt as *const PickleInstruction).add(pic + 1) as *const u8,
         bytes,
       )
     };
@@ -270,8 +270,8 @@ pub fn call_hint(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mu
 
     // Call next instruction
     {
-      let pkl = &*((*taskstate).engine.pt as *const PickleInstruction)
-        .add((*taskstate).curline_or_resume.usi);
+      let pkl =
+        &*((*taskstate).ws.pt as *const PickleInstruction).add((*taskstate).curline_or_resume.usi);
 
       debug_assert!(pkl.opcode == instruction);
 

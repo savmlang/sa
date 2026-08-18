@@ -1,12 +1,18 @@
-#[cfg(feature = "native")]
-use crate::jitmem::{JITMemData, JITMems, run::run_jit};
 use crate::testsuite::clean;
+#[cfg(feature = "native")]
+use crate::{
+  Resolver,
+  jitmem::{JITMemData, JITMems, run::run_jit},
+};
 use console::Style;
 use savm::{BytecodeResolver, VM};
 #[cfg(feature = "native")]
 use savm::{
   Executable,
-  acaot::native::{NativeCompilerBuilder, testing_compiler_infra, testing_epitier_compilers},
+  acaot::{
+    native::{NativeCompilerBuilder, testing_compiler_infra, testing_epitier_compilers},
+    pickle::def::PickleInstruction,
+  },
 };
 use statrs::statistics::{Data, Distribution, OrderStatistics};
 use std::time::Instant;
@@ -67,41 +73,46 @@ pub fn jit_benchmark<T: BytecodeResolver + Send + Sync + 'static>(
 ) {
   let mut store = Vec::with_capacity(rounds as usize);
 
-  let mut runtest =
-    |jit: &mut JITMemData,
-     compilers: &[(&'static str, &'static dyn NativeCompilerBuilder<true>)]| {
-      for &(name, _) in compilers {
-        let (exec, compile) = jit.ptrstore.get(&(sectionid, name)).unwrap();
+  let mut runtest = |jit: &mut JITMemData,
+                     compilers: &[(&'static str, &'static dyn NativeCompilerBuilder<true>)],
+                     outarc: &[PickleInstruction]| {
+    for &(name, _) in compilers {
+      let (exec, compile) = jit.ptrstore.get(&(sectionid, name)).unwrap();
 
-        for _ in 0..rounds {
-          clean();
+      for _ in 0..rounds {
+        clean();
 
-          let t0 = Instant::now();
-          run_jit(vm, *exec as *const Executable);
-          let tf = t0.elapsed();
-          store.push(tf.as_secs_f64());
-        }
-
-        let mut statdata = Data::new(store.as_mut_slice());
-
-        let p99 = format_duration(statdata.percentile(99));
-        let p75 = format_duration(statdata.percentile(75));
-        let median = format_duration(statdata.median());
-        let sd = format_duration(statdata.std_dev().unwrap_or(f64::NEG_INFINITY));
-        let compile = format_duration(compile.as_secs_f64());
-
-        println!(
-          "{:>14} Tier : {name}",
-          Style::new().green().apply_to("Bench")
-        );
-        bench_report(&median, &p75, &p99, &sd, Some(&compile));
+        let t0 = Instant::now();
+        run_jit(vm, &*outarc, *exec as *const Executable, name);
+        let tf = t0.elapsed();
+        store.push(tf.as_secs_f64());
       }
-    };
 
-  runtest(&mut jitdata.general, testing_compiler_infra::<true>());
+      let mut statdata = Data::new(store.as_mut_slice());
+
+      let p99 = format_duration(statdata.percentile(99));
+      let p75 = format_duration(statdata.percentile(75));
+      let median = format_duration(statdata.median());
+      let sd = format_duration(statdata.std_dev().unwrap_or(f64::NEG_INFINITY));
+      let compile = format_duration(compile.as_secs_f64());
+
+      println!(
+        "{:>14} Tier : {name}",
+        Style::new().green().apply_to("Bench")
+      );
+      bench_report(&median, &p75, &p99, &sd, Some(&compile));
+    }
+  };
+
+  let outarc = jitdata.picklestore.get(&sectionid).unwrap();
+  runtest(
+    &mut jitdata.general,
+    testing_compiler_infra::<true, Resolver>(),
+    &*outarc,
+  );
 
   for (idx, &compiler) in testing_epitier_compilers::<true>().iter().enumerate() {
-    runtest(&mut jitdata.epitier[idx], &[compiler]);
+    runtest(&mut jitdata.epitier[idx], &[compiler], &*outarc);
   }
 }
 

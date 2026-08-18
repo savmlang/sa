@@ -39,6 +39,7 @@ sart = { path = "../sart" }
 
 # SaVM Native Linker and CodeAllocator
 sajit = { path = "../sajit", optional = true }
+indexmap = { version = "^2", optional = true }
 savmbuild_cinder = { path = "../savm_build_cinder", optional = true }
 serde = { version = "^1", features = ["derive"] }
 
@@ -68,10 +69,12 @@ dev = ["cranelift", "llvm", "printir"]
 llvm = ["dep:llvm-sys", "dep:savmbuild", "native", "sajit/llvm"]
 cranelift = ["dep:cranelift", "native"]
 native = [
+  "libffi",
   "dep:sajit",
   "dep:crossbeam-channel",
   "dep:cc",
   "dep:savmbuild_cinder",
+  "dep:indexmap",
   "dag",
 ]
 

@@ -41,6 +41,16 @@ macro_rules! opcodes {
         ]
       }
 
+      pub type CRTFn = extern "C" fn(pickle: *mut PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState);
+      #[allow(unused)]
+      pub(crate) const fn c_pickle_generate_table<T: BytecodeResolver + Send + Sync + 'static>() -> [CRTFn; DISPATCH_TOTAL_ITEMS] {
+        [
+          $(
+            [<c_call_ $opcode:lower>]$(::<$generic>)?
+          ),*
+        ]
+      }
+
       $(
         pub extern "C" fn [<c_call_ $opcode:lower>]$(<$generic: BytecodeResolver + Send + Sync + 'static>)?(pickle: *mut PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMTaskState) {
           return [<call_ $opcode:lower>]$(::<$generic>)?(unsafe { &*pickle }, ws, taskstate);

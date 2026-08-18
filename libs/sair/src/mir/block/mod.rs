@@ -20,6 +20,16 @@ pub struct Block<'a, T: StringStore> {
   pub(crate) params: Vec<ValueId>,
 }
 
+impl<'a, T: StringStore> Block<'a, T> {
+  pub fn params(&self) -> &[ValueId] {
+    &self.params
+  }
+
+  pub fn instructions(&self) -> &[HLInstruction<ValueId>] {
+    &self.instr
+  }
+}
+
 #[repr(transparent)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct BlockId(pub(crate) usize);

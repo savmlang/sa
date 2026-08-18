@@ -12,7 +12,7 @@ rusqlite = { version = "^0.40", features = ["bundled", "blob", "backup"] }
 
 blake3 = "^1"
 
-savm = { path = "../../savm", default-features = false }
+savm = { path = "../../savm" }
 parking_lot = "^0.12"
 
 lexical-core = "^1"
@@ -26,4 +26,3 @@ windows = { version = "^0.62", features = [
   "Win32_Storage",
   "Win32_Storage_FileSystem",
 ] }
-

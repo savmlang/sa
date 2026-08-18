@@ -5,7 +5,7 @@ description = "The SaVM test harness designed to test SaVM itself."
 edition = "2024"
 
 [dependencies]
-savm = { path = "../../savm", default-features = false }
+savm = { path = "../../savm" }
 sasm = { path = "../sasm" }
 
 console = "^0.16"
