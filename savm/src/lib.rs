@@ -149,7 +149,28 @@ pub trait BytecodeResolver: Any {
 
   /// Return the id of the LAST VALID section
   /// We use this to prevent unnecessary [u64] allocation
-  fn last_section_id(&self) -> u64;
+  fn last_section_id(&self) -> u64 {
+    self
+      .sections()
+      .iter()
+      .copied()
+      .sum::<u64>()
+      // We do not want to execute when there's not even the main (sectionid 0) section
+      .strict_sub(1)
+  }
+
+  /// Every array index represents a module, and the value represents
+  /// total number of sections in that module
+  ///
+  /// Eg: &[2, 3]
+  ///
+  /// Module#0 = sections 0..2
+  /// Module#1 = sections 2..5
+  ///
+  /// (total 5 sections under 2 modules)
+  fn sections(&self) -> &[u64] {
+    &[]
+  }
 
   /// Returns an heuristic list upto 500 elements in size over 2 clusters
   ///

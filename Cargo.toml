@@ -63,7 +63,7 @@ members = [
 
   # SaVM Internal Building Crates
   "savm_build",
-  "savm_build_cinder"
+  "savm_build_cinder",
 ]
 resolver = "3"
 
