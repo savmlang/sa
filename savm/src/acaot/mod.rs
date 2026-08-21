@@ -33,7 +33,7 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(all(
   feature = "native",
-  any(target_arch = "x86_64", target_arch = "aarch64"),
+  any(target_arch = "x86_64"),
   any(target_os = "windows", target_os = "linux")
 ))]
 use crate::acaot::cinder::{StencilMap, StencilVec};
@@ -43,14 +43,14 @@ pub mod acdag;
 
 #[cfg(all(
   feature = "native",
-  any(target_arch = "x86_64", target_arch = "aarch64"),
+  any(target_arch = "x86_64"),
   any(target_os = "windows", target_os = "linux")
 ))]
 pub mod cinder;
 
 #[cfg(all(
   feature = "native",
-  any(target_arch = "x86_64", target_arch = "aarch64"),
+  any(target_arch = "x86_64"),
   any(target_os = "windows", target_os = "linux")
 ))]
 pub type Stencils = Arc<[StencilVec<StencilMap>]>;

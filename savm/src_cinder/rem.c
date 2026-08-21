@@ -6,6 +6,9 @@ extern void NEXT(DispatchStarter *dsp);
 
 DIVPRELUDEGEN();
 
+#pragma code_seg(push, ".jit_fn")
+#pragma const_seg(push, ".jit_fn")
+
 JITFN
 void cinderjit_rem(DispatchStarter *state)
 {

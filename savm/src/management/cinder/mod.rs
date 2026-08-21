@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use sajit::{
-  Executable, MemoryExecutableApi, MemorySizeInfo, SizeCheck, WriteFnResult, relcar::RELCAR_BASIC,
+  Executable, MemoryExecutableApi, MemorySizeInfo, SizeCheck, WriteFnResult,
+  relcar::{Relcar, Relocator},
   relocations::Relocation,
 };
 use savmbuild_cinder::RelocKind;
@@ -98,7 +99,7 @@ pub fn link(
     };
 
     let entries_ptr =
-      match unsafe { sajit.write_fn_iterated(entries_size, entries_data, relocs, &RELCAR_BASIC) } {
+      match unsafe { sajit.write_fn_iterated(entries_size, entries_data, relocs, &RELOCATOR) } {
         WriteFnResult::Executable(e) => e,
         _ => unreachable!(),
       };
@@ -137,13 +138,22 @@ pub fn link(
           let stencil_size = stencil_item.stencil.mcemit.len();
           *curroffset += stencil_size;
 
-          let reloc = stencil_item.stencil.reloc;
+          let resolved = &stencil_item.resolve.0;
 
           // Eagerly collect or map the relocations for this stencil
-          let relocs = stencil_item.resolve.iter().map(move |&(name, ref res)| {
-            let reloc_entry = unsafe {
-              let idx = reloc.binary_search_by(|s| s.symbol.cmp(name)).unwrap();
-              reloc.get_unchecked(idx)
+          let relocs = stencil_item.stencil.reloc.iter().map(move |reloc_entry| {
+            let (_, ref res) = unsafe {
+              resolved
+                .iter()
+                .find(|s| {
+                  let &Some((name, _)) = s else {
+                    return false;
+                  };
+
+                  *name == reloc_entry.symbol
+                })
+                .unwrap_unchecked()
+                .unwrap_unchecked()
             };
 
             let addr = match *res {
@@ -179,7 +189,7 @@ pub fn link(
       .flatten();
 
     let relocd_jit = match unsafe {
-      sajit.write_fn_iterated(stencils_size, acc_stencils, relocs_iter, &RELCAR_BASIC)
+      sajit.write_fn_iterated(stencils_size, acc_stencils, relocs_iter, &RELOCATOR)
     } {
       WriteFnResult::Executable(e) => e,
       _ => unreachable!(),
@@ -200,6 +210,53 @@ fn reloc_abs() -> RelocKind {
   #[cfg(target_pointer_width = "32")]
   return RelocKind::Abs4;
 
-  #[cfg(target_pointer_width = "64")]
+  #[cfg(all(target_pointer_width = "64", target_arch = "x86_64"))]
   return RelocKind::Abs8;
+
+  #[cfg(all(target_pointer_width = "64", target_arch = "aarch64"))]
+  return RelocKind::UserCustom { customdefined: 0 };
+}
+
+static RELOCATOR: Relcar<Arm64AwareRELCAR> = Relcar::<Arm64AwareRELCAR>::new();
+
+pub struct Arm64AwareRELCAR;
+
+const IMM16_MASK: u32 = 0x001f_ffe0;
+
+#[inline(always)]
+fn patch_imm16(instruction: u32, val16: u16) -> u32 {
+  (instruction & !IMM16_MASK) | (((val16 as u32) & 0xffff) << 5)
+}
+
+impl Relocator for Arm64AwareRELCAR {
+  fn handle_usercustom(info: sajit::relcar::RelocInfo, userdefined: u16) {
+    match userdefined {
+      // ARM64 split across 4
+      0 => {
+        let insn_ptr = info.patch_site as *mut u32;
+        let address: u64 = info.relocation.symbol_addr;
+
+        let g0 = (address & 0xffff) as u16;
+        let g1 = ((address >> 16) & 0xffff) as u16;
+        let g2 = ((address >> 32) & 0xffff) as u16;
+        let g3 = ((address >> 48) & 0xffff) as u16;
+
+        unsafe {
+          insn_ptr
+            .add(0)
+            .write_unaligned(patch_imm16(insn_ptr.add(0).read_unaligned(), g0));
+          insn_ptr
+            .add(1)
+            .write_unaligned(patch_imm16(insn_ptr.add(1).read_unaligned(), g1));
+          insn_ptr
+            .add(2)
+            .write_unaligned(patch_imm16(insn_ptr.add(2).read_unaligned(), g2));
+          insn_ptr
+            .add(3)
+            .write_unaligned(patch_imm16(insn_ptr.add(3).read_unaligned(), g3));
+        }
+      }
+      _ => unreachable!(),
+    }
+  }
 }

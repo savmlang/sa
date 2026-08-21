@@ -53,8 +53,11 @@ impl ToTokens for SymbolReloc {
     let offset = self.offset;
     let symbol = &*self.symbol;
     let reloc = match self.reloc {
-      RelocKind::Abs8 => format_ident!("Abs8"),
-      RelocKind::Abs4 => format_ident!("Abs4"),
+      RelocKind::Abs8 => quote! { savmbuild_cinder::RelocKind::Abs8 },
+      RelocKind::Abs4 => quote! { savmbuild_cinder::RelocKind::Abs4 },
+      RelocKind::UserCustom { customdefined } => {
+        quote! { savmbuild_cinder::RelocKind::UserCustom { customdefined: #customdefined } }
+      }
       _ => unreachable!(),
     };
 
@@ -62,7 +65,7 @@ impl ToTokens for SymbolReloc {
       SymbolRelocStatic {
         offset: #offset,
         symbol: #symbol,
-        reloc: savmbuild_cinder::RelocKind::#reloc
+        reloc: #reloc
       }
     });
   }

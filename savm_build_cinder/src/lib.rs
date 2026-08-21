@@ -1,5 +1,5 @@
 use object::{
-  File as ObjFile, Object, ObjectSection, ObjectSymbol, RelocationKind, RelocationTarget,
+  File as ObjFile, Object, ObjectSection, ObjectSymbol, RelocationFlags, RelocationTarget, elf, pe,
 };
 pub use sajit::relocations::RelocKind;
 use std::{fs, path::PathBuf};
@@ -30,9 +30,10 @@ pub struct SymbolRelocStatic {
 #[derive(Debug, Clone, Copy)]
 pub struct TargetMachine {
   pub arch_32: bool,
+  pub arm64: bool,
 }
 
-pub fn stenload<'a>(path: &PathBuf, name: &'a str, mc: TargetMachine) -> Stencil<'a> {
+pub fn stenload<'a>(path: &PathBuf, name: &'a str, _mc: TargetMachine) -> Stencil<'a> {
   let buf = fs::read(path).expect("Unable to open object");
   let objfile = ObjFile::parse(&*buf).expect("ObjectFile Invalid");
 
@@ -56,14 +57,17 @@ pub fn stenload<'a>(path: &PathBuf, name: &'a str, mc: TargetMachine) -> Stencil
         e => panic!("Unsupported relocatoin : {e:?}"),
       };
 
-      let reloc = match reloc.kind() {
-        RelocationKind::Absolute => {
-          if mc.arch_32 {
-            RelocKind::Abs4
-          } else {
-            RelocKind::Abs8
-          }
-        }
+      let reloc = match reloc.flags() {
+        RelocationFlags::Elf { r_type } => match r_type {
+          elf::R_AARCH64_MOVW_GOTOFF_G0 => RelocKind::UserCustom { customdefined: 0 },
+          elf::R_X86_64_64 => RelocKind::Abs8,
+          _ => unreachable!(),
+        },
+        RelocationFlags::Coff { typ } => match typ {
+          pe::IMAGE_REL_AMD64_ABSOLUTE | pe::IMAGE_REL_AMD64_ADDR64 => RelocKind::Abs8,
+          _ => unreachable!(),
+        },
+
         _ => unreachable!(),
       };
 
@@ -74,6 +78,7 @@ pub fn stenload<'a>(path: &PathBuf, name: &'a str, mc: TargetMachine) -> Stencil
       }
     })
     .collect::<Box<_>>();
+
   relocs.sort_unstable_by(|a, b| a.symbol.cmp(&b.symbol));
 
   Stencil {

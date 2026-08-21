@@ -28,7 +28,6 @@ fn build_cinder() {
   use std::{env::var, fs};
 
   let arch = var("CARGO_CFG_TARGET_ARCH").unwrap();
-
   let supported = ["x86_64"];
 
   if supported.contains(&&*arch) {
@@ -46,6 +45,9 @@ fn build_cinder() {
         "-fno-data-sections",
         "-fomit-frame-pointer",
         "-fno-stack-protector",
+        "-fno-jump-tables",
+        "-fno-signed-zeros",
+        "-fno-vectorize",
       ])
       .include("src_cinder");
 
@@ -74,6 +76,7 @@ fn build_cinder() {
 
     let machine = TargetMachine {
       arch_32: arch == "x86",
+      arm64: arch == "aarch64",
     };
 
     let stencils = built

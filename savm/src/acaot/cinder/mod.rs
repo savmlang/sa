@@ -224,7 +224,7 @@ pub const fn unpack_marker(data: [u8; 24]) -> (u64, u64, usize) {
 }
 
 #[derive(Clone, Copy)]
-pub struct StencilVec<T>([Option<T>; 6]);
+pub struct StencilVec<T>(pub(crate) [Option<T>; 6]);
 
 impl<T> StencilVec<T> {
   pub fn iter(&self) -> impl Iterator<Item = &T> {

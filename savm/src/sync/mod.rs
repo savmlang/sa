@@ -326,7 +326,7 @@ impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
       if dref.cinder {
         #[cfg(all(
           feature = "native",
-          any(target_arch = "x86_64", target_arch = "aarch64"),
+          any(target_arch = "x86_64"),
           any(target_os = "windows", target_os = "linux")
         ))]
         {
@@ -369,7 +369,7 @@ impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
   #[inline(never)]
   #[cfg(all(
     feature = "native",
-    any(target_arch = "x86_64", target_arch = "aarch64"),
+    any(target_arch = "x86_64"),
     any(target_os = "windows", target_os = "linux")
   ))]
   pub fn exec_jit_cinder(&self, pickle: &[PickleInstruction], exec: *const Executable) -> u32 {

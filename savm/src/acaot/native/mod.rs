@@ -1,6 +1,6 @@
 #[cfg(all(
   feature = "native",
-  any(target_arch = "x86_64", target_arch = "aarch64"),
+  any(target_arch = "x86_64"),
   any(target_os = "windows", target_os = "linux")
 ))]
 use crate::acaot::cinder::ACAoTCinder;
@@ -54,7 +54,7 @@ pub fn testing_compiler_infra<const SENDBACK: bool, T: BytecodeResolver + Send +
   &[
     #[cfg(all(
       feature = "native",
-      any(target_arch = "x86_64", target_arch = "aarch64"),
+      any(target_arch = "x86_64"),
       any(target_os = "windows", target_os = "linux")
     ))]
     (
@@ -98,7 +98,7 @@ pub fn compiler_infra<const SENDBACK: bool, T: BytecodeResolver + Send + Sync + 
   &[
     #[cfg(all(
       feature = "native",
-      any(target_arch = "x86_64", target_arch = "aarch64"),
+      any(target_arch = "x86_64"),
       any(target_os = "windows", target_os = "linux")
     ))]
     &CompilerBuilder(ACAoTCinder::<T>::create, CacheLevel::ACAoTCinder),
