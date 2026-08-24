@@ -1,0 +1,5 @@
+; satest Build Script for Hardcore Mathematical Benchmarks (10,000 internal loops)
+:compile math dist
+:jit
+:bench
+:iter 100 n

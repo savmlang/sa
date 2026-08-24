@@ -7,15 +7,18 @@ use crate::acaot::native::llvm_compiler::{
   ssaupdater::{LARGEPAD, REG_R2, REG_R3},
 };
 use llvm_sys::{
+  LLVMTypeKind,
   core::{
     LLVMBuildBitCast, LLVMBuildExtractElement, LLVMBuildInsertElement, LLVMConstInt,
-    LLVMDoubleTypeInContext, LLVMFloatTypeInContext, LLVMGetVectorSize, LLVMInt8TypeInContext,
-    LLVMInt16TypeInContext, LLVMInt32TypeInContext, LLVMInt64TypeInContext, LLVMVectorType,
+    LLVMDoubleTypeInContext, LLVMFloatTypeInContext, LLVMGetTypeKind, LLVMGetVectorSize,
+    LLVMInt8TypeInContext, LLVMInt16TypeInContext, LLVMInt32TypeInContext, LLVMInt64TypeInContext,
+    LLVMTypeOf, LLVMVectorType,
   },
   prelude::{LLVMBuilderRef, LLVMContextRef, LLVMTypeRef, LLVMValueRef},
 };
 
 pub mod regmap;
+pub mod utils;
 
 #[allow(unused)]
 pub const REGISTER_WIDTH: u8 = 8;
@@ -294,6 +297,12 @@ impl StoreResolver {
             *x = LLVMBuildBitCast(meta.builder, *x, llvmty.xreg, LLVM_VAR_NAME.0);
           });
 
+          let typ = LLVMTypeOf(vect);
+          let vect = match LLVMGetTypeKind(typ) {
+            LLVMTypeKind::LLVMVectorTypeKind | LLVMTypeKind::LLVMScalableVectorTypeKind => vect,
+            _ => LLVMBuildBitCast(meta.builder, vect, LLVMVectorType(typ, 1), LLVM_VAR_NAME.0),
+          };
+
           regmap.vectmask.iter().enumerate().for_each(|(idx, x)| {
             let extract_index = LLVMConstInt(meta.i32, idx as u64, 0);
             let insert_index = LLVMConstInt(meta.i32, x.laneid as u64, 0);
@@ -340,6 +349,24 @@ pub enum LLVMTypeOrWidth {
 }
 
 impl LLVMTypeOrWidth {
+  pub fn float_vect(&self, count: u32) -> LLVMTypeRef {
+    let typeref = unsafe {
+      let ctx = LLVM_CTX.with(|x| x.0);
+
+      match self.r#type().width {
+        4 => LLVMFloatTypeInContext(ctx),
+        8 => LLVMDoubleTypeInContext(ctx),
+        _ => unreachable!(),
+      }
+    };
+
+    if count == 1 {
+      return typeref;
+    }
+
+    unsafe { LLVMVectorType(typeref, count as _) }
+  }
+
   pub fn vect(&self, count: u32) -> LLVMTypeRef {
     let typeref = self.r#type().x1;
 

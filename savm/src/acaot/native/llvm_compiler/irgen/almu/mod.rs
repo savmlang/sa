@@ -9,7 +9,7 @@ use crate::acaot::{
       OffsetBytes, offsetload,
       reg::{
         LLVMTypeMapping, LLVMTypeOrWidth, llvmresolve_location_src_load,
-        llvmresolve_location_src_store,
+        llvmresolve_location_src_store, utils::vectorize,
       },
     },
     ssaupdater::{REG_R1, REG_R5},
@@ -25,13 +25,15 @@ use crate::acaot::{
   },
 };
 use llvm_sys::{
-  LLVMIntPredicate, LLVMRealPredicate,
+  LLVMIntPredicate::{self, LLVMIntNE},
+  LLVMRealPredicate,
   core::{
     LLVMBuildAShr, LLVMBuildAdd, LLVMBuildBitCast, LLVMBuildExtractValue, LLVMBuildFCmp,
-    LLVMBuildICmp, LLVMBuildLShr, LLVMBuildMul, LLVMBuildSDiv, LLVMBuildSExt, LLVMBuildSRem,
-    LLVMBuildSub, LLVMBuildTrunc, LLVMBuildUDiv, LLVMBuildURem, LLVMBuildZExt,
-    LLVMBuildZExtOrBitCast, LLVMConstInt, LLVMConstVector, LLVMInt8TypeInContext,
-    LLVMInt16TypeInContext, LLVMIntTypeInContext, LLVMTypeOf, LLVMVectorType,
+    LLVMBuildICmp, LLVMBuildLShr, LLVMBuildMul, LLVMBuildOr, LLVMBuildSDiv, LLVMBuildSExt,
+    LLVMBuildSRem, LLVMBuildSelect, LLVMBuildSub, LLVMBuildTrunc, LLVMBuildTruncOrBitCast,
+    LLVMBuildUDiv, LLVMBuildURem, LLVMBuildZExt, LLVMBuildZExtOrBitCast, LLVMConstInt,
+    LLVMConstVector, LLVMInt8TypeInContext, LLVMInt16TypeInContext, LLVMIntTypeInContext,
+    LLVMTypeOf, LLVMVectorType,
   },
   prelude::LLVMValueRef,
 };
@@ -139,6 +141,10 @@ pub fn handle_vcmp(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
         FloatOP::UnorderedOrLessThanOrEqual => LLVMRealPredicate::LLVMRealULE,
       };
 
+      let dest = typ.float_vect(count);
+
+      let src1 = LLVMBuildBitCast(meta.builder, src1, dest, LLVM_VAR_NAME.0);
+      let src2 = LLVMBuildBitCast(meta.builder, src2, dest, LLVM_VAR_NAME.0);
       LLVMBuildFCmp(meta.builder, op, src1, src2, LLVM_VAR_NAME.0)
     },
   };
@@ -280,7 +286,7 @@ pub fn handle_add(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
     pickle,
     meta,
     |_| 1,
-    |meta, instdefined, r#type, _count, src1, src2| unsafe {
+    |meta, instdefined, r#type, count, src1, src2| unsafe {
       // [<Carry/Sigflow bit>] [<saturation bit>] [Padding (14bits)] (16b)
       let carry = (instdefined >> 15) == 1; // gets the last bit
       let saturate = (instdefined >> 14 & 0b01) == 1; // gets the saturation bit
@@ -293,13 +299,39 @@ pub fn handle_add(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
         } else {
           "llvm.uadd.with.overflow"
         };
+        let r5 = LLVMBuildTruncOrBitCast(
+          meta.builder,
+          meta.regmnt.usereg(REG_R5),
+          r#type.x1,
+          LLVM_VAR_NAME.0,
+        );
+        let r5 = LLVMBuildICmp(
+          meta.builder,
+          LLVMIntNE,
+          r5,
+          LLVMConstInt(r#type.x1, 0, 0),
+          LLVM_VAR_NAME.0,
+        );
+
+        let carry = LLVMBuildSelect(
+          meta.builder,
+          r5,
+          vectorize(LLVMConstInt(r#type.x1, 1, 0), count),
+          vectorize(LLVMConstInt(r#type.x1, 0, 0), count),
+          LLVM_VAR_NAME.0,
+        );
 
         let valvect = meta.call_intrinsic(overflow, &mut [r#type.x1], &mut [src1, src2]);
 
         let sum = LLVMBuildExtractValue(meta.builder, valvect, 0, LLVM_VAR_NAME.0);
-        let oflow = {
-          let v = LLVMBuildExtractValue(meta.builder, valvect, 1, LLVM_VAR_NAME.0);
+        let oflow = LLVMBuildExtractValue(meta.builder, valvect, 1, LLVM_VAR_NAME.0);
 
+        let valvect = meta.call_intrinsic(overflow, &mut [r#type.x1], &mut [sum, carry]);
+        let sum = LLVMBuildExtractValue(meta.builder, valvect, 0, LLVM_VAR_NAME.0);
+        let oflow2 = LLVMBuildExtractValue(meta.builder, valvect, 1, LLVM_VAR_NAME.0);
+
+        let oflow = {
+          let v = LLVMBuildOr(meta.builder, oflow, oflow2, LLVM_VAR_NAME.0);
           LLVMBuildZExtOrBitCast(meta.builder, v, meta.i64, LLVM_VAR_NAME.0)
         };
         let meta_ptr = meta as *mut CompilerMeta;
@@ -343,20 +375,50 @@ pub fn handle_sub(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
         } else {
           "llvm.usub.with.overflow"
         };
+        let r5 = LLVMBuildTruncOrBitCast(
+          meta.builder,
+          meta.regmnt.usereg(REG_R5),
+          r#type.x1,
+          LLVM_VAR_NAME.0,
+        );
+        let r5 = LLVMBuildICmp(
+          meta.builder,
+          LLVMIntNE,
+          r5,
+          LLVMConstInt(r#type.x1, 0, 0),
+          LLVM_VAR_NAME.0,
+        );
+
+        let borrow = LLVMBuildSelect(
+          meta.builder,
+          r5,
+          vectorize(LLVMConstInt(r#type.x1, 1, 0), count),
+          vectorize(LLVMConstInt(r#type.x1, 0, 0), count),
+          LLVM_VAR_NAME.0,
+        );
+
         let mut typearg = [LLVMTypeOf(src1)];
 
         let valvect = meta.call_intrinsic(saturate, &mut typearg, &mut [src1, src2]);
 
-        let sum = LLVMBuildExtractValue(meta.builder, valvect, 0, LLVM_VAR_NAME.0);
+        let diff = LLVMBuildExtractValue(meta.builder, valvect, 0, LLVM_VAR_NAME.0);
+        let oflow = LLVMBuildExtractValue(meta.builder, valvect, 1, LLVM_VAR_NAME.0);
+
+        let valvect = meta.call_intrinsic(saturate, &mut typearg, &mut [diff, borrow]);
+
+        let diff = LLVMBuildExtractValue(meta.builder, valvect, 0, LLVM_VAR_NAME.0);
+        let oflow2 = LLVMBuildExtractValue(meta.builder, valvect, 1, LLVM_VAR_NAME.0);
+
         let oflow = {
-          let v = LLVMBuildExtractValue(meta.builder, valvect, 1, LLVM_VAR_NAME.0);
+          let v = LLVMBuildOr(meta.builder, oflow, oflow2, LLVM_VAR_NAME.0);
 
           LLVMBuildZExtOrBitCast(meta.builder, v, meta.i64, LLVM_VAR_NAME.0)
         };
+
         let meta_ptr = meta as *mut CompilerMeta;
         (*meta_ptr).regmnt.setreg(REG_R5, oflow);
 
-        sum
+        diff
       } else if saturate {
         let saturate = if r#type.signed {
           "llvm.ssub.sat"
@@ -381,19 +443,23 @@ pub fn handle_mul(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
     |instdefined| {
       let eflags = (instdefined >> 14) as u8;
 
-      let wide = (eflags & 0x03) == 1;
+      let wide = (eflags & 0x02) != 0;
       if wide { 2 } else { 1 }
     },
     |meta, instdefined, r#type, count, src1, src2| unsafe {
       let eflags = (instdefined >> 14) as u8;
 
-      let wide = (eflags & 0x03) == 1;
+      let wide = (eflags & 0x02) != 0;
       let lowbits = (eflags & 0x01) == 0;
 
       if wide || !lowbits {
         let bit_width = r#type.width * 8;
         let wide_elem_type = LLVMIntTypeInContext(meta.llvmctx, (bit_width * 2) as _);
-        let wide_vector_type = LLVMTypeOf(src1);
+        let wide_vector_type = if count == 1 {
+          wide_elem_type
+        } else {
+          LLVMVectorType(wide_elem_type, count)
+        };
 
         let (w_src1, w_src2) = if r#type.signed {
           (
@@ -427,11 +493,7 @@ pub fn handle_mul(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
 
           return LLVMBuildTrunc(meta.builder, shifted, original_vector_type, LLVM_VAR_NAME.0);
         } else {
-          let target = if count == 1 {
-            LLVMVectorType(r#type.x1, 2)
-          } else {
-            LLVMVectorType(r#type.x1, 2 * count)
-          };
+          let target = LLVMVectorType(r#type.x1, 2 * count);
 
           return LLVMBuildBitCast(meta.builder, wide_mul, target, LLVM_VAR_NAME.0);
         }

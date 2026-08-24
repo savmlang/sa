@@ -155,7 +155,27 @@ fn main() {
       .filter_map(Result::ok)
       .collect::<Box<_>>();
 
-    items.sort_unstable_by(|a, b| a.file_name().cmp(&b.file_name()));
+    items.sort_unstable_by(|a, b| {
+      let a_val = a
+        .file_name()
+        .to_str()
+        .and_then(|x| x.split_once("."))
+        .map(|x| x.0)
+        .and_then(|x| x.parse::<u64>().ok());
+      let b_val = b
+        .file_name()
+        .to_str()
+        .and_then(|x| x.split_once("."))
+        .map(|x| x.0)
+        .and_then(|x| x.parse::<u64>().ok());
+
+      if let (Some(a), Some(b)) = (a_val, b_val) {
+        return a.cmp(&b);
+      }
+
+      // Fallback
+      a.file_name().cmp(&b.file_name())
+    });
 
     for entry in items {
       let sectionid = entry
@@ -191,7 +211,7 @@ fn main() {
         fail += 1;
         println!(
           "{:>12} TestID #{sectionid}",
-          Style::new().green().apply_to("Pass")
+          Style::new().red().apply_to("FAIL")
         );
       } else {
         println!(

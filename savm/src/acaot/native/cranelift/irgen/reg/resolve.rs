@@ -243,6 +243,21 @@ pub fn resolve_location_src_store_assumedwdt(
         storeseq: data,
       }
     }
+    // The pointer is to be read from r3
+    11 => {
+      let r3 = resolve_reg(builder, meta, 2);
+
+      let ptr = builder.use_var(r3);
+      let alignment = alignment.unwrap_or(1);
+
+      let data = break_simd_waterfall(alignment, typedata, count, assumedwdt).into_boxed_slice();
+
+      StoreResolver::Pointer {
+        baseptr: ptr,
+        regtouches: Box::new([]),
+        storeseq: data,
+      }
+    }
     _ => unreachable!(),
   }
 }
@@ -402,6 +417,7 @@ impl Drop for StoreResolver {
   }
 }
 
+// An internal function that will at maximum process ~64B of alignment
 fn get_max_alignment(base_align: u8, byteoffset: i32) -> u8 {
   if byteoffset == 0 {
     return base_align;

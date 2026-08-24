@@ -10,6 +10,7 @@ extern char VERIFY[];
 JITFN
 void cinderjit_call_jumpable(DispatchStarter *state)
 {
+  state->taskstate->curline_or_resume = 0;
   CALL(state->pickle + (uintptr_t)PICKLE_IDX, state->ws, state->taskstate);
 
   if (state->taskstate->curline_or_resume == (uint64_t)VERIFY)

@@ -1,4 +1,10 @@
-use cranelift::prelude::{FunctionBuilder, InstBuilder};
+use cranelift::{
+  codegen::ir::{
+    Endianness, MemFlagsData,
+    types::{F32, F64},
+  },
+  prelude::{FunctionBuilder, InstBuilder},
+};
 
 use crate::acaot::{
   native::cranelift::{
@@ -43,7 +49,25 @@ pub fn hwnd_vcmp(
     .for_each(|(idx, (src1, src2))| {
       let val = match &cmpop {
         CMPOp::IntOp(i) => builder.ins().icmp(i.to_clir(), src1, src2),
-        CMPOp::FloatOp(f) => builder.ins().fcmp(f.to_clir(), src1, src2),
+        CMPOp::FloatOp(f) => {
+          let fptype = match typ.clif_mapping().width {
+            // float
+            4 => F32,
+            8 => F64,
+            _ => unreachable!(),
+          };
+          let src1 = builder.ins().bitcast(
+            fptype,
+            MemFlagsData::new().with_endianness(Endianness::Little),
+            src1,
+          );
+          let src2 = builder.ins().bitcast(
+            fptype,
+            MemFlagsData::new().with_endianness(Endianness::Little),
+            src2,
+          );
+          builder.ins().fcmp(f.to_clir(), src1, src2)
+        }
       };
 
       let newtype = builder.func.dfg.value_type(src1);

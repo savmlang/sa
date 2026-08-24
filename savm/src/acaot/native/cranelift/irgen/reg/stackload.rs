@@ -38,6 +38,18 @@ pub fn resolve_loc_to_ptr(
       let r2 = resolve_reg(builder, meta, 1);
 
       let ptr = builder.use_var(r2);
+      let ptr = builder.ins().iadd_imm_u(ptr, offset as i64);
+
+      return LocToPtr {
+        ptr,
+        reg_touched: false,
+      };
+    }
+    11 => {
+      let r3 = resolve_reg(builder, meta, 2);
+
+      let ptr = builder.use_var(r3);
+      let ptr = builder.ins().iadd_imm_u(ptr, offset as i64);
 
       return LocToPtr {
         ptr,

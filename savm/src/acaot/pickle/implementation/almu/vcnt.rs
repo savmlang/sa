@@ -58,7 +58,11 @@ bitop! {
     a.leading_zeros() as _
   },
   { u64, u32, u16, u8} cls      => |a| {
-    a.leading_ones() as _
+    if a & (1 << (std::mem::size_of_val(&a) * 8 - 1)) != 0 {
+        a.leading_ones().saturating_sub(1) as _
+    } else {
+        a.leading_zeros().saturating_sub(1) as _
+    }
   },
   { u64, u32, u16, u8 } ctz      => |a| {
     a.trailing_zeros() as _

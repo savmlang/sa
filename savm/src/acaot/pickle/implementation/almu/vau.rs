@@ -126,7 +126,7 @@ macro_rules! intop_carry {
       let output = (s1).$op(s2, carry);
 
       ptr::write_unaligned(t, output.0);
-      ptr::write_unaligned(($carry as *mut $t), if output.1 { !0 } else { 0 });
+      ptr::write_unaligned(($carry as *mut $t), if output.1 { 1 } else { 0 });
     }
   };
 }
@@ -277,7 +277,7 @@ pub fn call_vmul(_: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut VMT
   // - 0x: we use Lossy Multiplication (this is only time the other bit is read)
   let eflags = (instdefined >> 14) as u8;
 
-  let wide = (eflags & 0x03) == 1;
+  let wide = (eflags & 0x02) != 0;
   let lowbits = (eflags & 0x01) == 0;
 
   debug_assert!(count != 0);

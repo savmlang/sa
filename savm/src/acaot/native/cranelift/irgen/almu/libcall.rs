@@ -34,7 +34,7 @@ pub fn hwnd_libcall_sync(
   meta: &mut CompilerMeta,
   pickle: PickleInstruction,
 ) {
-  let sectionid = readws!(meta, start = 0, stop = 4, u64);
+  let sectionid = readws!(meta, start = 0, stop = 8, u64);
 
   // bits 0..7 == dont push regs 0..7 through
   let regignore = pickle.u1;

@@ -81,7 +81,7 @@ pub fn handle_vrot(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
     of_tgt,
   } = parse_vrot(pickle, meta.ws.as_ref());
 
-  let typ = LLVMTypeOrWidth::Width(typetag);
+  let typ = LLVMTypeOrWidth::Type(typetag);
 
   let src1 = llvmresolve_location_src_load(meta, typ, src1, None, of_src1, count);
   let src2 = llvmresolve_location_src_load(meta, typ, src2, None, of_src2, count);
@@ -94,7 +94,7 @@ pub fn handle_vrot(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
   };
 
   unsafe {
-    let vect = meta.call_intrinsic(name, &mut [LLVMTypeOf(src1)], &mut [src1, src2]);
+    let vect = meta.call_intrinsic(name, &mut [LLVMTypeOf(src1)], &mut [src1, src1, src2]);
     target.synchronize(meta, vect);
   }
 }

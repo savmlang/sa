@@ -434,7 +434,6 @@ pub fn call_jif(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mut
       }
 
       let cr = (*ws).relocmap.get(&marker).unwrap_unchecked();
-
       (*ws).jmp = (marker, cr);
       (*taskstate).curline_or_resume.usi = cr;
     }

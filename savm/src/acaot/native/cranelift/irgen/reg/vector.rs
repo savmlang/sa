@@ -24,7 +24,7 @@ pub fn reglane_insert(builder: &mut FunctionBuilder, reg: Value, valadd: Value, 
   };
 
   let reg = {
-    let mask = ((1u64 << (single_elem_width * 8)) - 1) << (single_elem_width * 8 * idx as u32);
+    let mask = if single_elem_width >= 8 { u64::MAX } else { ((1u64 << (single_elem_width * 8)) - 1) << (single_elem_width * 8 * idx as u32) };
 
     builder.ins().band_imm_u(reg, !mask.cast_signed())
   };

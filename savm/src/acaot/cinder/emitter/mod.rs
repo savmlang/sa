@@ -10,7 +10,7 @@ use crate::{
       CompilerMeta, INST_RETURN_P_ID, Resolved, StencilMap,
       emit::{
         Stencil, inst_call, inst_call_jmpable, inst_div, inst_mark, inst_nop, inst_rem, inst_vadd,
-        inst_vmul, inst_vsub, inst_wsput,
+        inst_vaddf, inst_vdivf, inst_vmul, inst_vmulf, inst_vsub, inst_vsubf, inst_wsput,
       },
       stencilify,
     },
@@ -18,9 +18,13 @@ use crate::{
       def::{
         PICKLE_OPCODE_DIV, PICKLE_OPCODE_HINT, PICKLE_OPCODE_JIF, PICKLE_OPCODE_JMP,
         PICKLE_OPCODE_MARK, PICKLE_OPCODE_REM, PICKLE_OPCODE_TASK, PICKLE_OPCODE_VADD,
-        PICKLE_OPCODE_VMUL, PICKLE_OPCODE_VSUB, PickleInstruction,
+        PICKLE_OPCODE_VADDF, PICKLE_OPCODE_VDIVF, PICKLE_OPCODE_VMUL, PICKLE_OPCODE_VMULF,
+        PICKLE_OPCODE_VSUB, PICKLE_OPCODE_VSUBF, PickleInstruction,
       },
-      reader::au::{ARITH, DIVLIKE, parse_arith, parse_divlike},
+      reader::{
+        au::{ARITH, DIVLIKE, parse_arith, parse_divlike},
+        fp::{VFP, parse_vfp},
+      },
     },
   },
   kvwrap::SaVMJumpWrapImpl,
@@ -106,6 +110,11 @@ pub fn emit<T: BytecodeResolver + Send + Sync + 'static>(
       PICKLE_OPCODE_DIV => emit_divlike(op, ws, &inst_div, comptime),
       PICKLE_OPCODE_REM => emit_divlike(op, ws, &inst_rem, comptime),
 
+      PICKLE_OPCODE_VADDF => emit_varith_vfp(op, ws, &inst_vaddf, comptime),
+      PICKLE_OPCODE_VSUBF => emit_varith_vfp(op, ws, &inst_vsubf, comptime),
+      PICKLE_OPCODE_VMULF => emit_varith_vfp(op, ws, &inst_vmulf, comptime),
+      PICKLE_OPCODE_VDIVF => emit_varith_vfp(op, ws, &inst_vdivf, comptime),
+
       // JMP-ABLE
       PICKLE_OPCODE_JIF | PICKLE_OPCODE_TASK => {
         let marker = match opcode {
@@ -183,6 +192,59 @@ pub fn emit<T: BytecodeResolver + Send + Sync + 'static>(
     ws = &[];
     idx += 1;
   }
+}
+
+#[inline(always)]
+fn emit_varith_vfp(
+  pickle: &PickleInstruction,
+  ws: &[u8],
+  stencil: &'static Stencil,
+  comptime: &mut CompilerMeta,
+) {
+  let VFP {
+    instdef,
+    count,
+    datatype,
+    src1,
+    src2,
+    tgt,
+    of_src1,
+    of_src2,
+    of_tgt,
+  } = parse_vfp(pickle, ws);
+
+  let dt_src1_src2_tgt_count = (datatype as u64)
+    | ((src1 as u64) << 8)
+    | ((src2 as u64) << 16)
+    | ((tgt as u64) << 24)
+    | ((count as u64) << 32);
+  let of_src1_src2 = (of_src1.cast_unsigned() as u64) | ((of_src2.cast_unsigned() as u64) << 32);
+
+  comptime.mapping.push(stencilify(&[StencilMap {
+    stencil,
+    resolve: stencilify(&[
+      (
+        "DATATYPE_SRC1_SRC2_TGT_COUNT",
+        Resolved::Immediate {
+          imm: dt_src1_src2_tgt_count,
+        },
+      ),
+      (
+        "INSTDEFINED",
+        Resolved::Immediate {
+          imm: instdef as u64,
+        },
+      ),
+      ("OF_SRC1_SRC2", Resolved::Immediate { imm: of_src1_src2 }),
+      (
+        "OF_TGT",
+        Resolved::Immediate {
+          imm: of_tgt.cast_unsigned() as u64,
+        },
+      ),
+      ("NEXT", Resolved::NextMainID),
+    ]),
+  }]));
 }
 
 #[inline(always)]

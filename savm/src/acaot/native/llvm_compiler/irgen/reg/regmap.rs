@@ -133,7 +133,11 @@ pub fn load_all_vectored(
       );
     }
 
-    final_vector
+    if regs.len() == 1 {
+      LLVMBuildBitCast(builder, final_vector, ty.x1, LLVM_VAR_NAME.0)
+    } else {
+      final_vector
+    }
   }
 }
 

@@ -150,18 +150,19 @@ pub fn compile<const SENDBACK: bool>(
               meta.vmtaskstate,
               offset_of!(VMTaskState, largepad) as i32,
             ),
+            13 => todo!("Global RW Data Soon"),
             _ => unreachable!(),
           };
 
           builder.def_var(r1, val);
         } else {
           let src = resolve_reg(builder, meta, source);
+          let data = builder.use_var(src);
 
           let tgt = resolve_reg(builder, meta, target);
-          let tgt = builder.use_var(tgt);
 
           // Do a MOV
-          builder.def_var(src, tgt);
+          builder.def_var(tgt, data);
         }
       }
 

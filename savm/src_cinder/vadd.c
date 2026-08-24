@@ -68,6 +68,7 @@ void cinderjit_vadd(DispatchStarter *state)
       break;
     case 3:
       INTOP_ADD_SAT_U(uint8_t, prelude.src1, prelude.src2, prelude.tgt, prelude.count, prelude.of_src1, prelude.of_src2, prelude.of_tgt);
+      break;
     case 4:
       INTOP_ADD_SAT_S(int64_t, prelude.src1, prelude.src2, prelude.tgt, prelude.count, prelude.of_src1, prelude.of_src2, prelude.of_tgt);
       break;

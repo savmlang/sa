@@ -17,7 +17,7 @@ void cinderjit_vmul(DispatchStarter *state)
   uint64_t instdefined = prelude.instdefined;
 
   uint8_t eflags = (uint8_t)(instdefined >> 14);
-  bool wide = (eflags & 0x03) == 1;
+  bool wide = (eflags & 0x02) != 0;
   bool lowbits = (eflags & 0x01) == 0;
 
   if (wide)

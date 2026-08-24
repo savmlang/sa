@@ -73,8 +73,8 @@
     TYPE *b_ = (TYPE *)(B);                                         \
     TYPE *out_ = (TYPE *)(OUT);                                     \
                                                                     \
-    TYPE max_ = (TYPE)((((TYPE) - 1) >> 1));                        \
-    TYPE min_ = (TYPE)(~max_);                                      \
+    TYPE max_ = (TYPE)(((uint64_t)1 << (sizeof(TYPE) * 8 - 1)) - 1); \
+    TYPE min_ = (TYPE)(~max_);                                       \
                                                                     \
     for (uint32_t i = 0; i < (uint32_t)(COUNT); i++)                \
     {                                                               \

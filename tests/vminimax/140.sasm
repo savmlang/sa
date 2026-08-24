@@ -1,0 +1,4 @@
+#import *
+reg $r1::u8, 0::u8, fp-10.5::u64
+reg $r2::u8, 0::u8, fp-20.5::u64
+vminimax %u16[ $f64::u4 | $r1::u4 | $r2::u4 | $r3::u4 ], %u8[ 0::u7 | $OP_VMAX::u1 ], 1::u32, 0::u8, 0::u8, 0::u8

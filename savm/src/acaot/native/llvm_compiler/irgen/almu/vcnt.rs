@@ -1,8 +1,11 @@
-use llvm_sys::core::LLVMTypeOf;
+use llvm_sys::core::{
+  LLVMBuildAShr, LLVMBuildOr, LLVMBuildShl, LLVMBuildXor, LLVMConstInt, LLVMConstVector,
+  LLVMGetIntTypeWidth, LLVMInt1TypeInContext, LLVMTypeOf,
+};
 
 use crate::acaot::{
   native::llvm_compiler::{
-    CompilerMeta,
+    CompilerMeta, LLVM_VAR_NAME,
     irgen::reg::{LLVMTypeOrWidth, llvmresolve_location_src_load, llvmresolve_location_src_store},
   },
   pickle::{
@@ -37,15 +40,55 @@ pub fn handle_vcnt(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
   );
 
   unsafe {
-    let intrinsic = match op {
-      0 => "llvm.ctpop",
-      1 => "llvm.ctlz",
-      2 => "llvm.clrsb",
-      3 => "llvm.ctz",
+    let ctx = meta.llvmctx;
+    let builder = meta.builder;
+
+    let val = match op {
+      0 => meta.call_intrinsic("llvm.ctpop", &mut [LLVMTypeOf(src)], &mut [src]),
+      1 => {
+        let zero_poison = LLVMConstInt(LLVMInt1TypeInContext(ctx), 0, 0);
+        meta.call_intrinsic("llvm.ctlz", &mut [LLVMTypeOf(src)], &mut [src, zero_poison])
+      }
+      2 => {
+        let x1 = typ.r#type().x1;
+        let bits = LLVMGetIntTypeWidth(x1);
+
+        let rhs = {
+          let scalar_rhs = LLVMConstInt(x1, (bits - 1) as u64, 0);
+          let mut mask = vec![scalar_rhs; count as usize];
+
+          if count == 1 { scalar_rhs } else { LLVMConstVector(mask.as_mut_ptr(), count as _) }
+        };
+
+        let ashr = LLVMBuildAShr(builder, src, rhs, LLVM_VAR_NAME.0);
+
+        let xor = LLVMBuildXor(builder, src, ashr, LLVM_VAR_NAME.0);
+
+        // (x ^ sign) << 1
+        let one = LLVMConstInt(x1, 1, 0);
+        let mut ones = vec![one; count as usize];
+
+        let one_vec = if count == 1 { one } else { LLVMConstVector(ones.as_mut_ptr(), count as _) };
+
+        let shl = LLVMBuildShl(builder, xor, one_vec, LLVM_VAR_NAME.0);
+
+        // ... | 1
+        let add_one = LLVMBuildOr(builder, shl, one_vec, LLVM_VAR_NAME.0);
+
+        let zero_poison = LLVMConstInt(LLVMInt1TypeInContext(ctx), 0, 0);
+
+        meta.call_intrinsic(
+          "llvm.ctlz",
+          &mut [LLVMTypeOf(src)],
+          &mut [add_one, zero_poison],
+        )
+      }
+      3 => {
+        let zero_poison = LLVMConstInt(LLVMInt1TypeInContext(ctx), 0, 0);
+        meta.call_intrinsic("llvm.cttz", &mut [LLVMTypeOf(src)], &mut [src, zero_poison])
+      }
       _ => unreachable!(),
     };
-
-    let val = meta.call_intrinsic(intrinsic, &mut [LLVMTypeOf(src)], &mut [src]);
 
     target.synchronize(meta, val);
   }

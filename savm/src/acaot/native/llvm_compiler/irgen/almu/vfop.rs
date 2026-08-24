@@ -1,5 +1,7 @@
 use llvm_sys::{
-  core::{LLVMBuildSub, LLVMConstNull, LLVMTypeOf},
+  core::{
+    LLVMBuildFNeg, LLVMBuildSub, LLVMConstInt, LLVMConstNull, LLVMInt1TypeInContext, LLVMTypeOf,
+  },
   prelude::LLVMValueRef,
 };
 
@@ -77,7 +79,7 @@ pub fn handle_vneg(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
     let basety = unsafe { LLVMTypeOf(src1) };
 
     if extllvm.float {
-      meta.call_intrinsic("llvm.fneg", &mut [basety], &mut [src1])
+      unsafe { LLVMBuildFNeg(meta.builder, src1, LLVM_VAR_NAME.0) }
     } else {
       unsafe {
         let zero = LLVMConstNull(basety);
@@ -93,14 +95,11 @@ pub fn handle_vabs(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
     let extllvm = ty.r#type();
     let basety = unsafe { LLVMTypeOf(src1) };
 
-    meta.call_intrinsic(
-      if extllvm.float {
-        "llvm.fabs"
-      } else {
-        "llvm.abs"
-      },
-      &mut [basety],
-      &mut [src1],
-    )
+    if extllvm.float {
+      meta.call_intrinsic("llvm.fabs", &mut [basety], &mut [src1])
+    } else {
+      let poison = unsafe { LLVMConstInt(LLVMInt1TypeInContext(meta.llvmctx), 0, 0) };
+      meta.call_intrinsic("llvm.abs", &mut [basety], &mut [src1, poison])
+    }
   });
 }

@@ -1,12 +1,17 @@
 //! Arithmatic-Logic-Memory Unit
 
+use std::mem::{self, forget};
+
 use crate::acaot::{
   native::cranelift::{
     CompilerMeta,
-    irgen::reg::{
-      COUNTSPILLER_USES_SIMD, StoreResolver, TypeOrWidth, resolve_location_src_load,
-      resolve_location_src_store, resolve_reg,
-      vector::{abstract_extractlane, abstract_insertlane},
+    irgen::{
+      almu::arith::IntArith,
+      reg::{
+        COUNTSPILLER_USES_SIMD, StoreResolver, TypeOrWidth, resolve_location_src_load,
+        resolve_location_src_store, resolve_reg,
+        vector::{abstract_extractlane, abstract_insertlane},
+      },
     },
   },
   pickle::{
@@ -26,6 +31,7 @@ use cranelift::{
   prelude::{MemFlagsData as MemFlags, *},
 };
 
+mod arith;
 mod atomic;
 mod fp;
 mod libcall;
@@ -198,7 +204,6 @@ pub fn hwnd_vadd(builder: &mut FunctionBuilder, meta: &mut CompilerMeta, _: Pick
 
   if carry {
     let r5 = resolve_reg(builder, meta, 4);
-
     let r5_val = builder.use_var(r5);
 
     let old = builder.ins().bitcast(
@@ -217,18 +222,21 @@ pub fn hwnd_vadd(builder: &mut FunctionBuilder, meta: &mut CompilerMeta, _: Pick
       unimplemented!()
     };
 
+    let mut arith = IntArith { builder };
     let (ans, of) = if clif.signed {
-      builder.ins().sadd_overflow_cin(src1, src2, r5_carry_bit)
+      arith.sadd_carry(src1, src2, r5_carry_bit)
     } else {
-      builder.ins().uadd_overflow_cin(src1, src2, r5_carry_bit)
+      arith.uadd_carry(src1, src2, r5_carry_bit)
     };
+    drop(arith);
     target.store(builder, 0, ans);
 
     if clif.width != 8 {
       let extend = abstract_insertlane(builder, meta, r5_val, of, 0);
       builder.def_var(r5, extend);
     } else {
-      builder.def_var(r5, of);
+      let extend = builder.ins().uextend(I64, of);
+      builder.def_var(r5, extend);
     };
   } else if saturate {
     src1
@@ -237,9 +245,53 @@ pub fn hwnd_vadd(builder: &mut FunctionBuilder, meta: &mut CompilerMeta, _: Pick
       .enumerate()
       .for_each(|(idx, (src1, src2))| {
         let val = if clif.signed {
-          builder.ins().sadd_sat(src1, src2)
+          let clif = typ.clif_mapping();
+          let x1 = clif.x1;
+
+          let (min, max) = match clif.width {
+            1 => (-128i64, 127i64),
+            2 => (-32768i64, 32767i64),
+            4 => (-2147483648i64, 2147483647i64),
+            8 => (i64::MIN, i64::MAX),
+            _ => unreachable!("invalid integer width"),
+          };
+
+          let zero = builder.ins().iconst(x1, 0);
+          let min = builder.ins().iconst(x1, min);
+          let max = builder.ins().iconst(x1, max);
+
+          let sum = builder.ins().iadd(src1, src2);
+
+          let a_neg = builder.ins().icmp(IntCC::SignedLessThan, src1, zero);
+
+          let b_neg = builder.ins().icmp(IntCC::SignedLessThan, src2, zero);
+
+          let sum_neg = builder.ins().icmp(IntCC::SignedLessThan, sum, zero);
+
+          // Same-sign operands + different-sign result = overflow.
+          let same_sign = builder.ins().icmp(IntCC::Equal, a_neg, b_neg);
+
+          let sign_changed = builder.ins().icmp(IntCC::NotEqual, a_neg, sum_neg);
+
+          let overflow = builder.ins().band(same_sign, sign_changed);
+
+          // Negative overflow -> MIN
+          // Positive overflow -> MAX
+          let saturated = builder.ins().select(a_neg, min, max);
+
+          builder.ins().select(overflow, saturated, sum)
         } else {
-          builder.ins().uadd_sat(src1, src2)
+          let sum = builder.ins().iadd(src1, src2);
+
+          let overflow = builder.ins().icmp(IntCC::UnsignedLessThan, sum, src1);
+
+          let clif = typ.clif_mapping();
+          let x1 = clif.x1;
+          let max = builder
+            .ins()
+            .iconst(x1, ((1u128 << (8 * clif.width)) - 1) as u64 as i64);
+
+          builder.ins().select(overflow, max, sum)
         };
         target.store(builder, idx, val);
       });
@@ -291,18 +343,21 @@ pub fn hwnd_vsub(builder: &mut FunctionBuilder, meta: &mut CompilerMeta, _: Pick
       unimplemented!()
     };
 
+    let mut arith = IntArith { builder };
     let (ans, of) = if clif.signed {
-      builder.ins().ssub_overflow_bin(src1, src2, r5_carry_bit)
+      arith.ssub_overflow_bin(src1, src2, r5_carry_bit)
     } else {
-      builder.ins().usub_overflow_bin(src1, src2, r5_carry_bit)
+      arith.usub_overflow_bin(src1, src2, r5_carry_bit)
     };
+    drop(arith);
     target.store(builder, 0, ans);
 
     if clif.width != 8 {
       let extend = abstract_insertlane(builder, meta, r5_val, of, 0);
       builder.def_var(r5, extend);
     } else {
-      builder.def_var(r5, of);
+      let extend = builder.ins().uextend(I64, of);
+      builder.def_var(r5, extend);
     };
   } else if saturate {
     src1
@@ -311,9 +366,50 @@ pub fn hwnd_vsub(builder: &mut FunctionBuilder, meta: &mut CompilerMeta, _: Pick
       .enumerate()
       .for_each(|(idx, (src1, src2))| {
         let val = if clif.signed {
-          builder.ins().ssub_sat(src1, src2)
+          let clif = typ.clif_mapping();
+          let x1 = clif.x1;
+
+          let (min, max) = match clif.width {
+            1 => (-128i64, 127i64),
+            2 => (-32768i64, 32767i64),
+            4 => (-2147483648i64, 2147483647i64),
+            8 => (i64::MIN, i64::MAX),
+            _ => unreachable!("invalid integer width"),
+          };
+
+          let zero = builder.ins().iconst(x1, 0);
+          let min = builder.ins().iconst(x1, min);
+          let max = builder.ins().iconst(x1, max);
+
+          let diff = builder.ins().isub(src1, src2);
+
+          let a_neg = builder.ins().icmp(IntCC::SignedLessThan, src1, zero);
+
+          let b_neg = builder.ins().icmp(IntCC::SignedLessThan, src2, zero);
+
+          let diff_neg = builder.ins().icmp(IntCC::SignedLessThan, diff, zero);
+
+          // Different-sign operands + changed result sign = overflow.
+          let different_sign = builder.ins().icmp(IntCC::NotEqual, a_neg, b_neg);
+
+          let sign_changed = builder.ins().icmp(IntCC::NotEqual, a_neg, diff_neg);
+
+          let overflow = builder.ins().band(different_sign, sign_changed);
+
+          // Negative src1 -> negative overflow -> MIN
+          // Positive src1 -> positive overflow -> MAX
+          let saturated = builder.ins().select(a_neg, min, max);
+
+          builder.ins().select(overflow, saturated, diff)
         } else {
-          builder.ins().usub_sat(src1, src2)
+          let clif = typ.clif_mapping();
+          let x1 = clif.x1;
+
+          let diff = builder.ins().isub(src1, src2);
+          let underflow = builder.ins().icmp(IntCC::UnsignedLessThan, src1, src2);
+          let zero = builder.ins().iconst(x1, 0);
+
+          builder.ins().select(underflow, zero, diff)
         };
         target.store(builder, idx, val);
       });
@@ -348,13 +444,17 @@ pub fn hwnd_vmul(builder: &mut FunctionBuilder, meta: &mut CompilerMeta, _: Pick
   // - 01: Output the 2nd 32-bit (i.e. high bits)
   let eflags = (instdefined >> 14) as u8;
 
-  let wide = (eflags & 0x03) == 1;
+  let wide = (eflags & 0x02) != 0;
   let lowbits = (eflags & 0x01) == 0;
 
   let clif = typ.clif_mapping();
 
   if wide {
-    target = resolve_location_src_store(builder, meta, typ, t, None, of_t, 2 * count);
+    let old = mem::replace(
+      &mut target,
+      resolve_location_src_store(builder, meta, typ, t, None, of_t, 2 * count),
+    );
+    forget(old);
 
     src1
       .into_iter()

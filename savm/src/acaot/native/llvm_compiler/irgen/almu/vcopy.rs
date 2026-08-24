@@ -39,7 +39,7 @@ pub fn handle_vcopy(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
         llvmresolve_location_src_store(meta, typ, target, Some(target_align), target_offset, count);
 
       let is_ptr =
-        matches!(store, StoreResolver::Ptr(_, _, _)) && matches!(src, SrcType::RegMap { .. });
+        matches!(store, StoreResolver::Ptr(_, _, _)) && matches!(src, SrcType::Pointer { .. });
 
       if is_ptr {
         let SrcType::Pointer {

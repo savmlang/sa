@@ -1,7 +1,29 @@
 :compile vcopy dist
-:compile mov dist
+:compile cast dist
+:compile div dist
+:compile rem dist
+:compile vabs dist
+:compile vadd dist
+:compile vaddf dist
+:compile vbit dist
+:compile vcmp dist
+:compile vcnt dist
+:compile vdivf dist
+:compile vfma dist
+:compile vfop dist
+:compile vminimax dist
+:compile vmul dist
+:compile vmulf dist
+:compile vneg dist
+:compile vrot dist
+:compile vsh dist
+:compile vsub dist
+:compile vsubf dist
 
 ; Also test jit
 :jit
 
-:bench
+; No benchmarks
+;
+; :bench
+; :iter 100 n
