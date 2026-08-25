@@ -61,7 +61,9 @@ pub fn stenload<'a>(path: &PathBuf, name: &'a str, _mc: TargetMachine) -> Stenci
         RelocationFlags::Elf { r_type } => match r_type {
           elf::R_AARCH64_MOVW_GOTOFF_G0 => RelocKind::UserCustom { customdefined: 0 },
           elf::R_X86_64_64 => RelocKind::Abs8,
-          _ => unreachable!(),
+          e => {
+            panic!("{e:?}");
+          }
         },
         RelocationFlags::Coff { typ } => match typ {
           pe::IMAGE_REL_AMD64_ABSOLUTE | pe::IMAGE_REL_AMD64_ADDR64 => RelocKind::Abs8,

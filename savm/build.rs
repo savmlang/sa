@@ -36,6 +36,7 @@ fn build_cinder() {
       .compiler("clang")
       .pic(false)
       .flags(["-std=c23", "-O3", "-mcmodel=large", "-g0"])
+      .flag("-fno-pie")
       .flags([
         "-fno-builtin",
         "-fno-addrsig",
