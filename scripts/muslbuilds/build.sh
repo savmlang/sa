@@ -14,7 +14,7 @@ TARGET_CXX_DIR=$(ls -d $SYSROOT/usr/include/c++/$GCC_VER/*-alpine-linux-musl* 2>
 
 # cc flags
 export CFLAGS="--sysroot=$SYSROOT \
-  -std=c11 \
+  -std=c23 \
   -I$SYSROOT/usr/include"
 
 export CXXFLAGS="--sysroot=$SYSROOT \

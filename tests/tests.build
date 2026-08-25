@@ -19,6 +19,7 @@
 :compile vsh dist
 :compile vsub dist
 :compile vsubf dist
+:compile scratchpad dist
 
 ; Also test jit
 :jit

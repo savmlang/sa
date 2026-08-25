@@ -1,0 +1,26 @@
+#import *
+
+; Exact TwoProduct residual extraction using FMA: fma(a, b, -round(a*b))
+; Case 1: a = 1 + 2^-51, b = 1 + 2^-51, -p = -(1 + 2^-50) -> residual = 2^-102 (0x3990000000000000)
+reg $r1::u8, 0::u8, 0x3ff0000000000002::u64
+reg $r2::u8, 0::u8, 0x3ff0000000000002::u64
+reg $r3::u8, 0::u8, 0xbff0000000000004::u64
+
+; Case 2: c = 1 + 2^-30, d = 1 + 2^-30, -q = -(1 + 2^-29) -> residual = 2^-60 (0x3c30000000000000)
+reg $r4::u8, 0::u8, 0x3ff0000000400000::u64
+reg $r5::u8, 0::u8, 0x3ff0000000400000::u64
+reg $r8::u8, 0::u8, 0xbff0000000800000::u64
+
+; Copy r1..r5 to scratchpad at offset 0 (40 bytes)
+vcopy %u8[ 0::u1 | 0::u7 ], %u8[ $r1::u4 | $scratchpad::u4 ], 40::u32, 0::u32, 0::u32
+; Copy r8 to scratchpad at offset 40 (8 bytes)
+vcopy %u8[ 0::u1 | 0::u7 ], %u8[ $r8::u4 | $scratchpad::u4 ], 8::u32, 0::u32, 40::u32
+
+; FMA Case 1: scratchpad[0] * scratchpad[1] + scratchpad[2] -> scratchpad[6] (byte offset 48)
+vfma %u16[ $scratchpad::u4 | $scratchpad::u4 | $scratchpad::u4 | $scratchpad::u4 ], 0::u8, 1::u32, 0::u32, 1::u32, 2::u32, 6::u32
+
+; FMA Case 2: scratchpad[3] * scratchpad[4] + scratchpad[5] -> scratchpad[7] (byte offset 56)
+vfma %u16[ $scratchpad::u4 | $scratchpad::u4 | $scratchpad::u4 | $scratchpad::u4 ], 0::u8, 1::u32, 3::u32, 4::u32, 5::u32, 7::u32
+
+; Copy scratchpad[6..8] back to r6, r7
+vcopy %u8[ 0::u1 | 0::u7 ], %u8[ $scratchpad::u4 | $r6::u4 ], 16::u32, 48::u32, 0::u32

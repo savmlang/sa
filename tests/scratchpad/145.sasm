@@ -1,0 +1,13 @@
+#import *
+
+reg $r1::u8, 0::u8, 2000::u64
+reg $r2::u8, 0::u8, 750::u64
+
+; copy r1 to scratchpad
+vcopy %u8[ 0::u1 | 0::u7 ], %u8[ $r1::u4 | $scratchpad::u4 ], 8::u32, 0::u32, 0::u32
+
+; vsub scratchpad (elem 0) - r2 -> scratchpad (elem 1 = byte offset 8)
+vsub %u32[ $u64::u4 | $scratchpad::u4 | $r2::u4 | $scratchpad::u4 | 0::u16 ], 1::u32, 0::u32, 0::u32, 1::u32
+
+; copy from scratchpad offset 8 bytes to r3
+vcopy %u8[ 0::u1 | 0::u7 ], %u8[ $scratchpad::u4 | $r3::u4 ], 8::u32, 8::u32, 0::u32

@@ -346,7 +346,7 @@ impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
 
         #[cfg(not(all(
           feature = "native",
-          any(target_arch = "x86_64", target_arch = "x86"),
+          any(target_arch = "x86_64"),
           any(target_os = "windows", target_os = "linux")
         )))]
         unreachable!();

@@ -1,0 +1,11 @@
+r1 = 24
+
+# Src
+r2 = 111
+r3 = 222
+r4 = 333
+
+# Dest (copied from scratchpad)
+r5 = 111
+r6 = 222
+r7 = 333

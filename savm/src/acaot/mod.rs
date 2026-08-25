@@ -57,7 +57,7 @@ pub type Stencils = Arc<[StencilVec<StencilMap>]>;
 
 #[cfg(not(all(
   feature = "native",
-  any(target_arch = "x86_64", target_arch = "x86"),
+  any(target_arch = "x86_64"),
   any(target_os = "windows", target_os = "linux")
 )))]
 pub type Stencils = Arc<[()]>;

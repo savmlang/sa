@@ -1,0 +1,41 @@
+#import *
+
+; Horner's method polynomial evaluation: P(x) = 2.0*x^3 - 3.0*x^2 + 4.0*x - 5.0
+; Coefficients: c3 = 2.0, c2 = -3.0, c1 = 4.0, c0 = -5.0
+reg $r1::u8, 0::u8, fp2.0::u64
+reg $r2::u8, 0::u8, fp-3.0::u64
+reg $r3::u8, 0::u8, fp4.0::u64
+reg $r4::u8, 0::u8, fp-5.0::u64
+
+; Point x1 = 1.5 (P(1.5) = 1.0)
+reg $r5::u8, 0::u8, fp1.5::u64
+; Point x2 = 2.5 (P(2.5) = 17.5)
+reg $r8::u8, 0::u8, fp2.5::u64
+
+; Copy r1..r5 to scratchpad (40 bytes): [2.0, -3.0, 4.0, -5.0, 1.5]
+vcopy %u8[ 0::u1 | 0::u7 ], %u8[ $r1::u4 | $scratchpad::u4 ], 40::u32, 0::u32, 0::u32
+; Copy r8 to scratchpad at offset 40 (8 bytes): [2.5]
+vcopy %u8[ 0::u1 | 0::u7 ], %u8[ $r8::u4 | $scratchpad::u4 ], 8::u32, 0::u32, 40::u32
+
+; Evaluate P(1.5):
+; Step 1: h1 = fma(2.0, 1.5, -3.0) = 0.0 -> scratchpad[6] (offset 48)
+vfma %u16[ $scratchpad::u4 | $scratchpad::u4 | $scratchpad::u4 | $scratchpad::u4 ], 0::u8, 1::u32, 0::u32, 4::u32, 1::u32, 6::u32
+
+; Step 2: h2 = fma(h1, 1.5, 4.0) = 4.0 -> scratchpad[6]
+vfma %u16[ $scratchpad::u4 | $scratchpad::u4 | $scratchpad::u4 | $scratchpad::u4 ], 0::u8, 1::u32, 6::u32, 4::u32, 2::u32, 6::u32
+
+; Step 3: h3 = fma(h2, 1.5, -5.0) = 1.0 -> scratchpad[6]
+vfma %u16[ $scratchpad::u4 | $scratchpad::u4 | $scratchpad::u4 | $scratchpad::u4 ], 0::u8, 1::u32, 6::u32, 4::u32, 3::u32, 6::u32
+
+; Evaluate P(2.5):
+; Step 1: k1 = fma(2.0, 2.5, -3.0) = 2.0 -> scratchpad[7] (offset 56)
+vfma %u16[ $scratchpad::u4 | $scratchpad::u4 | $scratchpad::u4 | $scratchpad::u4 ], 0::u8, 1::u32, 0::u32, 5::u32, 1::u32, 7::u32
+
+; Step 2: k2 = fma(k1, 2.5, 4.0) = 9.0 -> scratchpad[7]
+vfma %u16[ $scratchpad::u4 | $scratchpad::u4 | $scratchpad::u4 | $scratchpad::u4 ], 0::u8, 1::u32, 7::u32, 5::u32, 2::u32, 7::u32
+
+; Step 3: k3 = fma(k2, 2.5, -5.0) = 17.5 -> scratchpad[7]
+vfma %u16[ $scratchpad::u4 | $scratchpad::u4 | $scratchpad::u4 | $scratchpad::u4 ], 0::u8, 1::u32, 7::u32, 5::u32, 3::u32, 7::u32
+
+; Copy scratchpad[6..8] back to r6, r7
+vcopy %u8[ 0::u1 | 0::u7 ], %u8[ $scratchpad::u4 | $r6::u4 ], 16::u32, 48::u32, 0::u32

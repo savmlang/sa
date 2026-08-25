@@ -1,0 +1,37 @@
+#import *
+
+; Case 1: (1 + 2^-27) * (1 - 2^-27) - 1.0
+; r1 = 1.0 + 2^-27
+reg $r1::u8, 0::u8, 0x3ff0000002000000::u64
+; r2 = 1.0 - 2^-27
+reg $r2::u8, 0::u8, 0x3feffffffc000000::u64
+; r3 = -1.0
+reg $r3::u8, 0::u8, 0xbff0000000000000::u64
+
+; Case 2: (1 + 2^-26 + 2^-52) * (1 + 2^-26) - (1 + 2^-25 + 2^-51)
+; r4 = 1.0 + 2^-26 + 2^-52
+reg $r4::u8, 0::u8, 0x3ff0000004000001::u64
+; r5 = 1.0 + 2^-26
+reg $r5::u8, 0::u8, 0x3ff0000004000000::u64
+; r8 = -(1.0 + 2^-25 + 2^-51)
+reg $r8::u8, 0::u8, 0xbff0000008000002::u64
+
+; copy 40 bytes (r1..r5) to scratchpad at offset 0
+vcopy %u8[ 0::u1 | 0::u7 ], %u8[ $r1::u4 | $scratchpad::u4 ], 40::u32, 0::u32, 0::u32
+; copy r8 (8 bytes) to scratchpad at offset 40
+vcopy %u8[ 0::u1 | 0::u7 ], %u8[ $r8::u4 | $scratchpad::u4 ], 8::u32, 0::u32, 40::u32
+
+; Edge case 1: (1.0 + 2^-27) * (1.0 - 2^-27) - 1.0
+; In mul+add (double rounding): (1.0 - 2^-54) rounds to 1.0, then 1.0 - 1.0 = 0.0
+; In FMA (single rounding): (1.0 - 2^-54) - 1.0 = -2^-54 = 0xbc90000000000000
+; Store result at scratchpad elem 6 (byte offset 48)
+vfma %u16[ $scratchpad::u4 | $scratchpad::u4 | $scratchpad::u4 | $scratchpad::u4 ], 0::u8, 1::u32, 0::u32, 1::u32, 2::u32, 6::u32
+
+; Edge case 2: (1 + 2^-26 + 2^-52) * (1 + 2^-26) - (1 + 2^-25 + 2^-51)
+; In mul+add (double rounding): 2^-78 term is lost in intermediate product, result = 2^-52 (0x3cb0000000000000)
+; In FMA (single rounding): retains 2^-78 term, result = 2^-52 + 2^-78 (0x3cb0000004000000)
+; Store result at scratchpad elem 7 (byte offset 56)
+vfma %u16[ $scratchpad::u4 | $scratchpad::u4 | $scratchpad::u4 | $scratchpad::u4 ], 0::u8, 1::u32, 3::u32, 4::u32, 5::u32, 7::u32
+
+; copy 16 bytes (scratchpad[6..8]) from scratchpad byte offset 48 back to r6, r7
+vcopy %u8[ 0::u1 | 0::u7 ], %u8[ $scratchpad::u4 | $r6::u4 ], 16::u32, 48::u32, 0::u32
