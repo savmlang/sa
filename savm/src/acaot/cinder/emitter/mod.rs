@@ -1,7 +1,7 @@
-use core::slice;
-use std::hint::unreachable_unchecked;
-
 use ahash::HashMap;
+use core::slice;
+
+mod vdtop;
 
 use crate::{
   BytecodeResolver,
@@ -9,17 +9,22 @@ use crate::{
     cinder::{
       CompilerMeta, INST_RETURN_P_ID, Resolved, StencilMap,
       emit::{
-        Stencil, inst_call, inst_call_jmpable, inst_div, inst_mark, inst_nop, inst_rem, inst_vadd,
-        inst_vaddf, inst_vdivf, inst_vmul, inst_vmulf, inst_vsub, inst_vsubf, inst_wsput,
+        Stencil, inst_call, inst_call_jmpable, inst_cast, inst_div, inst_jif, inst_mark, inst_nop,
+        inst_rem, inst_vabs, inst_vadd, inst_vaddf, inst_vbit, inst_vcmp, inst_vcnt, inst_vdivf,
+        inst_vfcast, inst_vfop, inst_vminimax, inst_vmul, inst_vmulf, inst_vneg, inst_vrot,
+        inst_vsh, inst_vsub, inst_vsubf, inst_wsput,
       },
       stencilify,
     },
     pickle::{
       def::{
-        PICKLE_OPCODE_DIV, PICKLE_OPCODE_HINT, PICKLE_OPCODE_JIF, PICKLE_OPCODE_JMP,
-        PICKLE_OPCODE_MARK, PICKLE_OPCODE_REM, PICKLE_OPCODE_TASK, PICKLE_OPCODE_VADD,
-        PICKLE_OPCODE_VADDF, PICKLE_OPCODE_VDIVF, PICKLE_OPCODE_VMUL, PICKLE_OPCODE_VMULF,
-        PICKLE_OPCODE_VSUB, PICKLE_OPCODE_VSUBF, PickleInstruction,
+        PICKLE_OPCODE_CAST, PICKLE_OPCODE_DIV, PICKLE_OPCODE_HINT, PICKLE_OPCODE_JIF,
+        PICKLE_OPCODE_JMP, PICKLE_OPCODE_MARK, PICKLE_OPCODE_REM, PICKLE_OPCODE_TASK,
+        PICKLE_OPCODE_VABS, PICKLE_OPCODE_VADD, PICKLE_OPCODE_VADDF, PICKLE_OPCODE_VBIT,
+        PICKLE_OPCODE_VCMP, PICKLE_OPCODE_VCNT, PICKLE_OPCODE_VDIVF, PICKLE_OPCODE_VFCAST,
+        PICKLE_OPCODE_VFOP, PICKLE_OPCODE_VMINIMAX, PICKLE_OPCODE_VMUL, PICKLE_OPCODE_VMULF,
+        PICKLE_OPCODE_VNEG, PICKLE_OPCODE_VROT, PICKLE_OPCODE_VSH, PICKLE_OPCODE_VSUB,
+        PICKLE_OPCODE_VSUBF, PickleInstruction,
       },
       reader::{
         au::{ARITH, DIVLIKE, parse_arith, parse_divlike},
@@ -102,6 +107,7 @@ pub fn emit<T: BytecodeResolver + Send + Sync + 'static>(
           resolve: stencilify(&[("NEXT", Resolved::ResolveLaterStencilID { marker })]),
         }]));
       }
+      PICKLE_OPCODE_JIF => vdtop::emit_jif(op, ws, &inst_jif, comptime),
 
       PICKLE_OPCODE_VADD => emit_varith(ws, &inst_vadd, comptime),
       PICKLE_OPCODE_VSUB => emit_varith(ws, &inst_vsub, comptime),
@@ -115,19 +121,26 @@ pub fn emit<T: BytecodeResolver + Send + Sync + 'static>(
       PICKLE_OPCODE_VMULF => emit_varith_vfp(op, ws, &inst_vmulf, comptime),
       PICKLE_OPCODE_VDIVF => emit_varith_vfp(op, ws, &inst_vdivf, comptime),
 
+      PICKLE_OPCODE_VCMP => vdtop::emit_vcmp(op, ws, &inst_vcmp, comptime),
+      PICKLE_OPCODE_VCNT => vdtop::emit_vcnt(op, ws, &inst_vcnt, comptime),
+      PICKLE_OPCODE_VMINIMAX => vdtop::emit_vminimax(op, ws, &inst_vminimax, comptime),
+      PICKLE_OPCODE_VBIT => vdtop::emit_vbit(op, ws, &inst_vbit, comptime),
+
+      PICKLE_OPCODE_VABS => vdtop::emit_vdataop(op, ws, &inst_vabs, comptime),
+      PICKLE_OPCODE_VNEG => vdtop::emit_vdataop(op, ws, &inst_vneg, comptime),
+
+      PICKLE_OPCODE_CAST => vdtop::emit_cast(op, ws, &inst_cast, comptime),
+      PICKLE_OPCODE_VFCAST => vdtop::emit_vfcast(op, ws, &inst_vfcast, comptime),
+
+      PICKLE_OPCODE_VFOP => vdtop::emit_vfop(op, ws, &inst_vfop, comptime),
+
+      PICKLE_OPCODE_VROT => vdtop::emit_vrot(op, ws, &inst_vrot, comptime),
+      PICKLE_OPCODE_VSH => vdtop::emit_vsh(op, ws, &inst_vsh, comptime),
+
       // JMP-ABLE
-      PICKLE_OPCODE_JIF | PICKLE_OPCODE_TASK => {
-        let marker = match opcode {
-          PICKLE_OPCODE_JIF => {
-            u64::from_ne_bytes(unsafe { ws.get_unchecked(4..12).try_into().unwrap_unchecked() })
-          }
-
-          PICKLE_OPCODE_TASK => {
-            unimplemented!("Yet to implement tasks")
-          }
-
-          _ => unsafe { unreachable_unchecked() },
-        };
+      #[allow(unreachable_code)]
+      PICKLE_OPCODE_TASK => {
+        let marker = unimplemented!("Yet to implement tasks");
 
         let pickle_verify = comptime.jumps.get(&marker).unwrap();
         comptime.mapping.push(stencilify(&[
