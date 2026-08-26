@@ -230,7 +230,7 @@ impl SaVMLLVMBuilder {
   pub fn create_crater<const T: bool>() -> Box<dyn NativeCompiler<T>> {
     Box::new(
       Self::create(
-        LLVMCodeGenOptLevel::LLVMCodeGenLevelLess,
+        LLVMCodeGenOptLevel::LLVMCodeGenLevelDefault,
         LLVMRelocMode::LLVMRelocStatic,
         LLVMCodeModel::LLVMCodeModelLarge,
         CacheLevel::LLVMCrater,
