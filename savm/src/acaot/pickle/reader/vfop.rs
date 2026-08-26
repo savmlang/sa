@@ -19,7 +19,7 @@ pub fn parse_vdataop(pickle: &PickleInstruction, meta: &[u8]) -> VDATAOP {
   let datatype = (flags >> 12) as u8;
   let count = wspickle!(meta, start = 0, stop = 4, u32);
   let of_src1 = wspickle!(meta, start = 4, stop = 8, i32);
-  let of_tgt = wspickle!(meta, start = 12, stop = 16, i32);
+  let of_tgt = wspickle!(meta, start = 8, stop = 12, i32);
 
   let src1 = {
     let src = (flags >> 8) as u8 & 0x0F;

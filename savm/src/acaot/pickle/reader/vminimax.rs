@@ -6,9 +6,9 @@ pub struct VMINIMAX {
   pub flags_src2: u8,
   pub flags_target: u8,
   pub count: u32,
-  pub of_src1: u8,
-  pub of_src2: u8,
-  pub of_target: u8,
+  pub of_src1: i8,
+  pub of_src2: i8,
+  pub of_target: i8,
   pub typ: u8,
   pub alignment_src1: Option<u8>,
   pub alignment_src2: Option<u8>,
@@ -43,9 +43,9 @@ pub fn parse_vminimax(pickle: &PickleInstruction, ws: &[u8]) -> VMINIMAX {
   let flags_src2 = (flags >> 4) as u8 & 0x0F;
   let flags_target = flags as u8 & 0x0F;
 
-  let of_src1 = wspickle!(ws, start = 4, stop = 5, u8);
-  let of_src2 = wspickle!(ws, start = 5, stop = 6, u8);
-  let of_target = wspickle!(ws, start = 6, stop = 7, u8);
+  let of_src1 = wspickle!(ws, start = 4, stop = 5, i8);
+  let of_src2 = wspickle!(ws, start = 5, stop = 6, i8);
+  let of_target = wspickle!(ws, start = 6, stop = 7, i8);
 
   VMINIMAX {
     op,
@@ -68,8 +68,8 @@ pub struct VCNT {
   pub flags_src: u8,
   pub flags_target: u8,
   pub count: u32,
-  pub of_src: u8,
-  pub of_target: u8,
+  pub of_src: i8,
+  pub of_target: i8,
   pub typ: u8,
   pub alignment_src: Option<u8>,
   pub alignment_target: Option<u8>,
@@ -100,8 +100,8 @@ pub fn parse_vcnt(pickle: &PickleInstruction, ws: &[u8]) -> VCNT {
   let flags_src = (flags >> 8) as u8 & 0x0F;
   let flags_target = (flags >> 4) as u8 & 0x0F;
 
-  let of_src = wspickle!(ws, start = 4, stop = 5, u8);
-  let of_target = wspickle!(ws, start = 5, stop = 6, u8);
+  let of_src = wspickle!(ws, start = 4, stop = 5, i8);
+  let of_target = wspickle!(ws, start = 5, stop = 6, i8);
 
   VCNT {
     op,

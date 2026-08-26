@@ -18,7 +18,7 @@ macro_rules! bitop {
     pastey::paste! {
       $(
         $(
-          fn [<vop_ $f _ $t>](src1: *mut QuadPackedData, src2: *mut QuadPackedData, src3: *mut QuadPackedData, offset1: u8, offset2: u8, offset3: u8, count: u32) {
+          fn [<vop_ $f _ $t>](src1: *mut QuadPackedData, src2: *mut QuadPackedData, src3: *mut QuadPackedData, offset1: i8, offset2: i8, offset3: i8, count: u32) {
             unsafe {
               let s1 = (src1 as *mut $t).add(offset1 as _);
               let s2 = (src2 as *mut $t).add(offset2 as _);
@@ -40,7 +40,7 @@ macro_rules! bitop {
       )*
 
       const _DISPATCH: [
-        fn(src1: *mut QuadPackedData, src2: *mut QuadPackedData, src3: *mut QuadPackedData, offset1: u8, offset2: u8, offset3: u8, count: u32); 20
+        fn(src1: *mut QuadPackedData, src2: *mut QuadPackedData, src3: *mut QuadPackedData, offset1: i8, offset2: i8, offset3: i8, count: u32); 20
       ] = [
         $(
           $(

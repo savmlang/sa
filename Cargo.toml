@@ -58,8 +58,11 @@ members = [
   # This is the SaVM IR Generator
   "libs/sair",
 
-  # Internal Crates - saffine (sa affinity)
+  # Internal Crates 
+  # - saffine (sa affinity)
+  # - lmdb (our replacement for SQLite)
   "internal/saffine",
+  "internal/lmdb",
 
   # SaVM Internal Building Crates
   "savm_build",
