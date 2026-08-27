@@ -11,40 +11,95 @@ use crate::inst::regedit::{cleanup_registry, setup_registry};
 mod dir;
 mod regedit;
 
+pub struct Config {
+  pub sdk: SDKConfig,
+  pub tools: ToolConfig,
+  pub w32: WinConfig,
+}
+
+pub struct ToolConfig {
+  pub satest: bool,
+  pub saapprt: bool,
+}
+
+pub struct WinConfig {
+  pub path: bool,
+  pub start: bool,
+}
+
+pub struct SDKConfig {
+  pub staticarchives: bool,
+  pub linklibs: bool,
+  pub headers: bool,
+}
+
 pub fn install_info<
   F: FnMut(Cow<'static, str>, f64) -> (),
   I: FnOnce() -> (),
   const AUTOEXIT: bool,
+  const CLI: bool,
 >(
   mut cb: F,
   installed: I,
+  config: Config,
+  repair: bool,
 ) {
-  cb(s("Creating Directories..."), 0.0);
+  let path;
+  if repair {
+    cb(s("Clearing old SaVM"), 0.0);
 
-  let path = unsafe { dir::get_savmdir() };
-  _ = fs::remove_dir_all(&path);
-  fs::create_dir_all(&path).expect("This shouldn't error, if it does we crash");
+    path = unsafe { dir::get_savmdir() };
 
-  let steps = 3.0;
+    for entry in fs::read_dir(&path).unwrap().map(Result::unwrap) {
+      let path = entry.path();
 
-  cb(s("Copying Core Runtime..."), 1.0 / steps);
+      if entry.file_name() != "setup.exe" {
+        fs::remove_file(&path)
+          .or_else(|| fs::remove_dir_all(&path))
+          .expect("SaVM has another install currently running!");
+      }
+    }
+  } else {
+    cb(s("Creating Directories..."), 0.0);
 
-  extract(&path);
+    path = unsafe { dir::get_savmdir() };
+    _ = fs::remove_dir_all(&path);
+    fs::create_dir_all(&path).expect("This shouldn't error, if it does we crash");
+  }
 
-  cb(s("Copying important files..."), 2.0 / steps);
+  let steps = 5.0;
 
-  let cexe = current_exe().unwrap();
-  _ = fs::copy(cexe, format!("{}/savmuninstaller.exe", &path));
+  {
+    cb(s("Copying Core Runtime..."), 1.0 / steps);
 
-  cb(s("Setting Up Registry..."), 3.0 / steps);
+    extract(&path);
+  }
 
-  setup_registry(&path);
+  if !repair {
+    cb(s("Copying important files..."), 2.0 / steps);
 
-  cb(s("Installed"), 1.0);
-  installed();
+    let cexe = current_exe().unwrap();
+    _ = fs::copy(cexe, format!("{}/setup.exe", &path));
+  }
+
+  {
+    cb(s("Configuring SaVM..."), 3.0 / steps);
+    dir::configure(&path, &config);
+  }
+
+  {
+    cb(s("Setting Up Registry..."), 4.0 / steps);
+
+    setup_registry(&path, CLI);
+  }
+
+  {
+    cb(s("Successful"), 1.0);
+    installed();
+  }
 
   if AUTOEXIT {
-    sleep(Duration::from_secs(3));
+    sleep(Duration::from_secs(10));
     unsafe { ExitProcess(0) };
   }
 }
@@ -58,15 +113,17 @@ pub fn uninstall<I: FnOnce() -> (), const AUTOEXIT: bool>(done: I) {
       .filter(Option::is_some)
       .map(Option::unwrap)
       .for_each(|x| {
-        _ = fs::remove_dir_all(&x.path());
-        _ = fs::remove_file(&x.path());
+        let path = x.path();
+
+        _ = fs::remove_dir_all(&path);
+        _ = fs::remove_file(&path);
       });
   }
   let mut pbuf = PathBuf::from(path);
 
   unsafe {
     let dir = HSTRING::from(pbuf.to_str().unwrap());
-    pbuf.push("savmuninstaller.exe");
+    pbuf.push("setup.exe");
     let uninstaller = HSTRING::from(pbuf.to_str().unwrap());
 
     _ = MoveFileExW(&uninstaller, None, MOVEFILE_DELAY_UNTIL_REBOOT);

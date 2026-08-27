@@ -66,16 +66,19 @@ members = [
 
   # SaVM Internal Building Crates
   "savm_build",
-  "savm_build_cinder",
+  "savm_build_cinder", "sair/sair_llir",
 ]
 resolver = "3"
 
 # These are testing and hence should not be directly bundled
 exclude = ["sajit/llvmtest", "saw"]
 
+[profile.debug]
+debug = "line-tables-only"
+
 [profile.release]
 opt-level = 3
-lto = false
+lto = "fat"
 codegen-units = 1
 panic = "abort"
-strip = true
+strip = "debuginfo"

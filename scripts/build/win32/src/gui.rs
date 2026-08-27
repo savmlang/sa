@@ -3,11 +3,11 @@
 mod inst;
 
 use i_slint_backend_winit::winit::platform::windows::{BackdropType, WindowAttributesExtWindows};
-use slint::{Brush, Color, SharedString, VecModel};
+use slint::{Brush, Color, Model, SharedString, VecModel};
 use std::{env::args, rc::Rc, sync::OnceLock, thread};
 use windows_version::*;
 
-use crate::inst::{install_info, uninstall};
+use crate::inst::{Config, SDKConfig, ToolConfig, WinConfig, install_info, uninstall};
 
 slint::include_modules!();
 
@@ -44,9 +44,10 @@ fn main() -> Result<(), slint::PlatformError> {
 
   let ui = MainWindow::new()?;
 
-  let model = Rc::new(VecModel::from(licensegpl));
-
-  ui.set_licensegpl(model.into());
+  if !args().any(|x| &*x == "--water") {
+    let model = Rc::new(VecModel::from(licensegpl));
+    ui.set_licensegpl(model.into());
+  }
 
   if !*WIN10.get().unwrap() {
     let black_brush = Brush::SolidColor(Color::from_argb_u8(0, 0, 0, 0));
@@ -65,7 +66,7 @@ fn main() -> Result<(), slint::PlatformError> {
   let fx = ui.as_weak();
   let fx2 = ui.as_weak();
 
-  ui.on_startinstall(move || {
+  ui.on_startinstall(move |repair| {
     let fx = &fx;
     let fx2 = &fx2;
 
@@ -76,7 +77,39 @@ fn main() -> Result<(), slint::PlatformError> {
       let fx = fx;
       let fx2 = fx2;
 
-      install_info::<_, _, true>(
+      let configs: Box<[bool]>;
+      fx.upgrade_in_event_loop(|x| {
+        configs = x.get_configs().iter().collect();
+      })
+      .unwrap();
+
+      let [
+        staticarchives,
+        linkstubs,
+        cheaders,
+        satest,
+        saapprt,
+        path,
+        startmenu,
+      ] = *configs
+      else {
+        unreachable!()
+      };
+
+      let mut config = Config {
+        sdk: SDKConfig {
+          headers: cheaders,
+          linklibs: linkstubs,
+          staticarchives,
+        },
+        tools: ToolConfig { saapprt, satest },
+        w32: WinConfig {
+          path,
+          start: startmenu,
+        },
+      };
+
+      install_info::<_, _, true, false>(
         |tx, prog| {
           let fx = fx.clone();
           slint::invoke_from_event_loop(move || {
@@ -95,9 +128,12 @@ fn main() -> Result<(), slint::PlatformError> {
           })
           .unwrap();
         },
+        config,
+        repair,
       );
     });
   });
+
   // Move to Uninstall Page
   if let Some(_) = args().find(|x| x as &str == "uninstall") {
     ui.set_curpage(Page::Uninstall);
@@ -114,6 +150,11 @@ fn main() -> Result<(), slint::PlatformError> {
         .unwrap();
       });
     });
+  }
+
+  // Move to Repair Page
+  if let Some(_) = args().find(|x| x as &str == "repair") {
+    ui.set_curpage(Page::Repairconf);
   }
 
   ui.run()?;

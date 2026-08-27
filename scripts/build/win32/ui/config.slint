@@ -1,0 +1,168 @@
+import {
+    Palette,
+    Button,
+    HorizontalBox,
+    TextEdit,
+    ScrollView,
+    ListView,
+    VerticalBox,
+    GridBox,
+    ProgressIndicator,
+    TabWidget,
+    CheckBox,
+} from "std-widgets.slint";
+import { SaText, AnimatedPage, ReuseBottom, SaStyledText } from "reuse.slint";
+import { HelperTxts } from "gplv3summary.slint";
+import { Section, BoxItem } from "section.slint";
+
+export component Configure inherits AnimatedPage {
+    callback next();
+
+    in property <bool> repair;
+    in-out property <[bool]> configs;
+
+    VerticalLayout {
+        Rectangle {
+
+            HorizontalBox {
+                alignment: center;
+                padding-left: 0.5rem;
+                padding-top: 2rem;
+
+                Image {
+                    source: @image-url("../assets/salang.png");
+                    height: 2.5rem;
+                    width: 2.5rem;
+                }
+
+                SaText {
+                    text: "Customize";
+                    font-size: 2rem;
+                }
+            }
+        }
+
+        HorizontalBox {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+            alignment: LayoutAlignment.center;
+            padding-left: 6rem;
+            padding-right: 6rem;
+
+            SaStyledText {
+                default-font-size: 1.4rem;
+                text: @markdown("Let us **\{!repair ? "customize" : "repair"}** your ***`SaVM`*** installation");
+            }
+        }
+
+        HorizontalBox {
+            padding: 6rem;
+            padding-top: 1rem;
+            padding-bottom: 2rem;
+
+            Rectangle {
+                background: Palette.alternate-background.transparentize(50%);
+                border-radius: 0.5rem;
+
+                ScrollView {
+                    VerticalLayout {
+                        padding: 2rem;
+                        spacing: 1.5rem;
+
+                        CheckBox {
+                            checked: true;
+                            enabled: false;
+                            text: "SaVM Core";
+                        }
+
+                        Section {
+                            title: "SaVM SDK";
+                            enabled: false;
+                            items: [
+                                { label: "Include static libraries (.lib files)", default: configs[0], id: 0 },
+                                { label: "Include Link stubs (.dll.lib files)", default: configs[1], id: 1 },
+                                { label: "Include C Headers", default: configs[2], id: 2 }
+                            ];
+
+                            toggle(a, value) => {
+                                if a == -1 {
+                                    configs[0] = value;
+                                    configs[1] = value;
+                                    configs[2] = value;
+                                    return;
+                                }
+                                else if a == -2 {
+                                    configs[0] = false;
+                                    configs[1] = true;
+                                    configs[2] = true;
+                                    return;
+                                }
+                                configs[a] = value;
+                            }
+                        }
+
+                        Section {
+                            title: "SaVM Extended";
+                            enabled: true;
+                            items: [
+                                { label: "SaVM Testing & Benchmarking Tool (satest)", default: configs[3], id: 3 },
+                                {
+                                    label: "SaVM Desktop Application Runtime (savmrt, savmrtcache)",
+                                    default: configs[4],
+                                    id: 4
+                                },
+                            ];
+
+                            toggle(a, value) => {
+                                if a == -1 {
+                                    configs[3] = value;
+                                    configs[4] = value;
+                                    return;
+                                }
+                                else if a == -2 {
+                                    configs[3] = true;
+                                    configs[4] = true;
+                                    return;
+                                }
+                                configs[a] = value;
+                            }
+                        }
+
+                        CheckBox {
+                            checked: configs[5];
+                            text: "Add SaVM to PATH";
+
+                            toggled => {
+                                configs[5] = self.checked;
+                            }
+                        }
+
+                        CheckBox {
+                            checked: configs[6];
+                            text: "Add Start Menu Entries";
+
+                            toggled => {
+                                configs[6] = self.checked;
+                            }
+                        }
+
+                        CheckBox {
+                            checked: true;
+                            enabled: false;
+                            text: "SaVM Uninstall & Repair Tool";
+                        }
+                    }
+                }
+            }
+        }
+
+        ReuseBottom {
+            icon: @image-url("../assets/checkbox.svg");
+            contdbtn: repair ? "Repair" : "Install";
+            prog: 2 / 3;
+            next => {
+                next();
+            }
+        }
+    }
+}

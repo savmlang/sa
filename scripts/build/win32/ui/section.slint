@@ -1,0 +1,44 @@
+import { CheckBox } from "std-widgets.slint";
+
+export struct BoxItem { label: string, default: bool, id: int }
+
+export component Section {
+    in property <string> title;
+    in-out property <bool> enabled;
+    in property <[BoxItem]> items;
+
+    callback toggle(int, bool);
+
+    VerticalLayout {
+        spacing: 0.5rem;
+
+        CheckBox {
+            checked: enabled;
+            text: title;
+            toggled => {
+                enabled = !enabled;
+
+                if (!enabled) {
+                    toggle(-1, false);
+                } else {
+                    toggle(-2, false);
+                }
+            }
+        }
+
+        VerticalLayout {
+            padding-left: 2rem;
+            spacing: 0.5rem;
+
+            for item in items: child := CheckBox {
+                checked: item.default;
+                enabled: enabled;
+                text: item.label;
+
+                toggled => {
+                    toggle(item.id, self.checked);
+                }
+            }
+        }
+    }
+}

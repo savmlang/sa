@@ -3,8 +3,10 @@ import { HomePage } from "home.slint";
 import { LicensePage } from "license.slint";
 import { InstallingPage } from "install.slint";
 import { UninstallingPage } from "uninstall.slint";
+import { Configure } from "config.slint";
 
-enum Page { launchpad, license, installing, uninstall }
+enum Page { launchpad, license, configure, repairconf, repair, installing, uninstall }
+
 
 export component MainWindow inherits Window {
     in-out property <bool> dark: Palette.color-scheme == ColorScheme.dark;
@@ -37,13 +39,31 @@ export component MainWindow inherits Window {
     in-out property <float> prog: 0.0;
     in-out property <string> status: "Preparing";
 
+    in-out property <[bool]> configs: [false, false, false, true, true, true, true];
+
     in-out property <[string]> licensegpl: [
-        "Water is free for all mortals.",
-        "Water is provided to all.",
-        "Water is to be man's greatest resource.",
-        "All the water is to be as good as systems."
+        "Water is given for all mortals",
+        "A vessel, as seen of flowing trust",
+        "to the mortals, flowing forever",
+        "Who get a chance to behold, the earth",
+        "of good days, happiness and months of sleep",
+        "Or so i hold, a view from above. What I think",
+        "would be the gloomy days, may simple sheep",
+        "sleep well in the rainy days, the dearth of",
+        "sunken ways, winter comes, so as I see",
+        "they cannot think of a chance to break free.",
+        "The water in the darkened ways, thinks of thee",
+        "O! Can they break free. I think of that, so ",
+        "as the flow of thee, that how can they break free",
+        "As the winter drifts, and the cloud sits",
+        "the flow see, a few broke free, in the darkened",
+        "ways, thinks of thee, they went thee or thee?",
+        "Water sees none, nor in the course, as it flow",
+        "from its source, where they went thee? they broke",
+        "free? hwænne they? where thou went in the spree?",
+        "did they really broke free? or free? A few did"
     ];
-    callback startinstall();
+    callback startinstall(bool);
 
     if (win10 && dark): Rectangle {
         background: @radial-gradient(circle, rgba(43, 27, 54, 85%) 0%, rgba(32, 23, 40, 40%) 50%, transparent 100%);
@@ -67,16 +87,29 @@ export component MainWindow inherits Window {
         licensegpl: licensegpl;
 
         next => {
-            curpage = Page.installing;
-            startinstall();
+            curpage = Page.configure;
         }
     }
 
-    if (curpage == Page.installing): InstallingPage {
-        is-active: curpage == Page.installing;
+    if (curpage == Page.configure || curpage == Page.repairconf): Configure {
+        configs <=> configs;
+
+        is-active: curpage == Page.configure || curpage == Page.repairconf;
+        repair: curpage == Page.repairconf;
+
+        next => {
+            let is_repair = curpage == Page.repairconf;
+            curpage = is_repair ? Page.repair : Page.installing;
+            startinstall(is_repair);
+        }
+    }
+
+    if (curpage == Page.installing || curpage == Page.repair): InstallingPage {
+        is-active: curpage == Page.installing || curpage == Page.repair;
         prog: prog;
         status: status;
         installed: installed;
+        repair: curpage == Page.repair;
 
         next => {
             curpage = Page.installing;

@@ -1,8 +1,8 @@
+use crate::inst::Config;
 use std::{fs, io, path::Path};
-
 use windows_registry::LOCAL_MACHINE;
 
-pub fn setup_registry(savm: &str) {
+pub fn setup_registry(savm: &str, cli: bool) {
   let khlm_software = LOCAL_MACHINE
     .options()
     .write()
@@ -31,11 +31,15 @@ pub fn setup_registry(savm: &str) {
     _ = uninstall.set_string("Publisher", "SaVM Official");
     _ = uninstall.set_u32("NoModify", 1);
     _ = uninstall.set_u32("NoRepair", 1);
-    _ = uninstall.set_string("DisplayIcon", format!("{savm}\\savmuninstaller.exe"));
+    _ = uninstall.set_string("DisplayIcon", format!("{savm}\\setup.exe"));
     _ = uninstall.set_string(
       "UninstallString",
-      format!("\"{}\\savmuninstaller.exe\" uninstall", savm),
+      format!("\"{}\\setup.exe\" uninstall", savm),
     );
+
+    if !cli {
+      _ = uninstall.set_string("ModifyPath", format!("\"{}\\setup.exe\" repair", savm));
+    }
 
     if let Ok(size) = get_dir_size(savm) {
       _ = uninstall.set_u32("EstimatedSize", (size / 1024) as _);
