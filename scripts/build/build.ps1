@@ -102,7 +102,12 @@ foreach ($tech in $iter) {
 
       $target = "$rustarch-pc-windows-msvc"
       rustup target add $target
-      cargo build --bins --release --target $target
+
+      if ($env:DEBUG -eq "true") {
+        cargo build --bins --target $target  
+      } else {
+        cargo build --bins --release --target $target
+      }
 
       Set-Location ..
 

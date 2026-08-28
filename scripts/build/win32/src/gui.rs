@@ -77,11 +77,13 @@ fn main() -> Result<(), slint::PlatformError> {
       let fx = fx;
       let fx2 = fx2;
 
-      let configs: Box<[bool]>;
-      fx.upgrade_in_event_loop(|x| {
-        configs = x.get_configs().iter().collect();
+      let (tx, rx) = std::sync::mpsc::channel();
+      fx.upgrade_in_event_loop(move |x| {
+        _ = tx.send(x.get_configs().iter().collect::<Box<[bool]>>());
       })
       .unwrap();
+
+      let configs: Box<[bool]> = rx.recv().expect("Sending unexpectedly dropped");
 
       let [
         staticarchives,
@@ -96,7 +98,7 @@ fn main() -> Result<(), slint::PlatformError> {
         unreachable!()
       };
 
-      let mut config = Config {
+      let config = Config {
         sdk: SDKConfig {
           headers: cheaders,
           linklibs: linkstubs,
@@ -109,7 +111,10 @@ fn main() -> Result<(), slint::PlatformError> {
         },
       };
 
-      install_info::<_, _, true, false>(
+      #[cfg(debug_assertions)]
+      println!("{config:?}");
+
+      install_info::<_, _, true>(
         |tx, prog| {
           let fx = fx.clone();
           slint::invoke_from_event_loop(move || {
@@ -134,12 +139,11 @@ fn main() -> Result<(), slint::PlatformError> {
     });
   });
 
-  // Move to Uninstall Page
-  if let Some(_) = args().find(|x| x as &str == "uninstall") {
-    ui.set_curpage(Page::Uninstall);
+  let fx = ui.as_weak();
+  ui.on_startuninstall(move || {
+    let fx2 = &fx;
 
-    let fx = ui.as_weak();
-
+    let fx = fx2.clone();
     thread::spawn(move || {
       uninstall::<_, true>(move || {
         slint::invoke_from_event_loop(move || {
@@ -150,6 +154,10 @@ fn main() -> Result<(), slint::PlatformError> {
         .unwrap();
       });
     });
+  });
+
+  if let Some(_) = args().find(|x| x as &str == "uninstall") {
+    ui.set_uninstall(true);
   }
 
   // Move to Repair Page

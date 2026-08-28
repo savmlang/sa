@@ -34,6 +34,7 @@ export component MainWindow inherits Window {
     // Properties
     in-out property <Page> curpage: Page.launchpad;
 
+    in-out property <bool> uninstall: false;
     in-out property <bool> installed: false;
     in-out property <bool> uninstalled: false;
     in-out property <float> prog: 0.0;
@@ -64,6 +65,7 @@ export component MainWindow inherits Window {
         "did they really broke free? or free? A few did"
     ];
     callback startinstall(bool);
+    callback startuninstall();
 
     if (win10 && dark): Rectangle {
         background: @radial-gradient(circle, rgba(43, 27, 54, 85%) 0%, rgba(32, 23, 40, 40%) 50%, transparent 100%);
@@ -75,9 +77,15 @@ export component MainWindow inherits Window {
 
     if (curpage == Page.launchpad): HomePage {
         is-active: curpage == Page.launchpad;
+        uninstall: uninstall;
 
         next => {
-            curpage = Page.license;
+            if (uninstall) {
+                startuninstall();
+                curpage = Page.uninstall;
+            } else {
+                curpage = Page.license;
+            }
         }
     }
 

@@ -6,27 +6,34 @@ use windows::Win32::{
 };
 use windows_registry::HSTRING;
 
-use crate::inst::regedit::{cleanup_registry, setup_registry};
+use crate::inst::{
+  dir::get_savm_startmenu,
+  regedit::{cleanup_registry, setup_registry},
+};
 
 mod dir;
 mod regedit;
 
+#[derive(Debug)]
 pub struct Config {
   pub sdk: SDKConfig,
   pub tools: ToolConfig,
   pub w32: WinConfig,
 }
 
+#[derive(Debug)]
 pub struct ToolConfig {
   pub satest: bool,
   pub saapprt: bool,
 }
 
+#[derive(Debug)]
 pub struct WinConfig {
   pub path: bool,
   pub start: bool,
 }
 
+#[derive(Debug)]
 pub struct SDKConfig {
   pub staticarchives: bool,
   pub linklibs: bool,
@@ -37,7 +44,6 @@ pub fn install_info<
   F: FnMut(Cow<'static, str>, f64) -> (),
   I: FnOnce() -> (),
   const AUTOEXIT: bool,
-  const CLI: bool,
 >(
   mut cb: F,
   installed: I,
@@ -53,9 +59,9 @@ pub fn install_info<
     for entry in fs::read_dir(&path).unwrap().map(Result::unwrap) {
       let path = entry.path();
 
-      if entry.file_name() != "setup.exe" {
+      if entry.file_name() != "savmsetupconfigureuninstallrepair.exe" {
         fs::remove_file(&path)
-          .or_else(|| fs::remove_dir_all(&path))
+          .or_else(|_| fs::remove_dir_all(&path))
           .expect("SaVM has another install currently running!");
       }
     }
@@ -79,7 +85,10 @@ pub fn install_info<
     cb(s("Copying important files..."), 2.0 / steps);
 
     let cexe = current_exe().unwrap();
-    _ = fs::copy(cexe, format!("{}/setup.exe", &path));
+    _ = fs::copy(
+      cexe,
+      format!("{}/savmsetupconfigureuninstallrepair.exe", &path),
+    );
   }
 
   {
@@ -90,7 +99,7 @@ pub fn install_info<
   {
     cb(s("Setting Up Registry..."), 4.0 / steps);
 
-    setup_registry(&path, CLI);
+    setup_registry(&path, config.w32.path);
   }
 
   {
@@ -121,9 +130,16 @@ pub fn uninstall<I: FnOnce() -> (), const AUTOEXIT: bool>(done: I) {
   }
   let mut pbuf = PathBuf::from(path);
 
+  {
+    unsafe {
+      let start = get_savm_startmenu();
+      fs::remove_dir_all(start).unwrap();
+    }
+  }
+
   unsafe {
     let dir = HSTRING::from(pbuf.to_str().unwrap());
-    pbuf.push("setup.exe");
+    pbuf.push("savmsetupconfigureuninstallrepair.exe");
     let uninstaller = HSTRING::from(pbuf.to_str().unwrap());
 
     _ = MoveFileExW(&uninstaller, None, MOVEFILE_DELAY_UNTIL_REBOOT);
