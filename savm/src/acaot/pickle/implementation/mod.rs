@@ -478,7 +478,9 @@ pub fn call_vcmp(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mu
     *const QuadPackedData,
     *const QuadPackedData,
     *mut QuadPackedData,
+
     u64,
+    usize,
     i32,
     i32,
     i32,
@@ -508,10 +510,11 @@ pub fn call_vcmp(pickle: &PickleInstruction, ws: *mut WorkingSet, taskstate: *mu
     for additive in 0..count {
       innercmp(
         op,
-        src1.add(additive as _),
-        src2.add(additive as _),
-        target.add(additive as _),
+        src1,
+        src2,
+        target,
         successval,
+        additive as usize,
         offset1,
         offset2,
         offset3,
@@ -527,6 +530,7 @@ unsafe fn vcmp_inner<T>(
   s2: *const QuadPackedData,
   t: *mut QuadPackedData,
   success: u64,
+  additive: usize,
   offset1: i32,
   offset2: i32,
   offset3: i32,
@@ -534,8 +538,8 @@ unsafe fn vcmp_inner<T>(
   T: Copy + PartialEq + PartialOrd + 'static,
 {
   unsafe {
-    let v1 = read_unaligned((s1 as *mut T).offset(offset1 as _));
-    let v2 = read_unaligned((s2 as *mut T).offset(offset2 as _));
+    let v1 = read_unaligned((s1 as *mut T).add(additive).offset(offset1 as _));
+    let v2 = read_unaligned((s2 as *mut T).add(additive).offset(offset2 as _));
 
     // We are treating signed and unsigned as same ONLY
     // because we prune sign earlier
@@ -554,7 +558,10 @@ unsafe fn vcmp_inner<T>(
     } else {
       zeroed()
     };
-    (t as *mut T).offset(offset3 as _).write_unaligned(val);
+    (t as *mut T)
+      .add(additive)
+      .offset(offset3 as _)
+      .write_unaligned(val);
   }
 }
 
@@ -579,7 +586,10 @@ unsafe fn vcmp_f_inner<T, E>(
   s1: *const QuadPackedData,
   s2: *const QuadPackedData,
   t: *mut QuadPackedData,
+
   success: u64,
+  additive: usize,
+
   offset1: i32,
   offset2: i32,
   offset3: i32,
@@ -590,8 +600,8 @@ unsafe fn vcmp_f_inner<T, E>(
     assert!(size_of::<T>() == size_of::<E>());
     assert!(align_of::<T>() == align_of::<E>());
 
-    let v1 = read_unaligned((s1 as *mut T).offset(offset1 as _));
-    let v2 = read_unaligned((s2 as *mut T).offset(offset2 as _));
+    let v1 = read_unaligned((s1 as *mut T).add(additive).offset(offset1 as _));
+    let v2 = read_unaligned((s2 as *mut T).add(additive).offset(offset2 as _));
 
     let un = v1.nan() || v2.nan();
     let eq = v1 == v2;
@@ -623,6 +633,6 @@ unsafe fn vcmp_f_inner<T, E>(
     } else {
       zeroed()
     };
-    ((t as *mut T).offset(offset3 as _) as *mut E).write_unaligned(val);
+    ((t as *mut T).add(additive).offset(offset3 as _) as *mut E).write_unaligned(val);
   }
 }

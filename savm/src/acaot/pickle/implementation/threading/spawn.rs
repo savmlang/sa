@@ -1,7 +1,7 @@
 use std::{
   ffi::c_void,
   ptr::{self, null_mut},
-  thread::spawn,
+  thread::Builder,
 };
 
 use sart::ctr::VMTaskState;
@@ -25,13 +25,16 @@ pub extern "C" fn savm_spawn<T: BytecodeResolver + Send + Sync + 'static>(
     let safe_taskstate = ThreadSafe(taskstate);
     let vm = ThreadSafe((*taskstate).engine.pt as *mut VM<T>);
 
-    let stdrt = spawn(move || {
-      let vm = vm;
-      let taskstate = safe_taskstate;
+    let stdrt = Builder::new()
+      // 512KiB per SaVM Thread
+      .stack_size(512 * 1024)
+      .spawn(move || {
+        let vm = vm;
+        let taskstate = safe_taskstate;
 
-      let [r7, r8] = (*vm.0).fncall(section, taskstate.0);
-      (r7.u64, r8.u64)
-    });
+        let [r7, r8] = (*vm.0).fncall::<true>(section, taskstate.0);
+        (r7.u64, r8.u64)
+      });
 
     // Return HWND
     if return_hwnd {

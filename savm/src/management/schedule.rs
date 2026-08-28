@@ -3,6 +3,9 @@ use crossbeam_channel::Sender;
 #[cfg(feature = "native")]
 use std::iter::Peekable;
 
+#[cfg(feature = "native")]
+use crate::management::jit::StopInfo;
+
 /// Dispatches compilation tasks to critical, fastlane, and public compiler queues.
 #[cfg(feature = "native")]
 pub fn schedule<
@@ -25,6 +28,8 @@ pub fn schedule<
   compilers_len: usize,
   important_s: F,
   others_iter: E,
+
+  stopinfo: &mut (StopInfo, StopInfo, StopInfo),
 ) {
   /*
     Schedule more work through each sector
@@ -66,12 +71,12 @@ pub fn schedule<
   */
 
   if critical.peek().is_none() {
-    _ = tx_critical.try_send((0, 0, true));
+    stopinfo.0 = StopInfo::Stopping;
   }
 
   if important.peek().is_none() {
     if *compiler_fastlane + 1 == compilers_len {
-      _ = tx_fastlane.try_send((0, 0, true));
+      stopinfo.1 = StopInfo::Stopping;
     } else {
       *compiler_fastlane += 1;
       *important = important_s();
@@ -80,10 +85,31 @@ pub fn schedule<
 
   if others.peek().is_none() {
     if *compiler_public + 1 == compilers_len {
-      _ = tx_public.try_send((0, 0, true));
+      stopinfo.2 = StopInfo::Stopping;
     } else {
       *compiler_public += 1;
       *others = others_iter();
+    }
+  }
+
+  /*
+    Stop Signals
+  */
+  if stopinfo.0 == StopInfo::Stopping {
+    if let Ok(_) = tx_critical.try_send((0, 0, true)) {
+      stopinfo.0 = StopInfo::Stopped;
+    }
+  }
+
+  if stopinfo.1 == StopInfo::Stopping {
+    if let Ok(_) = tx_fastlane.try_send((0, 0, true)) {
+      stopinfo.1 = StopInfo::Stopped;
+    }
+  }
+
+  if stopinfo.2 == StopInfo::Stopping {
+    if let Ok(_) = tx_public.try_send((0, 0, true)) {
+      stopinfo.2 = StopInfo::Stopped;
     }
   }
 }

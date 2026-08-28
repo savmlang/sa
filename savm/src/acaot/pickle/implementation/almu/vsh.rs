@@ -32,10 +32,10 @@ macro_rules! bitop {
 
               let t1 = (src3 as *mut $t).offset(offset3 as _);
 
+              let $b = ptr::read_unaligned(s2);
+
               for idx in 0..count {
                 let $a: $t = ptr::read_unaligned(s1.add(idx as _));
-                let $b = ptr::read_unaligned(s2.add(idx as _));
-
                 let t2 = t1.add(idx as _);
 
                 ptr::write_unaligned(t2, {

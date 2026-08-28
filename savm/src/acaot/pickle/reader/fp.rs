@@ -90,7 +90,7 @@ pub fn parse_vfma(pickle: &PickleInstruction, meta: &[u8]) -> VFMA {
 
   let flags = u16::from_ne_bytes([f1, f2]);
 
-  let fptype = ((flags >> 12) & 0x01) as u8;
+  let fptype = (pickle.u3 & 0x01) as u8;
 
   let datatype = match fptype {
     0 => 8,

@@ -4,8 +4,8 @@ use llvm_sys::{
   LLVMAtomicOrdering, LLVMAtomicRMWBinOp,
   core::{
     LLVMBuildAtomicCmpXchg, LLVMBuildAtomicRMW, LLVMBuildExtractValue, LLVMBuildInsertElement,
-    LLVMBuildSExt, LLVMConstInt, LLVMGetUndef, LLVMSetOrdering, LLVMSetWeak, LLVMTypeOf,
-    LLVMVectorType,
+    LLVMBuildIntToPtr, LLVMBuildSExt, LLVMConstInt, LLVMGetUndef, LLVMSetOrdering, LLVMSetWeak,
+    LLVMTypeOf, LLVMVectorType,
   },
 };
 
@@ -34,6 +34,11 @@ fn ordmap(ord: Ordering) -> LLVMAtomicOrdering {
   }
 }
 
+#[cfg(target_pointer_width = "64")]
+static POINTER: LLVMTypeOrWidth = LLVMTypeOrWidth::Width(0);
+#[cfg(target_pointer_width = "32")]
+static POINTER: LLVMTypeOrWidth = LLVMTypeOrWidth::Width(1);
+
 pub fn handle_atomic(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
   match parse_atomic(pickle, &meta.ws) {
     ATOMIC::LOAD {
@@ -46,7 +51,9 @@ pub fn handle_atomic(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
     } => {
       let typ = LLVMTypeOrWidth::Type(typedata);
 
-      let pointer = llvmresolve_location_src_load(meta, typ, ptr_loc, None, ptr_loc_of as _, 1);
+      let pointer = llvmresolve_location_src_load(meta, POINTER, ptr_loc, None, ptr_loc_of as _, 1);
+      let pointer =
+        unsafe { LLVMBuildIntToPtr(meta.builder, pointer, typ.vect(1), LLVM_VAR_NAME.0) };
 
       let loaded = offsetload(
         meta.builder,
@@ -73,7 +80,9 @@ pub fn handle_atomic(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
     } => {
       let typ = LLVMTypeOrWidth::Type(typedata);
 
-      let pointer = llvmresolve_location_src_load(meta, typ, ptr_loc, None, ptr_loc_of as _, 1);
+      let pointer = llvmresolve_location_src_load(meta, POINTER, ptr_loc, None, ptr_loc_of as _, 1);
+      let pointer =
+        unsafe { LLVMBuildIntToPtr(meta.builder, pointer, typ.vect(1), LLVM_VAR_NAME.0) };
 
       let to_store =
         llvmresolve_location_src_load(meta, typ, val_stored_loc, None, val_store_of as _, 1);
@@ -109,7 +118,10 @@ pub fn handle_atomic(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
 
       let signed = typ.r#type().signed;
 
-      let pointer = llvmresolve_location_src_load(meta, typ, ptr_loc, None, ptr_loc_of as _, 1);
+      let pointer = llvmresolve_location_src_load(meta, POINTER, ptr_loc, None, ptr_loc_of as _, 1);
+      let pointer =
+        unsafe { LLVMBuildIntToPtr(meta.builder, pointer, typ.vect(1), LLVM_VAR_NAME.0) };
+
       let rhs_value = llvmresolve_location_src_load(meta, typ, rhs_loc, None, rhs_loc_of as _, 1);
 
       let load = llvmresolve_location_src_store(meta, typ, load_loc, None, load_loc_of as _, 1);
@@ -164,7 +176,9 @@ pub fn handle_atomic(pickle: &PickleInstruction, meta: &mut CompilerMeta) {
     } => {
       let typ = LLVMTypeOrWidth::Type(typedata);
 
-      let pointer = llvmresolve_location_src_load(meta, typ, ptr_loc, None, ptr_loc_of as _, 1);
+      let pointer = llvmresolve_location_src_load(meta, POINTER, ptr_loc, None, ptr_loc_of as _, 1);
+      let pointer =
+        unsafe { LLVMBuildIntToPtr(meta.builder, pointer, typ.vect(1), LLVM_VAR_NAME.0) };
 
       let val_stored =
         llvmresolve_location_src_load(meta, typ, val_stored_loc, None, val_store_of as _, 1);

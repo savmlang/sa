@@ -61,8 +61,8 @@ pub fn parse_vfcast(pickle: &PickleInstruction, ws: &[u8]) -> VFCAST {
 
   let target = (flags as u8) & 0x0F;
 
-  let type_int = (flags >> 8) as u8 & 0x03;
-  let type_float = match (flags >> 9) as u8 & 0x01 {
+  let type_int = (flags >> 8) as u8 & 0x07;
+  let type_float = match (flags >> 11) as u8 & 0x01 {
     0 => 8,
     1 => 9,
     _ => unreachable!(),

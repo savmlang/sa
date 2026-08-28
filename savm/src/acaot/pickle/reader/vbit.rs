@@ -46,24 +46,13 @@ pub fn parse_vbit(pickle: &PickleInstruction, meta: &[u8]) -> VBIT {
     countdata
   };
 
-  let (src1, of_src1) = {
-    let src = (flags as u8) & 0x0F;
-    let of = wspickle!(meta, start = 4, stop = 8, i32);
-    (src, of)
-  };
-  let (src2, of_src2) = {
-    let src = (flags as u8) >> 4 & 0x0F;
-    let of = wspickle!(meta, start = 8, stop = 12, i32);
+  let src1 = ((flags >> 8) as u8) & 0x0F;
+  let src2 = ((flags >> 4) as u8) & 0x0F;
+  let tgt = (flags as u8) & 0x0F;
 
-    (src, of)
-  };
-
-  let (tgt, of_tgt) = {
-    let src = (flags >> 12) as u8 & 0x0F;
-    let of = wspickle!(meta, start = 12, stop = 16, i32);
-
-    (src, of)
-  };
+  let of_src1 = { wspickle!(meta, start = 4, stop = 8, i32) };
+  let of_src2 = { wspickle!(meta, start = 8, stop = 12, i32) };
+  let of_tgt = { wspickle!(meta, start = 12, stop = 16, i32) };
 
   VBIT {
     count,
@@ -117,25 +106,13 @@ pub fn parse_vrot(pickle: &PickleInstruction, meta: &[u8]) -> VROT {
     countdata
   };
 
-  let (src1, of_src1) = {
-    let src = (flags as u8) & 0x0F;
-    let of = wspickle!(meta, start = 4, stop = 8, i32);
+  let src1 = ((flags >> 8) as u8) & 0x0F;
+  let src2 = ((flags >> 4) as u8) & 0x0F;
+  let tgt = (flags as u8) & 0x0F;
 
-    (src, of)
-  };
-  let (src2, of_src2) = {
-    let src = (flags as u8) >> 4 & 0x0F;
-    let of = wspickle!(meta, start = 8, stop = 12, i32);
-
-    (src, of)
-  };
-
-  let (tgt, of_tgt) = {
-    let src = (flags >> 12) as u8 & 0x0F;
-    let of = wspickle!(meta, start = 12, stop = 16, i32);
-
-    (src, of)
-  };
+  let of_src1 = { wspickle!(meta, start = 4, stop = 8, i32) };
+  let of_src2 = { wspickle!(meta, start = 8, stop = 12, i32) };
+  let of_tgt = { wspickle!(meta, start = 12, stop = 16, i32) };
 
   VROT {
     count,

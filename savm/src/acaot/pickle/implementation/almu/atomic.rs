@@ -193,7 +193,7 @@ macro_rules! atomicable {
             let stored = *stored;
             let expected = *expected;
 
-            let [out, succ] = <$b>::from_ptr(pt).compare_exchange_weak(expected, stored, order1, order2).map_or_else(|e| [e, !0], |x| [x, 0]);
+            let [out, succ] = <$b>::from_ptr(pt).compare_exchange_weak(expected, stored, order1, order2).map_or_else(|e| [e, 0], |x| [x, !0]);
             *ret = out;
             *ret.add(1) = succ;
           }

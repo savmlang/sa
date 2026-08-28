@@ -30,21 +30,28 @@ use crate::{
 pub static GLOBAL_DATA: OnceLock<UnSafePtr<u8>> = OnceLock::new();
 static UNUSED_RELOCMAP: LazyLock<Arc<[PickleJumpData]>> = LazyLock::new(Default::default);
 
-const SCRATCHPAD: usize = 50 * 24 * size_of::<QuadPackedData>();
-
 pub struct UnSafePtr<T>(pub *mut T);
 unsafe impl<T> Send for UnSafePtr<T> {}
 unsafe impl<T> Sync for UnSafePtr<T> {}
 
+pub static VM_MAX_VMSTATES: usize = 128;
+const SCRATCHPAD_64VALS: usize = 24;
+
 pub struct VMState {
+  pub scratchpad: Scratchpad,
+  pub ts: [VMTaskState; VM_MAX_VMSTATES],
   pub ws: WorkingSet,
-  pub ts: [VMTaskState; 50],
   pub cindex: usize,
+  pub primed: bool,
 }
+
+#[repr(C, align(64))]
+pub struct Scratchpad(pub [QuadPackedData; SCRATCHPAD_64VALS * VM_MAX_VMSTATES]);
 
 impl VMState {
   pub fn init() -> Self {
     VMState {
+      scratchpad: Scratchpad(unsafe { zeroed() }),
       ws: WorkingSet {
         arr: &[],
         dispatch: null(),
@@ -55,17 +62,9 @@ impl VMState {
         jmp: (0, 0),
         relocmap: SaVMJumpWrap(UNUSED_RELOCMAP.clone()),
       },
-      ts: unsafe {
-        let mut ts: [VMTaskState; 50] = zeroed();
-
-        let alloca = salloc::aligned_malloc(SCRATCHPAD, 64) as *mut QuadPackedData;
-        for (i, t) in ts.iter_mut().enumerate() {
-          t.scratchpad = alloca.add(i * 24);
-        }
-
-        ts
-      },
+      ts: unsafe { zeroed() },
       cindex: 0,
+      primed: false,
     }
   }
 }
@@ -74,7 +73,6 @@ impl Drop for VMState {
   fn drop(&mut self) {
     unsafe {
       salloc::aligned_free(self.ws.largepad as _);
-      salloc::aligned_free(self.ts[0].scratchpad as _);
 
       if !self.ws.ame.is_null() {
         salloc::aligned_free(self.ws.ame as _);
@@ -93,7 +91,7 @@ pub(crate) mod preps {
     PickleJumpData,
     acaot::pickle::{def::PickleInstruction, implementation::DispatchFn},
     kvwrap::{SaVMJumpWrap, SaVMJumpWrapImpl},
-    sync::{VMSTAT, VMState},
+    sync::{VM_MAX_VMSTATES, VMSTAT, VMState},
   };
   use sart::{
     ctr::{
@@ -102,22 +100,46 @@ pub(crate) mod preps {
     },
     structures::QuadPackedData,
   };
-  use std::{os::raw::c_void, ptr, sync::Arc};
+  use std::{hint::cold_path, mem, os::raw::c_void, sync::Arc};
 
   #[inline(always)]
-  pub fn fncall_prep(vmstat: *mut VMState, oldtsk: *mut VMTaskState) {
+  pub fn fncall_prep<const THREADSPAWN: bool>(vmstat: *mut VMState, oldtsk: *mut VMTaskState) {
     unsafe {
-      (*vmstat).cindex += 1;
-      ptr::write((*vmstat).ts.as_mut_ptr().add((*vmstat).cindex), *oldtsk);
+      if !THREADSPAWN {
+        (*vmstat).cindex += 1;
+
+        // CRITICAL BUG
+        if (*vmstat).cindex >= VM_MAX_VMSTATES {
+          cold_path();
+          panic!(
+            "[CRITICAL] SaVM hit a fundamental exception : fncall exceeded : {}",
+            VM_MAX_VMSTATES
+          );
+        }
+      }
+
+      let newtsk = (*vmstat).ts.as_mut_ptr().add((*vmstat).cindex);
+
+      // Only EXACTLY copy the registers
+      (*newtsk).r1 = (*oldtsk).r1;
+      (*newtsk).r2 = (*oldtsk).r2;
+      (*newtsk).r3 = (*oldtsk).r3;
+      (*newtsk).r4 = (*oldtsk).r4;
+      (*newtsk).r5 = (*oldtsk).r5;
+      (*newtsk).r6 = (*oldtsk).r6;
+      (*newtsk).r7 = (*oldtsk).r7;
+      (*newtsk).r8 = (*oldtsk).r8;
     }
   }
 
   #[inline(always)]
-  pub fn fncall_out(vmstat: *mut VMState) -> [QuadPackedData; 2] {
+  pub fn fncall_out<const THREADSPAWN: bool>(vmstat: *mut VMState) -> [QuadPackedData; 2] {
     unsafe {
       let resp = (*vmstat).ts.get_unchecked((*vmstat).cindex);
 
-      (*vmstat).cindex -= 1;
+      if !THREADSPAWN {
+        (*vmstat).cindex -= 1;
+      }
 
       [resp.r7, resp.r8]
     }
@@ -141,20 +163,21 @@ pub(crate) mod preps {
     jumps: Arc<[PickleJumpData]>,
     engine: *mut c_void,
     dispatch: F,
-  ) -> *mut VMTaskState {
+  ) -> (((u64, usize), SaVMJumpWrap), *mut VMTaskState) {
     unsafe {
       let wrapped = SaVMJumpWrap(jumps);
 
       dispatch(&mut (*t).ws.dispatch);
       (*t).ws.jmp = (0, wrapped.get(&0).unwrap_or_default());
-      (*t).ws.relocmap = wrapped;
+
+      let recovery = ((*t).ws.jmp, mem::replace(&mut (*t).ws.relocmap, wrapped));
 
       let ts = (*t).ts.as_mut_ptr().add((*t).cindex as usize);
 
       (*ts).engine.pt = engine;
       (*ts).curline_or_resume.usi = 0;
 
-      ts
+      (recovery, ts)
     }
   }
 
@@ -205,14 +228,41 @@ pub(crate) mod preps {
 impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
   pub const PICKLE_DISPATCH_TABLE: [ResolveFn; DISPATCH_TOTAL_ITEMS] = pickle_generate_table::<E>();
 
-  pub fn fncall(&self, sectionid: u64, oldtsk: *mut VMTaskState) -> [QuadPackedData; 2] {
+  // Does not need prime_vmstat because fncall is called from an executing section
+  #[inline(always)]
+  pub(crate) fn fncall<const THREADSPAWN: bool>(
+    &self,
+    sectionid: u64,
+    oldtsk: *mut VMTaskState,
+  ) -> [QuadPackedData; 2] {
+    if THREADSPAWN {
+      Self::prime_vmstat();
+    }
+
     let vmstat = VMSTAT.with(|x| x.get());
-    preps::fncall_prep(vmstat, oldtsk);
+    preps::fncall_prep::<THREADSPAWN>(vmstat, oldtsk);
 
     self.dispatch_chocolate::<true>(sectionid);
 
-    let vmstat = VMSTAT.with(|x| x.get());
-    preps::fncall_out(vmstat)
+    preps::fncall_out::<THREADSPAWN>(vmstat)
+  }
+
+  fn prime_vmstat() {
+    VMSTAT.with(|x| unsafe {
+      let vmstate = x.get();
+
+      if !(*vmstate).primed {
+        cold_path();
+        let scratchpad = (*vmstate).scratchpad.0.as_mut_ptr();
+
+        for (i, ts) in (*vmstate).ts.iter_mut().enumerate() {
+          // The offset is in count, so no issues
+          ts.scratchpad = scratchpad.add(i * SCRATCHPAD_64VALS) as *mut _;
+        }
+
+        (*vmstate).primed = true;
+      }
+    })
   }
 
   pub fn call_section(&self, sectionid: u64) {
@@ -221,6 +271,8 @@ impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
 
   #[inline(always)]
   pub fn dispatch_chocolate<const JMPTOJIT: bool>(&self, sectionid: u64) {
+    Self::prime_vmstat();
+
     let Some((data, jumps)) = CODE_CACHE.get(&sectionid) else {
       self.pickle_section(sectionid);
 
@@ -235,9 +287,10 @@ impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
     let mut run_jit = false;
 
     let t = VMSTAT.with(UnsafeCell::get);
-    let ts = preps::prepare_interpreter_loop(t, jumps, self as *const _ as *mut _, |x| {
-      *x = Self::PICKLE_DISPATCH_TABLE.as_ptr();
-    });
+    let (recovery, ts) =
+      preps::prepare_interpreter_loop(t, jumps, self as *const _ as *mut _, |x| {
+        *x = Self::PICKLE_DISPATCH_TABLE.as_ptr();
+      });
 
     unsafe {
       cleanup_vmstat(self as *const _ as *mut _);
@@ -291,6 +344,12 @@ impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
       }
     }
 
+    // Clear clobbered state before interpreter leaves
+    unsafe {
+      (*t).ws.jmp = recovery.0;
+      (*t).ws.relocmap = recovery.1;
+    }
+
     #[cfg(feature = "native")]
     if run_jit {
       return self.dispatch_jit(sectionid);
@@ -303,6 +362,8 @@ impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
   #[inline(always)]
   #[cfg(feature = "native")]
   pub fn dispatch_jit(&self, sectionid: u64) {
+    Self::prime_vmstat();
+
     use crate::JIT_CACHE;
     use std::ops::Deref;
 
@@ -373,6 +434,8 @@ impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
     any(target_os = "windows", target_os = "linux")
   ))]
   pub fn exec_jit_cinder(&self, pickle: &[PickleInstruction], exec: *const Executable) -> u32 {
+    Self::prime_vmstat();
+
     use crate::acaot::cinder::DispatchStarter;
 
     let vmstate = VMSTAT.with(UnsafeCell::get);
@@ -409,6 +472,8 @@ impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
   #[inline(always)]
   #[cfg(feature = "native")]
   pub fn exec_jit(&self, exec: *const Executable) -> u32 {
+    Self::prime_vmstat();
+
     let vmstate = VMSTAT.with(UnsafeCell::get);
     unsafe {
       use std::mem::transmute;

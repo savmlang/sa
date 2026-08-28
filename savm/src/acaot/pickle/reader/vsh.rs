@@ -21,9 +21,9 @@ pub fn parse_vsh(pickle: &PickleInstruction, ws: &[u8]) -> VSH {
 
   let count = wspickle!(ws, start = 0, stop = 4, u32);
 
-  let flags_src1 = (flags as u8) & 0x0F;
-  let flags_src2 = (flags as u8) >> 4 & 0x0F;
-  let flags_target = (flags >> 12) as u8 & 0x0F;
+  let flags_src1 = ((flags >> 8) as u8) & 0x0F;
+  let flags_src2 = ((flags >> 4) as u8) & 0x0F;
+  let flags_target = (flags as u8) & 0x0F;
 
   let of_src1 = wspickle!(ws, start = 4, stop = 5, i8);
   let of_src2 = wspickle!(ws, start = 5, stop = 6, i8);

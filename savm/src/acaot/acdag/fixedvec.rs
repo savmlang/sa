@@ -2,7 +2,7 @@ use core::slice;
 use std::{
   alloc::{Layout, alloc, dealloc, handle_alloc_error},
   ops::{Deref, DerefMut},
-  ptr,
+  ptr::{self, null_mut},
 };
 
 pub struct FixedVec<T: Sized> {
@@ -15,6 +15,15 @@ pub struct FixedVec<T: Sized> {
 impl<T: Sized> FixedVec<T> {
   pub fn new(cap: usize) -> Self {
     let layout = Layout::array::<T>(cap).expect("Layout overflow");
+
+    if cap == 0 {
+      return Self {
+        data: null_mut(),
+        layout,
+        len: 0,
+        cap: 0,
+      };
+    }
 
     let data = unsafe { alloc(layout) } as *mut T;
 
@@ -32,6 +41,10 @@ impl<T: Sized> FixedVec<T> {
 
   pub fn factory<F: FnMut(usize) -> T>(mut factory: F, cap: usize) -> Self {
     let mut out: FixedVec<T> = FixedVec::new(cap);
+
+    if cap == 0 {
+      return out;
+    }
     for i in 0..out.cap {
       _ = out.push(factory(i));
     }
@@ -70,12 +83,18 @@ impl<T: Sized> Deref for FixedVec<T> {
   type Target = [T];
 
   fn deref(&self) -> &Self::Target {
+    if self.cap == 0 {
+      return &[];
+    }
     unsafe { slice::from_raw_parts(self.data, self.len) }
   }
 }
 
 impl<T: Sized> DerefMut for FixedVec<T> {
   fn deref_mut(&mut self) -> &mut Self::Target {
+    if self.cap == 0 {
+      return &mut [];
+    }
     unsafe { slice::from_raw_parts_mut(self.data, self.len) }
   }
 }
@@ -88,6 +107,8 @@ impl<T: Sized> Drop for FixedVec<T> {
       }
     }
 
-    unsafe { dealloc(self.data as _, self.layout) };
+    if self.cap != 0 {
+      unsafe { dealloc(self.data as _, self.layout) };
+    }
   }
 }

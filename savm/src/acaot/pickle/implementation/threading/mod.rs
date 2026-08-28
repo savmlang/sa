@@ -44,7 +44,7 @@ pub extern "C" fn ffi_synccall_sectionid<T: BytecodeResolver + Send + Sync + 'st
   unsafe {
     let vm = (*taskstate).engine.pt as *const _ as *const VM<T>;
 
-    let [r7, r8] = (*vm).fncall(sectionid, taskstate);
+    let [r7, r8] = (*vm).fncall::<false>(sectionid, taskstate);
 
     (*taskstate).r7 = r7;
     (*taskstate).r8 = r8;
@@ -79,7 +79,7 @@ pub fn call_synccall<T: BytecodeResolver + Send + Sync + 'static>(
     let tskptr = taskstate as *mut _;
 
     let dispatch = || {
-      let [r7, r8] = (*vm).fncall(sectionid, taskstate);
+      let [r7, r8] = (*vm).fncall::<false>(sectionid, taskstate);
 
       (*taskstate).r7 = r7;
       (*taskstate).r8 = r8;

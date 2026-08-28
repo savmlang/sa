@@ -19,16 +19,7 @@ macro_rules! prelude {
 
     let typetag = (flags >> 12) as u8;
 
-    let countbit = ((flags >> 4) & 0x01) as u8;
-
-    let count_data = arrcastint!($ws, start = 0, stop = 4, u32);
-
-    let count = if (countbit == 0) {
-      count_data
-    } else {
-      unsafe { (*$task).r1.u32 }
-    };
-
+    let count = arrcastint!($ws, start = 0, stop = 4, u32);
     let offset1 = arrcastint!($ws, start = 4, stop = 8, i32);
     let offset2 = arrcastint!($ws, start = 8, stop = 12, i32);
 

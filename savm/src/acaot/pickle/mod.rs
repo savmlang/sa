@@ -104,19 +104,20 @@ impl<T: Read> PickleWorker<T> {
   fn handle_atomic(&mut self) {
     let opcode = PICKLE_OPCODE_ATOMIC;
 
-    let flags_offset_v0_v1 = self.bytecode.extract::<4>();
+    let raw = self.bytecode.extract::<8>();
+    let imm16 = [raw[6], raw[7]].swap_if_be();
 
-    let mut cp = [0; 6];
-    cp[0..1].copy_from_slice(&[flags_offset_v0_v1[3]]);
-    cp[1..3].copy_from_slice(&self.bytecode.extract::<2>());
-    cp[3..5].copy_from_slice(&self.bytecode.extract::<2>().swap_if_be());
+    let mut cp = [0u8; 5];
+    cp[0] = raw[1] & 0x7; // ordering2
+    cp[1..3].copy_from_slice(&raw[4..6]); // of_v2, of_v3
+    cp[3..5].copy_from_slice(&imm16); // instdefined
     self.emit_copy_bytes(opcode, cp);
 
     self.out.push(PickleInstruction {
-      opcode: opcode,
-      u1: flags_offset_v0_v1[0],
-      u2: flags_offset_v0_v1[1],
-      u3: flags_offset_v0_v1[2],
+      opcode,
+      u1: raw[0], // flags
+      u2: raw[2], // of_v0
+      u3: raw[3], // of_v1
     });
   }
 
@@ -220,6 +221,7 @@ impl<T: Read> PickleWorker<T> {
   fn handle_vcnt(&mut self) {
     let opcode = PICKLE_OPCODE_VCNT;
     let [flags1, flags2] = self.bytecode.extract::<2>().swap_if_be();
+    let [alignment] = self.bytecode.extract::<1>();
 
     let mut copy = [0u8; 6];
     copy[0..4].copy_from_slice(&self.bytecode.extract::<4>().swap_if_be());
@@ -231,7 +233,7 @@ impl<T: Read> PickleWorker<T> {
       opcode: opcode,
       u1: flags1,
       u2: flags2,
-      u3: 0,
+      u3: alignment,
     });
   }
 

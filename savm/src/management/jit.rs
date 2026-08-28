@@ -156,6 +156,8 @@ pub fn run_jit_orchestrator<T: BytecodeResolver + Send + Sync + 'static>(resolve
   threads += 1;
   let mut compiler_public = 0;
 
+  let mut stopinfo = (StopInfo::None, StopInfo::None, StopInfo::None);
+
   loop {
     select! {
       recv(recv) -> val => {
@@ -184,6 +186,7 @@ pub fn run_jit_orchestrator<T: BytecodeResolver + Send + Sync + 'static>(resolve
           compilers_len,
           || ShuffledSliceIter::new_panicking(important_s).peekable(),
           others_iter,
+          &mut stopinfo,
         );
       }
 
@@ -201,6 +204,7 @@ pub fn run_jit_orchestrator<T: BytecodeResolver + Send + Sync + 'static>(resolve
           compilers_len,
           || ShuffledSliceIter::new_panicking(important_s).peekable(),
           others_iter,
+          &mut stopinfo,
         );
 
         // Break JIT if all modules are processes
@@ -219,4 +223,11 @@ pub fn run_jit_orchestrator<T: BytecodeResolver + Send + Sync + 'static>(resolve
   loop {
     thread::sleep(Duration::MAX);
   }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StopInfo {
+  None,
+  Stopping,
+  Stopped,
 }

@@ -307,8 +307,8 @@ impl<T: BytecodeResolver + Send + Sync + 'static> VM<T> {
 
       thread::Builder::new()
         .name("JIT Management".into())
-        // 32KiB stack space
-        .stack_size(32 * 1024)
+        // 1MiB (1024 KiB) stack space
+        .stack_size(1024 * 1024)
         .spawn(move || management_main(resolve))
         .expect("Unable to spawn management thread");
     }
