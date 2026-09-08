@@ -183,7 +183,7 @@ impl JITMemoryManager {
     let guaranteed =
       || MemoryExecutable::sizecalc(data).expect("Unable to at all calculate size needed!");
 
-    let size_needed = if prefer_jitlink() {
+    let size_needed = if cfg!(not(windows)) {
       MemoryExecutable::sizecalc_jitlink(&self.symbpool, data)
         .unwrap_or_else(guaranteed)
         .get() as usize
@@ -254,20 +254,9 @@ impl JITMemoryManager {
 
       #[cfg(not(windows))]
       return (|| {
-        if prefer_jitlink() {
-          use sajit::LLVMJITLink;
+        use sajit::LLVMJITLink;
 
-          mexec.write_jitlink(_symbpool, data, resolver_full)
-        } else {
-          use sajit::LLVMRTDyld;
-          use std::borrow::Cow;
-
-          mexec.write_rtdyld(data, resolver_full).map_err(|_| {
-            Cow::Borrowed(
-              &[Cow::Borrowed("RTDyld was unable to relocate!")] as &'static [Cow<'static, str>]
-            )
-          })
-        }
+        mexec.write_jitlink(1, _symbpool, data, resolver_full)
       })();
     };
 
@@ -310,28 +299,6 @@ impl JITMemoryManager {
         )
       })
   }
-}
-
-#[rustfmt::skip]
-#[allow(unused)]
-fn prefer_jitlink() -> bool {
-  cfg!(
-    any(
-      all(
-        target_os = "linux", 
-        any(
-          target_arch = "x86_64",
-          target_arch = "aarch64",
-          target_arch = "riscv64",
-          target_arch = "powerpc64"
-        )
-      ),
-      all(
-        target_os = "macos",
-        target_arch = "aarch64"
-      )
-    )
-  )
 }
 
 impl Drop for JITMemoryManager {

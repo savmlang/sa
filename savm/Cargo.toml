@@ -23,7 +23,7 @@ crossbeam-channel = { version = "^0.5", optional = true }
 pastey = "^0.2"
 
 # Sets of compiler
-cranelift = { version = "^0.134", features = [
+cranelift = { version = "^0.135", features = [
   "std",
   "native",
   "frontend",

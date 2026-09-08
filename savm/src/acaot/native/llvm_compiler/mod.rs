@@ -441,8 +441,6 @@ impl<const T: bool> NativeCompiler<T> for SaVMLLVM {
 
       let buf = LLVMBuffer(buf);
 
-      println!("Buf: {:?}", buf.deref());
-
       return CacheData::JITCache {
         level: self.cache,
         binary: Arc::from(buf.deref()),
