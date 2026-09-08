@@ -1,9 +1,3 @@
-#[cfg(all(
-  feature = "native",
-  any(target_arch = "x86_64"),
-  any(target_os = "windows", target_os = "linux")
-))]
-use crate::management::cinder;
 #[cfg(all(feature = "native", feature = "cranelift"))]
 use crate::management::jitmem::calculate_relocation_abs;
 #[cfg(feature = "native")]
@@ -49,20 +43,6 @@ pub fn process_jit<T: BytecodeResolver + Send + Sync + 'static>(
 
       match cache {
         CacheData::None | CacheData::Pickle { .. } => {}
-        CacheData::CinderTempCache {
-          binary: _stencil,
-          entrymap: _entries,
-        } => {
-          #[cfg(all(
-            feature = "native",
-            any(target_arch = "x86_64"),
-            any(target_os = "windows", target_os = "linux")
-          ))]
-          {
-            let (bin, ctr) = cinder::link(_entries, _stencil, sajit);
-            write(true, bin, ctr);
-          }
-        }
         CacheData::JITCache {
           level,
           binary: _binary,
@@ -80,9 +60,6 @@ pub fn process_jit<T: BytecodeResolver + Send + Sync + 'static>(
             #[cfg(feature = "llvm")]
             CacheLevel::LLVMEpitome => {
               todo!("Soon");
-            }
-            CacheLevel::ACAoTCinder => {
-              unreachable!();
             }
             #[cfg(feature = "llvm")]
             CacheLevel::LLVMCrater => {

@@ -66,9 +66,6 @@ pub fn compiler<const SENDBACK: bool, E: BytecodeResolver + Send + Sync + 'stati
         CacheData::None => {
           jitdata = compile();
         }
-        CacheData::JITCache { level, .. } if matches!(level, CacheLevel::ACAoTCinder) => {
-          jitdata = compile();
-        }
         e => {
           jitdata = e;
         }

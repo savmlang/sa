@@ -57,6 +57,7 @@ members = [
   # 
   # This is the SaVM IR Generator
   "libs/sair",
+  "sair/sair_llir",
 
   # Internal Crates 
   # - saffine (sa affinity)
@@ -66,7 +67,6 @@ members = [
 
   # SaVM Internal Building Crates
   "savm_build",
-  "savm_build_cinder", "sair/sair_llir",
 ]
 resolver = "3"
 

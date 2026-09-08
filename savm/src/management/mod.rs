@@ -1,13 +1,6 @@
 use crate::BytecodeResolver;
 use std::sync::Arc;
 
-#[cfg(all(
-  feature = "native",
-  any(target_arch = "x86_64"),
-  any(target_os = "windows", target_os = "linux")
-))]
-pub mod cinder;
-
 #[cfg(feature = "native")]
 pub mod compiler_thread;
 #[cfg(feature = "native")]

@@ -256,7 +256,7 @@ impl BytecodeResolver for ApplicationManager {
     };
 
     let (optlevel, metamap, libcalls, machinecode) = match &cache {
-      CacheData::CinderTempCache { .. } | CacheData::None => return,
+      CacheData::None => return,
       CacheData::Pickle {
         out,
         jumps,

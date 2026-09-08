@@ -23,7 +23,7 @@ pub use sart;
 #[cfg(feature = "native")]
 use crate::acaot::native::store::SwappableCodeSpace;
 use crate::{
-  acaot::{JITReloc, Stencils, pickle::def::PickleInstruction},
+  acaot::{JITReloc, pickle::def::PickleInstruction},
   management::management_main,
 };
 
@@ -80,10 +80,6 @@ pub enum CacheData {
     binary: Arc<[u8]>,
     reloc: JITRelocs,
   },
-  CinderTempCache {
-    entrymap: Arc<[Box<[u8]>]>,
-    binary: Stencils,
-  },
 }
 
 unsafe impl Send for CacheData {}
@@ -93,7 +89,6 @@ unsafe impl Sync for CacheData {}
 #[derive(Debug, Clone, Copy)]
 pub enum CacheLevel {
   Pickle,
-  ACAoTCinder,
   CraneliftCrafter,
   CraneliftEpicenter,
   LLVMCrater,
@@ -106,22 +101,20 @@ impl CacheLevel {
   pub fn to_int(&self) -> u8 {
     match self {
       Self::Pickle => 0,
-      Self::ACAoTCinder => 1,
-      Self::CraneliftCrafter => 2,
-      Self::CraneliftEpicenter => 3,
-      Self::LLVMCrater => 4,
-      Self::LLVMEpitome => 5,
+      Self::CraneliftCrafter => 1,
+      Self::CraneliftEpicenter => 2,
+      Self::LLVMCrater => 3,
+      Self::LLVMEpitome => 4,
     }
   }
 
   pub fn from_int(cachelevel: i64) -> Option<Self> {
     Some(match cachelevel {
       0 => Self::Pickle,
-      1 => Self::ACAoTCinder,
-      2 => Self::CraneliftCrafter,
-      3 => Self::CraneliftEpicenter,
-      4 => Self::LLVMCrater,
-      5 => Self::LLVMEpitome,
+      1 => Self::CraneliftCrafter,
+      2 => Self::CraneliftEpicenter,
+      3 => Self::LLVMCrater,
+      4 => Self::LLVMEpitome,
       _ => return None,
     })
   }

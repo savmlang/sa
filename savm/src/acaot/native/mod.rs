@@ -1,9 +1,4 @@
-#[cfg(all(
-  feature = "native",
-  any(target_arch = "x86_64"),
-  any(target_os = "windows", target_os = "linux")
-))]
-use crate::acaot::cinder::ACAoTCinder;
+
 #[cfg(feature = "cranelift")]
 use crate::acaot::native::cranelift::SaVMCranelift;
 #[cfg(feature = "llvm")]
@@ -52,15 +47,6 @@ impl<const T: bool> NativeCompilerBuilder<T> for CompilerBuilder<T> {
 pub fn testing_compiler_infra<const SENDBACK: bool, T: BytecodeResolver + Send + Sync + 'static>()
 -> &'static [(&'static str, &'static dyn NativeCompilerBuilder<SENDBACK>)] {
   &[
-    #[cfg(all(
-      feature = "native",
-      any(target_arch = "x86_64"),
-      any(target_os = "windows", target_os = "linux")
-    ))]
-    (
-      "Cinder - ACAoT JIT",
-      &CompilerBuilder(ACAoTCinder::<T>::create, CacheLevel::ACAoTCinder),
-    ),
     #[cfg(feature = "cranelift")]
     (
       "Crafter - Cranelift JIT",
@@ -96,12 +82,6 @@ pub fn testing_epitier_compilers<const SENDBACK: bool>()
 pub fn compiler_infra<const SENDBACK: bool, T: BytecodeResolver + Send + Sync + 'static>()
 -> &'static [&'static dyn NativeCompilerBuilder<SENDBACK>] {
   &[
-    #[cfg(all(
-      feature = "native",
-      any(target_arch = "x86_64"),
-      any(target_os = "windows", target_os = "linux")
-    ))]
-    &CompilerBuilder(ACAoTCinder::<T>::create, CacheLevel::ACAoTCinder),
     #[cfg(feature = "cranelift")]
     &CompilerBuilder(SaVMCranelift::create_abs8, CacheLevel::CraneliftCrafter),
     #[cfg(feature = "llvm")]

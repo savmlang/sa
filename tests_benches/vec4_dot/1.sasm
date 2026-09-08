@@ -1,0 +1,60 @@
+; Benchmark 2: 4D Vector Dot Product & Normalization (SIMD & Float Math)
+; Footprint: 32 bytes (2 x 128-bit QuadPackedData vectors in r1,r2 and r3,r4, result in r7)
+; What it stresses:
+;   - SIMD floating-point multiply-accumulate (vmulf / vfma)
+;   - Horizontal reduction across vector lanes
+;   - Square root (vfop with VFOP_SQRT)
+;   - Vector lane division for normalization
+; Algorithm:
+;   dot = (v1.x * v2.x) + (v1.y * v2.y) + (v1.z * v2.z) + (v1.w * v2.w)
+;   norm = sqrt(dot)
+;   v1_norm = v1 / norm
+
+#import *
+
+#define MARK_LOOP_BEGIN 1::u64
+
+; v1 = [1.0, 2.0, 3.0, 4.0] (in r1, r2)
+reg $r1::u8, 0::u8, %u64[ fp2.0::u32 | fp1.0::u32 ]
+reg $r2::u8, 0::u8, %u64[ fp4.0::u32 | fp3.0::u32 ]
+
+; v2 = [2.0, 3.0, 4.0, 5.0] (in r3, r4)
+reg $r3::u8, 0::u8, %u64[ fp3.0::u32 | fp2.0::u32 ]
+reg $r4::u8, 0::u8, %u64[ fp5.0::u32 | fp4.0::u32 ]
+
+reg $r5::u8, 0::u8, 0::u64
+reg $r6::u8, 0::u8, 0::u64
+reg $r7::u8, 0::u8, 0::u64
+reg $r8::u8, 0::u8, 1000::u64
+
+; Scratchpad holds constant 1 for loop decrement
+reg $scratchpad::u8, 0::u8, 1::u64
+
+mark $MARK_LOOP_BEGIN::u64
+  ; Reset v1
+  reg $r1::u8, 0::u8, %u64[ fp2.0::u32 | fp1.0::u32 ]
+  reg $r2::u8, 0::u8, %u64[ fp4.0::u32 | fp3.0::u32 ]
+
+  ; 4D SIMD Elementwise Multiply: [r5, r6] = [r1, r2] * [r3, r4] (count = 4 f32 lanes)
+  vmulf %u16[ 0::u3 | $FOP_f32::u1 | $r1::u4 | $r3::u4 | $r5::u4 ], 4::u32, 0::u32, 0::u32, 0::u32
+
+  ; Horizontal Reduction:
+  ; r7[0] = r5[0] + r5[1] (2.0 + 6.0 = 8.0)
+  vaddf %u16[ 0::u3 | $FOP_f32::u1 | $r5::u4 | $r5::u4 | $r7::u4 ], 1::u32, 0::u32, 1::u32, 0::u32
+  ; r7[1] = r6[0] + r6[1] (12.0 + 20.0 = 32.0)
+  vaddf %u16[ 0::u3 | $FOP_f32::u1 | $r6::u4 | $r6::u4 | $r7::u4 ], 1::u32, 0::u32, 1::u32, 1::u32
+  ; r7[0] = r7[0] + r7[1] (8.0 + 32.0 = 40.0 = dot)
+  vaddf %u16[ 0::u3 | $FOP_f32::u1 | $r7::u4 | $r7::u4 | $r7::u4 ], 1::u32, 0::u32, 1::u32, 0::u32
+
+  ; Square root: norm = sqrt(dot) -> r7[0] = sqrt(40.0)
+  vfop %u16[ 0::u4 | $r7::u4 | $r7::u4 | $FOP_f32::u1 | $VFOP_SQRT::u3 ], 1::u32, 0::u32, 0::u32
+
+  ; Normalization: v1 = v1 / norm
+  vdivf %u16[ 0::u3 | $FOP_f32::u1 | $r1::u4 | $r7::u4 | $r1::u4 ], 1::u32, 0::u32, 0::u32, 0::u32
+  vdivf %u16[ 0::u3 | $FOP_f32::u1 | $r1::u4 | $r7::u4 | $r1::u4 ], 1::u32, 1::u32, 0::u32, 1::u32
+  vdivf %u16[ 0::u3 | $FOP_f32::u1 | $r2::u4 | $r7::u4 | $r2::u4 ], 1::u32, 0::u32, 0::u32, 0::u32
+  vdivf %u16[ 0::u3 | $FOP_f32::u1 | $r2::u4 | $r7::u4 | $r2::u4 ], 1::u32, 1::u32, 0::u32, 1::u32
+
+  ; Decrement loop counter: r8 = r8 - 1
+  vsub %u32[ $u64::u4 | $r8::u4 | $scratchpad::u4 | $r8::u4 | 0::u16 ], 1::u32, 0::u32, 0::u32, 0::u32
+  jif %u8[ $OP_JNZ::u1 | $w64::u2 | 0::u1 | $r8::u4 ], 0::u32, $MARK_LOOP_BEGIN::u64

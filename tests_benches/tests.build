@@ -1,5 +1,11 @@
-; satest Build Script for Hardcore Mathematical Benchmarks (10,000 internal loops)
-:compile math dist
+:compile collatz dist
+:compile vec4_dot dist
+:compile horner_poly dist
+:compile fnv1a_hash dist
+
+; Test both interpreter and JIT
 :jit
+
+; Benchmark configuration
 :bench
 :iter 100 n

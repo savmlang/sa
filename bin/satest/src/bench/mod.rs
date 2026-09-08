@@ -83,7 +83,7 @@ pub fn jit_benchmark<T: BytecodeResolver + Send + Sync + 'static>(
         clean();
 
         let t0 = Instant::now();
-        run_jit(vm, &*outarc, *exec as *const Executable, name);
+        run_jit(vm, &*outarc, *exec as *const Executable);
         let tf = t0.elapsed();
         store.push(tf.as_secs_f64());
       }

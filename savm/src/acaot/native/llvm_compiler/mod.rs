@@ -231,7 +231,7 @@ impl SaVMLLVMBuilder {
     Box::new(
       Self::create(
         LLVMCodeGenOptLevel::LLVMCodeGenLevelDefault,
-        LLVMRelocMode::LLVMRelocStatic,
+        LLVMRelocMode::LLVMRelocPIC,
         LLVMCodeModel::LLVMCodeModelLarge,
         CacheLevel::LLVMCrater,
         c"default<O1>".as_ptr(),
@@ -244,7 +244,7 @@ impl SaVMLLVMBuilder {
     Box::new(
       Self::create(
         LLVMCodeGenOptLevel::LLVMCodeGenLevelAggressive,
-        LLVMRelocMode::LLVMRelocStatic,
+        LLVMRelocMode::LLVMRelocPIC,
         if cfg!(target_arch = "riscv64") {
           LLVMCodeModel::LLVMCodeModelMedium
         } else {
@@ -440,6 +440,8 @@ impl<const T: bool> NativeCompiler<T> for SaVMLLVM {
       }
 
       let buf = LLVMBuffer(buf);
+
+      println!("Buf: {:?}", buf.deref());
 
       return CacheData::JITCache {
         level: self.cache,

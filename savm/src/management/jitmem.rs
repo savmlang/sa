@@ -7,7 +7,6 @@ use std::{
   ptr::{null, null_mut},
 };
 
-use sajit::relocations::RelocKind;
 #[cfg(feature = "llvm")]
 use sajit::symbpool::LLVMSymbolPool;
 use sajit::{
@@ -15,6 +14,7 @@ use sajit::{
   relocations::Relocation,
 };
 use sajit::{SizeCheck, relcar::RELCAR_BASIC};
+use sajit::{coffr::cache::ReusableLinkerCache, relocations::RelocKind};
 
 use crate::{
   acaot::{
@@ -27,10 +27,14 @@ use crate::{
   management::polyfills::{llvm::memcpy, *},
 };
 
+static DUMMY: i32 = 1;
+
 pub struct JITMemoryManager {
   #[cfg(feature = "llvm")]
   symbpool: LLVMSymbolPool,
   quick: Vec<Pin<Box<MemoryExecutable>>>,
+
+  cache: ReusableLinkerCache,
 
   // Stores `epicenter` TEXT - our flagship
   // JIT + AoT tier
@@ -46,6 +50,7 @@ impl JITMemoryManager {
       #[cfg(feature = "llvm")]
       symbpool: LLVMSymbolPool::new(),
       quick: vec![Box::pin(a)],
+      cache: ReusableLinkerCache::create(),
       epitier: None,
     }
   }
@@ -168,10 +173,10 @@ impl JITMemoryManager {
   pub fn write_llvm<T>(
     &mut self,
     data: &[u8],
-    mut resolver: T,
+    resolver: T,
   ) -> Result<(*const Executable, *mut usize), Cow<'static, [Cow<'static, str>]>>
   where
-    T: FnMut(*const str) -> usize,
+    T: Fn(*const str) -> usize,
   {
     use sajit::LLVMDryRun;
 
@@ -196,29 +201,58 @@ impl JITMemoryManager {
         _ => resolver(d),
       };
 
-      #[cfg(all(windows, target_arch = "x86"))]
+      #[cfg(windows)]
       return (|| {
-        use sajit::coffr::loader::I686COFFRelocator;
+        use sajit::coffr::gp::GPCoffr;
         use std::collections::HashMap;
 
         let mut out = HashMap::new();
 
         unsafe {
-          I686COFFRelocator::load(&data, mexec).map_err(|_| {
-            Cow::Borrowed(&[Cow::Borrowed("Unable to parse COFF")] as &'static [Cow<'static, str>])
-          })?.prepare(|d| {
-            resolver_full(d) as u32
-          }, |name, ptr| {
-            use std::mem::transmute;
+          use sajit::{coffr::cache::LinkerTransaction, transaction::MemoryTransaction};
 
-            _ = out.insert(Box::from(name) as Box<str>, transmute::<_, *const Executable>(ptr as usize));
-          });
+          let resolve = |name| {
+            use sajit::coffr::Name::{Bytes, UTF8};
+
+            match name {
+              UTF8("_fltused") | Bytes(b"_fltused") | UTF8("_fltround") | Bytes(b"_fltround") => {
+                &DUMMY as *const i32 as u64
+              }
+              UTF8(name) => resolver_full(name) as u64,
+              Bytes(name) => panic!("Got bytes in COFFR relocation : {name:?}"),
+            }
+          };
+
+          GPCoffr::new(&data).map_err(|x| {
+            eprintln!("{x:?}");
+            Cow::Borrowed(&[Cow::Borrowed("Unable to parse COFF")] as &'static [Cow<'static, str>])
+          })?.link(&resolve, MemoryTransaction::new(mexec, 1), LinkerTransaction::create(&mut self.cache)).map_err(|x| {
+            eprintln!("{x:?}");
+            Cow::Borrowed(&[Cow::Borrowed("Unable to relocate COFF")] as &'static [Cow<'static, str>])
+          })?.try_for_each(|val| {
+            use std::mem::transmute;
+            use sajit::coffr::{CoFFRError, Name::{Bytes, UTF8}};
+
+            if let Ok((k,v)) = val {
+              let k = match k {
+                UTF8(x) => Box::from(x),
+                Bytes(x) => Box::from(format!("bytes:{x:?}"))
+              };
+
+              _ = out.insert(k, transmute(v));
+            }
+
+            Ok::<(), CoFFRError>(())
+          }).map_err(|x| {
+            eprintln!("{x:?}");
+            Cow::Borrowed(&[Cow::Borrowed("Unable to read COFF symbols")] as &'static [Cow<'static, str>])
+          })?;
         };
 
         Ok(out)
       })();
 
-      #[cfg(not(all(windows, target_arch = "x86")))]
+      #[cfg(not(windows))]
       return (|| {
         if prefer_jitlink() {
           use sajit::LLVMJITLink;
@@ -279,6 +313,7 @@ impl JITMemoryManager {
 }
 
 #[rustfmt::skip]
+#[allow(unused)]
 fn prefer_jitlink() -> bool {
   cfg!(
     any(

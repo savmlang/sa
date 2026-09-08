@@ -381,39 +381,8 @@ impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
 
       let (_, exec) = jit.get();
 
-      let opcode;
       let dref = exec.deref();
-
-      if dref.cinder {
-        #[cfg(all(
-          feature = "native",
-          any(target_arch = "x86_64"),
-          any(target_os = "windows", target_os = "linux")
-        ))]
-        {
-          cold_path();
-
-          let pickle;
-          loop {
-            if let Some((data, _)) = CODE_CACHE.get(&sectionid) {
-              pickle = data;
-              break;
-            }
-
-            self.pickle_section(sectionid)
-          }
-          opcode = self.exec_jit_cinder(&pickle, dref.exec);
-        }
-
-        #[cfg(not(all(
-          feature = "native",
-          any(target_arch = "x86_64"),
-          any(target_os = "windows", target_os = "linux")
-        )))]
-        unreachable!();
-      } else {
-        opcode = self.exec_jit(dref.exec);
-      }
+      let opcode = self.exec_jit(dref.exec);
       drop(exec);
 
       if opcode == OPCODE_JIT_CHECK {
@@ -425,48 +394,6 @@ impl<E: BytecodeResolver + Send + Sync + 'static> VM<E> {
     }
 
     return self.ame_free(sectionid);
-  }
-
-  #[inline(never)]
-  #[cfg(all(
-    feature = "native",
-    any(target_arch = "x86_64"),
-    any(target_os = "windows", target_os = "linux")
-  ))]
-  pub fn exec_jit_cinder(&self, pickle: &[PickleInstruction], exec: *const Executable) -> u32 {
-    Self::prime_vmstat();
-
-    use crate::acaot::cinder::DispatchStarter;
-
-    let vmstate = VMSTAT.with(UnsafeCell::get);
-
-    unsafe {
-      use crate::acaot::cinder::setws;
-      use std::mem::transmute;
-
-      let curr_taskstate = (*vmstate).ts.as_mut_ptr().add((*vmstate).cindex);
-
-      let mut cinder: DispatchStarter = DispatchStarter {
-        hotness_or_resume: 0,
-        ws: &mut (*vmstate).ws as *mut _ as _,
-        pickle: pickle.as_ptr() as _,
-        taskstate: curr_taskstate,
-        wsarr: setws,
-      };
-
-      // Setup Pointers
-      {
-        let task = &mut *curr_taskstate;
-
-        task.engine.pt = self as *const _ as *mut Self as _;
-        task.ws.pt = &mut cinder as *mut _ as _;
-      }
-
-      let exec: extern "C" fn(vmtskstate: *mut VMTaskState) = transmute(exec);
-      exec(curr_taskstate);
-
-      (*curr_taskstate).opcode
-    }
   }
 
   #[inline(always)]

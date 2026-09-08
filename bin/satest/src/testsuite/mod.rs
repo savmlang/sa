@@ -5,20 +5,20 @@ use std::{sync::Arc, time::Instant};
 use crate::ExpectedOutput;
 #[cfg(feature = "native")]
 use crate::{
-  jitmem::{run::run_jit, JITMemData, JITMems},
   Resolver,
+  jitmem::{JITMemData, JITMems, run::run_jit},
 };
 use console::Style;
+use savm::{BytecodeResolver, VM, sart::ctr::FLAGS::FLAG_FIRST, sync::VMSTAT};
 #[cfg(feature = "native")]
 use savm::{
+  CacheData, CacheLevel,
   acaot::{
-    native::{testing_epitier_compilers, NativeCompiler, NativeCompilerBuilder},
+    native::{NativeCompiler, NativeCompilerBuilder, testing_epitier_compilers},
     pickle::def::PickleInstruction,
   },
   kvwrap::SaVMJumpWrapRef,
-  CacheData, CacheLevel,
 };
-use savm::{sart::ctr::FLAGS::FLAG_FIRST, sync::VMSTAT, BytecodeResolver, VM};
 
 pub fn clean() {
   VMSTAT.with(|x| {
@@ -73,8 +73,8 @@ pub fn test_jits<T: BytecodeResolver + Send + Sync + 'static>(
 ) {
   use crate::err;
   use savm::{
-    acaot::{native::testing_compiler_infra, pickle::PickleWorker},
     SymbolMapTable,
+    acaot::{native::testing_compiler_infra, pickle::PickleWorker},
   };
 
   let mut worker = PickleWorker {
@@ -141,21 +141,13 @@ pub fn test_jits<T: BytecodeResolver + Send + Sync + 'static>(
             .expect("Unable to get rest"),
           _ => err("Unsupported CacheLevel"),
         },
-        #[cfg(all(
-          feature = "native",
-          any(target_arch = "x86_64"),
-          any(target_os = "windows", target_os = "linux")
-        ))]
-        savm::CacheData::CinderTempCache { entrymap, binary } => {
-          savm::management::cinder::link(entrymap, binary, jitdata.mem())
-        }
         _ => err("Unsupported Compiler Output"),
       };
 
       jitdata.ptrstore.insert((sectionid, *name), (exec as _, tf));
 
       clean();
-      run_jit(vm, &*outarc, exec, *name);
+      run_jit(vm, &*outarc, exec);
 
       let localfailure = assertchecks(out, fail);
 
