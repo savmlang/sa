@@ -89,4 +89,7 @@ strip = "debuginfo"
 # <https://github.com/rust-lang/rust-bindgen/pull/2403> to fix
 # <https://github.com/rust-lang/rust-bindgen/issues/2991>, which affects only
 # native32.
-bindgen = { git = "https://github.com/chrysn-pull-requests/rust-bindgen", branch = "extended-floats", optional = true }
+#
+# A fork of https://github.com/chrysn-pull-requests/rust-bindgen that artificially bumps
+# to 0.73.0
+bindgen = { git = "https://github.com/savmlang/rust-bindgen", branch = "extended-floats" }

@@ -35,6 +35,7 @@ fn build_ssaupdater() {
     let mut build = Build::new();
     build
       .cpp(true)
+      .warnings(false)
       .std("c++20")
       .file("./srcxx/blockpreds.cpp")
       .include("srcxx")

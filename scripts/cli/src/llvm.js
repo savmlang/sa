@@ -25,7 +25,8 @@ function delay(ms) {
  */
 export default async function handlellvm(argv0) {
   let tries = 1;
-  while (tries <= 5) {
+  const TOTAL_TRIES = 500;
+  while (tries <= TOTAL_TRIES) {
     try {
       const spin = spinner({
         indicator: "timer",
@@ -33,7 +34,7 @@ export default async function handlellvm(argv0) {
       });
 
       spin.start();
-      spin.message("Resolving LLVM from releases");
+      spin.message(`Resolving LLVM from releases (${tries}/${TOTAL_TRIES})`);
 
       /**
        * @type {{ [key:string]: string }}
@@ -53,6 +54,10 @@ export default async function handlellvm(argv0) {
         {
           headers: {
             "user-agent": "SaCLI",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+
             ...headers,
           },
         },
@@ -98,6 +103,10 @@ export default async function handlellvm(argv0) {
         log.info(
           `Ignoring LLVMENV_VERSION : ${process.env["LLVMENV_VERSION"]} as ${llvmbuild} was resolved`,
         );
+      }
+
+      if (!jsonout?.assets) {
+        log.error(`SERVER ERR : ${JSON.stringify(jsonout)}`);
       }
 
       let target = jsonout.assets.find((asset) => asset.name == llvmbuild);
@@ -182,7 +191,7 @@ export default async function handlellvm(argv0) {
     } catch (err) {
       tries += 1;
       console.error(err);
-      await delay(5000);
+      await delay(tries * 1000);
     }
   }
 }

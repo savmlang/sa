@@ -21,6 +21,7 @@ fn main() {
 
     builder
       .cpp(false)
+      .warnings(false)
       .cargo_metadata(true)
       .files(["./src_lmdb/mdb.c", "./src_lmdb/midl.c"]);
 

@@ -239,7 +239,7 @@ impl JITMemoryManager {
                 Bytes(x) => Box::from(format!("bytes:{x:?}"))
               };
 
-              _ = out.insert(k, transmute(v));
+              _ = out.insert(k, transmute(v as usize));
             }
 
             Ok::<(), CoFFRError>(())
