@@ -6,7 +6,7 @@ pub mod resolvedata;
 pub mod vm;
 
 use crate::resolvedata::{SAVMC_IResolveData, SAVMC_IStream};
-use cprelude::{Slicable, SlicableMut};
+use cprelude::Slicable;
 pub use savm::CacheLevel;
 use savm::{
   acaot::{pickle::def::PickleInstruction, JITReloc},
@@ -181,20 +181,26 @@ fn map_cache(ccache: ICacheData) -> CacheData {
 impl BytecodeResolver for SAVMC_IBytecodeResolver {
   type T<'a> = SAVMC_IResolveData;
 
-  fn rodata(&self) -> &[u8] {
-    let out = unsafe { (self.get_rodata)(self.state).to_slice_raw() };
+  fn rodata(&self) -> savm::Slice<u8> {
+    let out = (self.get_rodata)(self.state);
 
     (self.clear_allocated)(self.state);
 
-    out
+    savm::Slice {
+      ptr: out.data,
+      len: out.len,
+    }
   }
 
-  fn rwdata(&self) -> &mut [u8] {
-    let out = unsafe { (self.get_rwdata)(self.state).to_slice_mut() };
+  fn rwdata(&self) -> savm::SliceMut<u8> {
+    let out = (self.get_rwdata)(self.state);
 
     (self.clear_allocated)(self.state);
 
-    out
+    savm::SliceMut {
+      ptr: out.data,
+      len: out.len,
+    }
   }
 
   fn last_section_id(&self) -> u64 {

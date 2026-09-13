@@ -1,5 +1,7 @@
 use console::Style;
-use savm::{BytecodeResolver, CacheData, CacheLevel, SymbolMapTable, SymbolMapTableInfo, VM};
+use savm::{
+  BytecodeResolver, CacheData, CacheLevel, Slice, SliceMut, SymbolMapTable, SymbolMapTableInfo, VM,
+};
 use serde::{Deserialize, Serialize};
 use std::{
   borrow::Cow,
@@ -7,6 +9,7 @@ use std::{
   fmt::Display,
   fs::{self, File},
   process::exit,
+  ptr::addr_of_mut,
   sync::{Arc, RwLock},
 };
 
@@ -58,11 +61,21 @@ pub(crate) struct Resolver {
 impl BytecodeResolver for Resolver {
   type T<'a> = File;
 
-  fn rodata(&self) -> &[u8] {
-    &[]
+  fn rodata(&self) -> Slice<u8> {
+    let ptr: &'static [u8] = const { &[] };
+    Slice {
+      ptr: ptr.as_ptr(),
+      len: 0,
+    }
   }
-  fn rwdata(&self) -> &mut [u8] {
-    &mut []
+
+  fn rwdata(&self) -> SliceMut<u8> {
+    static mut PTR: [u8; 0] = [];
+
+    SliceMut {
+      ptr: addr_of_mut!(PTR) as *mut u8,
+      len: 0,
+    }
   }
   fn learn_data(&self, _: u64) -> SymbolMapTableInfo {
     SymbolMapTableInfo::MixedSizedBytecode

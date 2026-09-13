@@ -1,7 +1,7 @@
 use std::{borrow::Cow, env::args, process::exit};
 
 use console::Style;
-use sasm::PathInfo;
+use sasm::{FS, PathInfo};
 
 fn argparse() -> PathInfo<'static> {
   let mut argv = args();
@@ -46,5 +46,5 @@ fn argparse() -> PathInfo<'static> {
 fn main() {
   let file = argparse();
 
-  sasm::sasm(file);
+  sasm::sasm(file, FS);
 }

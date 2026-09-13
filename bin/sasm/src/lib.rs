@@ -1,7 +1,7 @@
 use std::{
   borrow::Cow,
   cmp::Ordering,
-  fs,
+  path::{Path, PathBuf},
   sync::{Arc, atomic::AtomicU64},
   thread::{self, sleep},
   time::{Duration, Instant},
@@ -20,20 +20,59 @@ pub struct PathInfo<'a> {
   pub distdir: Cow<'a, str>,
 }
 
-pub fn sasm<'a>(rt: PathInfo<'a>) {
-  let t0 = Instant::now();
-  let mut files = fs::read_dir(rt.bindir.as_ref())
-    .unwrap()
-    .map(|x| x.unwrap())
-    .collect::<Vec<_>>();
+pub struct DirFsEntry {
+  pub name: Box<str>,
+  pub path: PathBuf,
+}
 
-  _ = fs::create_dir_all(&*rt.distdir);
+pub struct FS;
+impl FileSystemImpl for FS {}
+
+pub trait FileSystemImpl: Send + Sync {
+  fn readdir<P: AsRef<Path>, T, F>(&self, path: P, cb: F) -> T
+  where
+    F: FnOnce(&mut dyn Iterator<Item = DirFsEntry>) -> T,
+  {
+    use std::fs;
+    let mut val = fs::read_dir(path).unwrap().map(|x| {
+      let x = x.unwrap();
+
+      DirFsEntry {
+        name: x.file_name().into_string().unwrap().into_boxed_str(),
+        path: x.path(),
+      }
+    });
+
+    cb(&mut val)
+  }
+
+  fn mkdir<P: AsRef<Path>>(&self, path: P) -> Option<()> {
+    use std::fs;
+    fs::create_dir_all(path).ok()
+  }
+
+  fn read_to_string<P: AsRef<Path>>(&self, path: P) -> Option<String> {
+    use std::fs;
+    fs::read_to_string(path).ok()
+  }
+
+  fn write<P: AsRef<Path>, C: AsRef<[u8]>>(&self, path: P, contents: C) -> Option<()> {
+    use std::fs;
+    fs::write(path, contents).ok()
+  }
+}
+
+pub fn sasm<'a, T: FileSystemImpl>(rt: PathInfo<'a>, fs: T) {
+  let t0 = Instant::now();
+  let mut files = fs.readdir(rt.bindir.as_ref(), |x| x.collect::<Vec<_>>());
+
+  _ = fs.mkdir(&*rt.distdir);
 
   let mut has_macros = false;
   // Send macros to the last element
   files.sort_unstable_by(|a, b| {
-    let a = a.file_name();
-    let b = b.file_name();
+    let a = a.name.as_ref();
+    let b = b.name.as_ref();
     let is_a_macros = a == "defs.sasm";
     let is_b_macros = b == "defs.sasm";
 
@@ -55,7 +94,7 @@ pub fn sasm<'a>(rt: PathInfo<'a>) {
     let macrosfile = unsafe { files.pop().unwrap_unchecked() };
 
     let static_str = Box::leak(
-      fs::read_to_string(macrosfile.path())
+      fs.read_to_string(macrosfile.path)
         .expect("Unable to read and parse macros file")
         .into_boxed_str(),
     );
@@ -98,14 +137,12 @@ pub fn sasm<'a>(rt: PathInfo<'a>) {
     .into_par_iter()
     .map(|x| {
       let fl = x
-        .file_name()
-        .into_string()
-        .unwrap()
+        .name
         .strip_suffix(".sasm")
         .expect("Unable to strip `.sasm` from file name")
         .parse::<u64>()
         .unwrap();
-      let cnt = fs::read_to_string(x.path()).unwrap();
+      let cnt = fs.read_to_string(x.path).unwrap();
 
       (fl, cnt)
     })
@@ -115,7 +152,7 @@ pub fn sasm<'a>(rt: PathInfo<'a>) {
 
       unsafe {
         let cnt = assemble(std::mem::transmute(&cnt as &str), &macros, &resolved).out;
-        fs::write(format!("{}/{fl}", &rt.distdir), cnt).unwrap();
+        fs.write(format!("{}/{fl}", &rt.distdir), cnt).unwrap();
       }
     });
 

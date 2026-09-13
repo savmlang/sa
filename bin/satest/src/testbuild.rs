@@ -7,7 +7,7 @@ use std::{
 };
 
 use console::Style;
-use sasm::PathInfo;
+use sasm::{FS, PathInfo};
 
 use crate::{TestHarness, err};
 
@@ -35,10 +35,13 @@ pub fn asmbuild(asm: File, tst: &mut TestHarness, cwd: &str) {
             Style::new().yellow().bold().apply_to("Compiling")
           );
 
-          sasm::sasm(PathInfo {
-            bindir: Cow::Borrowed(bin),
-            distdir: Cow::Borrowed(dist),
-          });
+          sasm::sasm(
+            PathInfo {
+              bindir: Cow::Borrowed(bin),
+              distdir: Cow::Borrowed(dist),
+            },
+            FS,
+          );
         }
         ":bench" => {
           tst.bench = true;

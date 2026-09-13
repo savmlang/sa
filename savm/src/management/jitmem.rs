@@ -60,15 +60,18 @@ impl JITMemoryManager {
   }
 
   pub fn gc(&mut self) {
-    self
-      .quick
-      .extract_if(.., |x| unsafe { x.try_free() }.is_ok())
-      .for_each(|x| {
-        // SAFETY : try_drop has ran all the drop glue code
-        // We must dealloc the Box and continue
-        let innr = *Pin::into_inner(x);
-        forget(innr);
-      });
+    let mut i = self.quick.len();
+    while i > 0 {
+      i -= 1;
+
+      let should_free = unsafe { self.quick.get_unchecked_mut(i).try_free().is_ok() };
+
+      if should_free {
+        let dt = self.quick.swap_remove(i);
+        let mexec = *Pin::into_inner(dt);
+        forget(mexec);
+      }
+    }
   }
 
   // Reserve a 1KB space for SaVM CoreData
@@ -178,18 +181,14 @@ impl JITMemoryManager {
   where
     T: Fn(*const str) -> usize,
   {
-    use sajit::LLVMDryRun;
+    use sajit::ObjectFileSizeCalc;
 
-    let guaranteed =
-      || MemoryExecutable::sizecalc(data).expect("Unable to at all calculate size needed!");
-
-    let size_needed = if cfg!(not(windows)) {
-      MemoryExecutable::sizecalc_jitlink(&self.symbpool, data)
-        .unwrap_or_else(guaranteed)
-        .get() as usize
-    } else {
-      guaranteed().get() as _
-    };
+    let size_needed = MemoryExecutable::sizecalc(data, |needed| {
+      needed
+        .map(|x| x.size + x.align.saturating_sub(1))
+        .sum::<usize>()
+    })
+    .expect("Unable to at all calculate size needed!");
 
     let mut jitwrite = |mexec: &mut MemoryExecutable, _symbpool: &LLVMSymbolPool| {
       #[allow(unused_mut)]
@@ -214,10 +213,13 @@ impl JITMemoryManager {
           let resolve = |name| {
             use sajit::coffr::Name::{Bytes, UTF8};
 
+            const CHECKLIST: &[&str] = &["fltused", "fltround"];
+
             match name {
-              UTF8("_fltused") | Bytes(b"_fltused") | UTF8("_fltround") | Bytes(b"_fltround") => {
+              UTF8(checkflt) if CHECKLIST.iter().any(|&s| checkflt.ends_with(s)) => {
                 &DUMMY as *const i32 as u64
               }
+
               UTF8(name) => resolver_full(name) as u64,
               Bytes(name) => panic!("Got bytes in COFFR relocation : {name:?}"),
             }
@@ -274,8 +276,6 @@ impl JITMemoryManager {
     };
 
     let (out, mexec) = {
-      use sajit::MemorySizeInfo;
-
       let old = mexec.cursor();
       let out: Result<
         std::collections::HashMap<Box<str>, *const Executable>,

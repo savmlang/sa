@@ -1,6 +1,6 @@
 use parking_lot::Mutex;
 use savm::{
-  OPTLEVEL_PICKLE,
+  OPTLEVEL_PICKLE, Slice, SliceMut,
   acaot::{JITReloc, pickle::def::PickleInstruction},
   sart::structures::ffi::CallSig,
 };
@@ -9,7 +9,7 @@ use std::{
   io::Cursor,
   mem::transmute,
   path::PathBuf,
-  ptr,
+  ptr::{self, addr_of_mut},
   sync::Arc,
 };
 
@@ -119,12 +119,21 @@ impl ApplicationManager {
 impl BytecodeResolver for ApplicationManager {
   type T<'a> = Cursor<Box<[u8]>>;
 
-  fn rodata(&self) -> &[u8] {
-    &[]
+  fn rodata(&self) -> Slice<u8> {
+    let ptr: &'static [u8] = const { &[] };
+    Slice {
+      ptr: ptr.as_ptr(),
+      len: 0,
+    }
   }
 
-  fn rwdata(&self) -> &mut [u8] {
-    &mut []
+  fn rwdata(&self) -> SliceMut<u8> {
+    static mut PTR: [u8; 0] = [];
+
+    SliceMut {
+      ptr: addr_of_mut!(PTR) as *mut u8,
+      len: 0,
+    }
   }
 
   fn last_section_id(&self) -> u64 {

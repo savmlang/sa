@@ -131,14 +131,14 @@ pub trait BytecodeResolver: Any {
 
   /// Read Only data - this is the part of SaVM Global Data
   /// that is loaded as READ-ONLY
-  fn rodata(&self) -> &[u8];
+  fn rodata(&self) -> Slice<u8>;
 
   /// Read Write data - this is the part of SaVM Global Data
   /// that is both readable and writable.
   ///
   /// These methods are expected to be zero cost
   /// and the location of storage should NOT change
-  fn rwdata(&self) -> &mut [u8];
+  fn rwdata(&self) -> SliceMut<u8>;
 
   /// Return the id of the LAST VALID section
   /// We use this to prevent unnecessary [u64] allocation
@@ -195,6 +195,20 @@ pub trait BytecodeResolver: Any {
   ///
   /// eg. we hope it does not replace Pickle code with Cranelift code as that'll lead to performance losses next round
   fn update_cache(&self, section: u64, cache: CacheData);
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct Slice<T> {
+  pub ptr: *const T,
+  pub len: usize,
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct SliceMut<T> {
+  pub ptr: *mut T,
+  pub len: usize,
 }
 
 #[cfg(feature = "libffi")]

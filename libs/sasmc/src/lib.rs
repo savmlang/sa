@@ -1,5 +1,5 @@
 use core::{slice, str};
-use sasm::PathInfo;
+use sasm::{PathInfo, FS};
 use std::borrow::Cow;
 
 cprelude::cprelude! {
@@ -22,15 +22,18 @@ pub struct IPathInfo {
 /// and other artifacts currently.
 pub unsafe extern "C" fn savm_toolkit_sasm_run(pathinfo: IPathInfo) {
   unsafe {
-    sasm::sasm(PathInfo {
-      bindir: Cow::Borrowed(str::from_utf8_unchecked(slice::from_raw_parts(
-        pathinfo.bindir.data as _,
-        pathinfo.bindir.len,
-      ))),
-      distdir: Cow::Borrowed(str::from_utf8_unchecked(slice::from_raw_parts(
-        pathinfo.distdir.data as _,
-        pathinfo.distdir.len,
-      ))),
-    })
+    sasm::sasm(
+      PathInfo {
+        bindir: Cow::Borrowed(str::from_utf8_unchecked(slice::from_raw_parts(
+          pathinfo.bindir.data as _,
+          pathinfo.bindir.len,
+        ))),
+        distdir: Cow::Borrowed(str::from_utf8_unchecked(slice::from_raw_parts(
+          pathinfo.distdir.data as _,
+          pathinfo.distdir.len,
+        ))),
+      },
+      FS,
+    )
   };
 }
