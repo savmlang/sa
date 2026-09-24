@@ -1,0 +1,117 @@
+// SASM Core
+Root =
+  Item*
+
+Item =
+  ImportDef | ConstDef | ExternDef | FnDef
+
+IdentData =
+  Identifier | RawIdentifier
+
+Identifier =
+  'Ident'
+
+RawIdentifier =
+  'RawIdent'
+
+// Paths
+Path =
+  AbsolutePath ('.' '*')?
+
+AbsolutePath =
+  segment:IdentData ('.' segment:IdentData)*
+
+// Types
+TypeRef =
+  '*'? AbsolutePath
+
+// Directives
+// @stackLimit(30)
+// @runtime(1.41)
+DirectiveDecl =
+  'Directive' ('(' LiteralExpr? (',' LiteralExpr)* ')')?
+
+// Decl
+ImportDef =
+  'import' Path ';'
+
+ConstDef =
+  'DocComment'*
+  'export'?
+  'const'
+  name:IdentData
+  (':' type:TypeRef)?
+  '='
+  value:LiteralExpr
+  ';'
+
+// extern printf(fmt: *u8): i32;
+ExternDef =
+  'DocComment'*
+  'extern'
+  ('(' abi:IdentData ')')?
+  name:IdentData
+  ParamList
+  (':' ret:TypeRef)?
+  ';'
+
+// fn main(argc: i32): i32 { ... }
+// export(C) fn raw_writer() aware { ... }
+// export(C) aware fn raw_writer() aware { ... }
+FnDef =
+  'DocComment'*
+  DirectiveDecl*
+  'export'?
+  ('(' abi:IdentData ')')?
+  'aware'?
+  'fn'
+  name:IdentData
+  ParamList
+  (':' ret:TypeRef)?
+  body:BlockExpr
+
+ParamList =
+  '(' (Param (',' Param)* ','?)? ')'
+
+Param =
+  name:IdentData (':' type:TypeRef)?
+
+// Blocks
+BlockExpr =
+  'aware'? '{' Stmt* (tail:Expr)? '}'
+
+Stmt =
+  LetStmt | ExprStmt | ReturnStmt
+
+ReturnStmt =
+  'return' out:Expr? ';'
+
+LetStmt =
+  'let' 'mut'? name:IdentData (':' type:TypeRef)? ('=' value:Expr)? ';'
+
+ExprStmt =
+  Expr ';'
+
+Expr =
+  LiteralExpr | PathExpr | CallExpr | BlockExpr
+
+LiteralExpr =
+  StrLiteral | NumLiteral | FpLiteral
+
+StrLiteral =
+  'StrLit'
+
+NumLiteral =
+  'NumLit'
+
+FpLiteral =
+  'FpLit'
+
+PathExpr =
+  AbsolutePath
+
+CallExpr =
+  callee:Expr ArgList
+
+ArgList =
+  '(' (Expr (',' Expr)* ','?)? ')'

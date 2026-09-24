@@ -1,0 +1,17 @@
+[package]
+name = "sasm-syntax"
+version = "0.1.0"
+edition = "2024"
+
+build = 'grammar/build.rs'
+
+[dependencies]
+sasm-lexer = { path = "../sasm-lexer" }
+rowan = "^0.17"
+
+[build-dependencies]
+proc-macro2 = "^1"
+quote = "^1"
+ungrammar = "^1"
+syn = { version = "^3", features = ["full"] }
+prettyplease = "^0.3"

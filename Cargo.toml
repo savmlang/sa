@@ -50,15 +50,6 @@ members = [
   "mixedradix",
   "mixedradix/macros",
 
-  # SaBin Spec
-  "libs/sabin_spec",
-
-  # A sane way to compile SaVM Bytecode
-  # 
-  # This is the SaVM IR Generator
-  "libs/sair",
-  "sair/sair_llir",
-
   # Internal Crates 
   # - saffine (sa affinity)
   # - lmdb (our replacement for SQLite)
@@ -66,7 +57,24 @@ members = [
   "internal/lmdb",
 
   # SaVM Internal Building Crates
-  "savm_build",
+  "savm_build", 
+
+  # SAsm
+  "libs/sasm/sasm-syntax", 
+  "libs/sasm/sasm-lexer", 
+  "libs/sasm/sasm-ast", 
+  "libs/sasm/sasm-macros", 
+  "libs/sasm/sasm-proc-macros", 
+  "libs/sasm/sasm-sema", 
+  
+  # SaVM Compiler Toolkit
+  "libs/toolkit/sair", 
+  "libs/toolkit/sair-backend", 
+  "libs/toolkit/sair-savm-backend", 
+  "libs/toolkit/salink", 
+  "libs/toolkit/sif", 
+  "libs/toolkit/sair-alloc", 
+  "libs/toolkit/sabin",
 ]
 resolver = "3"
 
