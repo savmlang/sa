@@ -8,6 +8,7 @@ build = 'grammar/build.rs'
 [dependencies]
 sasm-lexer = { path = "../sasm-lexer" }
 rowan = "^0.17"
+pastey = "0.2.3"
 
 [build-dependencies]
 proc-macro2 = "^1"

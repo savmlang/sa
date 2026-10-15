@@ -109,6 +109,8 @@ pub enum SasmToken {
   LtEq,
 
   // Literals
+  #[regex(r#"(true|false)"#)]
+  BoolLit,
   #[regex(r#"[0-9]+\.[0-9]+"#)]
   FpLit,
   #[regex(r#"[0-9]+"#)]

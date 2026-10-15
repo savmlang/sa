@@ -18,7 +18,7 @@ export fn main() {
 
 }
 
-export(C) fn hello2() {
+export(In) fn hello2() {
 
 }
     "##;

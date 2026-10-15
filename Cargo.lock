@@ -1582,6 +1582,7 @@ version = "0.1.0"
 name = "sasm-syntax"
 version = "0.1.0"
 dependencies = [
+ "pastey",
  "prettyplease 0.3.0",
  "proc-macro2",
  "quote",

@@ -19,19 +19,28 @@ pub fn generate_enum(grammar: &Grammar, name: &str, rule: &Rule, out: &mut Token
       #( #variants ),*
     }
 
-    impl NodeMetadata for #name {
+    impl UnifiedMetadata for #name {
       type SyntaxKind = #enum_name;
 
-      fn kind() -> &'static [#enum_name] {
-        &[
-          #( #enum_name::#variants ),*
-        ]
-      }
+      const KIND: &'static [#enum_name] = &[
+        #( #enum_name::#variants ),*
+      ];
+      const RAW_KIND: &'static [SyntaxKind] = &[
+        #( SyntaxKind::#variants ),*
+      ];
 
       fn current_kind(&self) -> #enum_name {
         match self {
           #( Self::#variants(_) => { #enum_name::#variants })*
         }
+      }
+
+      fn castable(kind: SyntaxKind) -> bool {
+        Self::can_cast(kind)
+      }
+
+      fn try_cast(syntax: SyntaxElement) -> Option<Self> {
+        Self::cast(syntax.node()?)
       }
     }
 

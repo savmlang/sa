@@ -1,6 +1,6 @@
-// pub mod r;
+pub mod parser;
 
-pub(crate) mod autogen {
+pub mod autogen {
   include!(concat!(env!("OUT_DIR"), "/", "generated.rs"));
 }
 

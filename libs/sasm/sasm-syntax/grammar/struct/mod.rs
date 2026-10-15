@@ -1,24 +1,54 @@
+use std::collections::HashMap;
+
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use ungrammar::{Grammar, Rule};
 
-pub fn generate_struct(_grammar: &Grammar, name: &str, _rule: &Rule, out: &mut TokenStream) {
+pub mod view;
+
+pub fn generate_struct(
+  grammar: &Grammar,
+  tokens_map: &HashMap<&str, &str>,
+  name: &str,
+  rule: &Rule,
+  out: &mut TokenStream,
+) {
   let name = format_ident!("{name}");
+
+  view::understand_view(&name, grammar, tokens_map, rule, out);
+
   let generator = quote! {
     #[derive(Debug, Clone, PartialEq, Eq, Hash)]
     pub struct #name {
-      pub(crate) syntax: SyntaxNode,
+      pub syntax: SyntaxNode,
     }
 
-    impl NodeMetadata for #name {
+    impl #name {
+      pub fn view(&self) -> AstViewHWND<impl Iterator<Item = SyntaxElement>, #name> {
+        self.syntax.astview()
+      }
+    }
+
+    impl UnifiedMetadata for #name {
       type SyntaxKind = SyntaxKind;
 
-      fn kind() -> &'static [SyntaxKind] {
-        &[SyntaxKind::#name]
-      }
+      const KIND: &'static [SyntaxKind] = &[
+        SyntaxKind::#name
+      ];
+      const RAW_KIND: &'static [SyntaxKind] = &[
+        SyntaxKind::#name
+      ];
 
       fn current_kind(&self) -> SyntaxKind {
         SyntaxKind::#name
+      }
+
+      fn castable(kind: SyntaxKind) -> bool {
+        Self::can_cast(kind)
+      }
+
+      fn try_cast(syntax: SyntaxElement) -> Option<Self> {
+        Self::cast(syntax.node()?)
       }
     }
 

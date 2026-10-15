@@ -18,18 +18,29 @@ pub fn generate_token(
     #[repr(transparent)]
     #[derive(Debug, Clone, Hash, PartialEq, Eq)]
     pub struct #ident {
-      pub(crate) token: SyntaxToken
+      pub token: SyntaxToken
     }
 
-    impl TokenMetadata for #ident {
+    impl UnifiedMetadata for #ident {
+      type SyntaxKind = SyntaxKind;
+
+      const RAW_KIND: &'static [SyntaxKind] = &[SyntaxKind::#syntaxkind];
+      const KIND: &'static [SyntaxKind] = &[SyntaxKind::#syntaxkind];
+
       #[inline]
-      fn kind() -> SyntaxKind {
+      fn current_kind(&self) -> SyntaxKind {
         SyntaxKind::#syntaxkind
       }
 
       #[inline]
-      fn try_cast(token: SyntaxToken) -> Option<Self> {
-        (token.kind() == Self::kind()).then(|| Self { token })
+      fn castable(kind: SyntaxKind) -> bool {
+        kind == SyntaxKind::#syntaxkind
+      }
+
+      #[inline]
+      fn try_cast(token: SyntaxElement) -> Option<Self> {
+        let token = token.token()?;
+        Self::castable(token.kind()).then(|| Self { token })
       }
     }
 

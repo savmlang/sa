@@ -54,10 +54,11 @@ fn main() {
       if is_alt_rule(&node_data.rule) {
         generate_enum(&grammar, name, &node_data.rule, &mut out);
       } else {
-        generate_struct(&grammar, name, &node_data.rule, &mut out);
+        generate_struct(&grammar, &tokens_map, name, &node_data.rule, &mut out);
       }
     }
 
+    eprintln!("GENERATED:\n{}", out);
     let file: syn::File = syn::parse2(out).unwrap();
     let out = prettyplease::unparse(&file);
 

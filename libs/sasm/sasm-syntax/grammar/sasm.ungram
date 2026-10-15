@@ -14,12 +14,21 @@ Identifier =
 RawIdentifier =
   'RawIdent'
 
+CommentDoc =
+  'DocComment'
+
 // Paths
 Path =
-  AbsolutePath ('.' '*')?
+  AbsolutePath PathWildcard?
+
+PathWildcard =
+  '.' '*'
 
 AbsolutePath =
-  segment:IdentData ('.' segment:IdentData)*
+  iter_segment:IdentData merge_segment:PathPartial*
+
+PathPartial =
+  '.' segment:IdentData
 
 // Types
 TypeRef =
@@ -29,57 +38,82 @@ TypeRef =
 // @stackLimit(30)
 // @runtime(1.41)
 DirectiveDecl =
-  'Directive' ('(' LiteralExpr? (',' LiteralExpr)* ')')?
+  'Directive' args:DirectiveArgs?
+
+//# `merge_args` is our custom macro that merges the args from DirectiveExtendedArgs
+DirectiveArgs =
+  '(' DirectiveArgsList? ')'
+
+DirectiveArgsList =
+  iter_args:LiteralExpr merge_args:DirectiveExtendedArgs*
+
+DirectiveExtendedArgs =
+  ',' args:LiteralExpr
 
 // Decl
 ImportDef =
   'import' Path ';'
 
+UnitTypeRef =
+  ':' returns:TypeRef
+
+AbiDataRef =
+  '(' abiinfo:AbiDataInfo ')'
+
+AbiDataInfo =
+  iter_abi:IdentData merge_abi:AbiDataExtendedRef*
+
+AbiDataExtendedRef =
+  ',' abi:IdentData
+
 ConstDef =
-  'DocComment'*
+  comments:CommentDoc*
   'export'?
   'const'
   name:IdentData
-  (':' type:TypeRef)?
+  returns:UnitTypeRef?
   '='
   value:LiteralExpr
   ';'
 
 // extern printf(fmt: *u8): i32;
 ExternDef =
-  'DocComment'*
+  comments:CommentDoc*
   'extern'
-  ('(' abi:IdentData ')')?
+  AbiDataRef?
   name:IdentData
-  ParamList
-  (':' ret:TypeRef)?
+  parameters:ParamList
+  returns:UnitTypeRef?
   ';'
 
 // fn main(argc: i32): i32 { ... }
-// export(C) fn raw_writer() aware { ... }
-// export(C) aware fn raw_writer() aware { ... }
+// export(In) fn raw_writer() aware { ... }
+// export aware fn raw_writer() aware { ... }
 FnDef =
-  'DocComment'*
-  DirectiveDecl*
+  comments:CommentDoc*
+  directives:DirectiveDecl*
   'export'?
-  ('(' abi:IdentData ')')?
+  abi:AbiDataRef?
   'aware'?
   'fn'
   name:IdentData
-  ParamList
-  (':' ret:TypeRef)?
+  parameters:ParamList
+  returns:UnitTypeRef?
   body:BlockExpr
 
 ParamList =
-  '(' (Param (',' Param)* ','?)? ')'
+  '(' parameters:Params? ')'
+
+Params =
+  iter_parameter:Param merge_parameter:ParamPart*
+
+ParamPart =
+  ',' parameter:Param
 
 Param =
-  name:IdentData (':' type:TypeRef)?
+  name:IdentData returns:UnitTypeRef?
 
 // Blocks
-BlockExpr =
-  'aware'? '{' Stmt* (tail:Expr)? '}'
-
 Stmt =
   LetStmt | ExprStmt | ReturnStmt
 
@@ -87,16 +121,25 @@ ReturnStmt =
   'return' out:Expr? ';'
 
 LetStmt =
-  'let' 'mut'? name:IdentData (':' type:TypeRef)? ('=' value:Expr)? ';'
+  'let' 'mut'? name:IdentData returns:UnitTypeRef? value:LetAssignment? ';'
+
+LetAssignment =
+  '=' value:Expr
 
 ExprStmt =
   Expr ';'
 
 Expr =
-  LiteralExpr | PathExpr | CallExpr | BlockExpr
+  LiteralExpr | AbsolutePath | CallExpr | BlockExpr
+
+BlockExpr =
+  'aware'? '{' statements:Stmt* tail:Expr? '}'
 
 LiteralExpr =
-  StrLiteral | NumLiteral | FpLiteral
+  BoolLiteral | StrLiteral | NumLiteral | FpLiteral
+
+BoolLiteral =
+  'BoolLit'
 
 StrLiteral =
   'StrLit'
@@ -107,11 +150,14 @@ NumLiteral =
 FpLiteral =
   'FpLit'
 
-PathExpr =
-  AbsolutePath
-
 CallExpr =
-  callee:Expr ArgList
+  callee:AbsolutePath ArgList
 
 ArgList =
-  '(' (Expr (',' Expr)* ','?)? ')'
+  '(' Args? ')'
+
+Args =
+  iter_expr:Expr merge_expr:ArgsExtended*
+
+ArgsExtended =
+  ',' expr:Expr
