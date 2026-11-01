@@ -85,9 +85,6 @@ pub fn understand_sequence(
 
   // generate struct defs
   let (structsig, labels) = {
-    let mut generics = vec![];
-
-    let lastid = operations.len() - 1;
     let generation = operations
       .iter()
       .enumerate()
@@ -105,16 +102,6 @@ pub fn understand_sequence(
 
           if let Some(op) = directive {
             match *op {
-              "merge" if lastid == id => {
-                let generic = format_ident!("Iter{id}");
-                let val = Some(quote! {
-                  pub #identlabel: Result<#generic>
-                });
-
-                generics.push((generic, nodestruct));
-
-                return val;
-              }
               // Ignore merges, iters
               "iter" | "merge" => return None,
               _ => unreachable!(),
@@ -128,16 +115,6 @@ pub fn understand_sequence(
             Attribute::Optional => Some(quote! {
               pub #identlabel: Result<Option<#nodestruct>>
             }),
-            Attribute::Repeat if lastid == id => {
-              let generic = format_ident!("Iter{id}");
-              let val = Some(quote! {
-                pub #identlabel: Result<#generic>
-              });
-
-              generics.push((generic, nodestruct));
-
-              val
-            }
             _ => None,
           }
         }
@@ -163,23 +140,11 @@ pub fn understand_sequence(
             Attribute::Optional => Some(quote! {
               pub #identlabel: Result<Option<#tokenstruct>>
             }),
-            Attribute::Repeat if lastid == id => {
-              let generic = format_ident!("Iter{id}");
-              let val = Some(quote! {
-                pub #identlabel: Result<#generic>
-              });
-
-              generics.push((generic, tokenstruct));
-
-              val
-            }
             _ => None,
           }
         }
       })
       .collect::<Vec<_>>();
-
-    let (generics, tokenstructs) = generics.into_iter().unzip::<_, _, Vec<_>, Vec<_>>();
 
     let structlabels = generation
       .iter()
@@ -196,16 +161,12 @@ pub fn understand_sequence(
       .collect::<Vec<_>>();
 
     let definition = quote! {
-      pub struct #name_dataview<
-        #( #generics: Iterator<Item = Result<#tokenstructs>> ),*
-      >
-      {
+      pub struct #name_dataview {
         #( #generation ),*
       }
     };
 
-    let structsignature =
-      quote! { #name_dataview<#( impl Iterator<Item = Result<#tokenstructs>> + 'a ),*> };
+    let structsignature = quote! { #name_dataview };
 
     out.extend(quote! {
       #definition

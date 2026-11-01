@@ -25,8 +25,9 @@ pub fn parse_enum<'a>(enumcode: &'a str) -> HashMap<&'a str, &'a str> {
       let value_str = line
         .strip_prefix("#[token(\"")
         .expect("Could not strip prefix")
-        .strip_suffix("\")]")
-        .expect("Could not strip suffix");
+        .split_once("\"")
+        .expect("Could not strip suffix")
+        .0;
       value = Value::Token(value_str);
       continue;
     } else if line.ends_with(",") {

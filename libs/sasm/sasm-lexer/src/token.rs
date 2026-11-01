@@ -15,6 +15,8 @@ pub enum SasmToken {
   BlockComment,
 
   // Keywords
+  #[token("ptr")]
+  Pointer,
   #[token("return")]
   Return,
   #[token("extern")]
@@ -97,16 +99,14 @@ pub enum SasmToken {
   Asterisk,
   #[token("|")]
   Pipe,
-
-  // Conditionals
-  #[token("==")]
-  EqEq,
-  #[token("!=")]
-  NeEq,
-  #[token(">=")]
-  GtEq,
-  #[token("<=")]
-  LtEq,
+  #[token("&")]
+  And,
+  #[token("^")]
+  Caret,
+  #[token("~")]
+  Tilde,
+  #[token("!")]
+  Exclamation,
 
   // Literals
   #[regex(r#"(true|false)"#)]

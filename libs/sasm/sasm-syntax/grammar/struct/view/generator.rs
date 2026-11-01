@@ -18,93 +18,43 @@ pub fn understand_sequence(
   labels: &[Ident],
   out: &mut TokenStream,
 ) {
-  let struct_sig_bucket = {
-    let mut iter_structsig = operations.iter().enumerate().peekable();
+  let mut struct_sig_bucket = Vec::new();
+  let mut struct_params_bucket = Vec::new();
 
-    iter::from_fn(move || {
-      let (count, tok) = iter_structsig.next()?;
-      let nxt = iter_structsig.peek();
+  for (count, op) in operations.iter().enumerate() {
+    if let Operation::Node {
+      label,
+      directive,
+      attribute,
+      node,
+      ..
+    } = op
+    {
+      let is_repeat = match directive {
+        Some("iter") => true,
+        Some("merge") => false,
+        _ => matches!(attribute, Attribute::Repeat),
+      };
 
-      match tok {
-        Operation::Node {
-          directive,
-          attribute,
-          node,
-          ..
-        } => {
-          let handle_repeat = || {
-            let nodename = format_ident!("{}", &grammar[**node].name);
-            let iname = format_ident!("CallOnce{count}");
+      if is_repeat {
+        let nodename = format_ident!("{}", &grammar[**node].name);
+        let iname = format_ident!("CallOnce{count}");
 
-            Some(quote! {
-              #iname: FnOnce(
-                &mut dyn Iterator<Item = Result<#nodename>>
-              ) -> ()
-            })
-          };
-          if let Some(directive) = *directive {
-            match directive {
-              "merge" if nxt.is_some() => {
-                return handle_repeat();
-              }
-              // Ignore iter, merge
-              "iter" | "merge" => return None,
-              _ => unreachable!(),
-            }
-          }
+        struct_sig_bucket.push(quote! {
+          #iname: FnOnce(&mut dyn Iterator<Item = Result<#nodename>>) -> ()
+        });
 
-          match attribute {
-            Attribute::Repeat if nxt.is_some() => handle_repeat(),
-            _ => None,
-          }
-        }
-        _ => None,
+        let parname = label.as_ref().map_or_else(
+          || format_ident!("handle_{count}"),
+          |x| format_ident!("handle_{x}"),
+        );
+
+        struct_params_bucket.push(quote! {
+          #parname: #iname
+        });
       }
-    })
-  };
-
-  let struct_params_bucket = {
-    let mut iter_structsig = operations.iter().enumerate().peekable();
-    iter::from_fn(move || {
-      let (count, tok) = iter_structsig.next()?;
-      let nxt = iter_structsig.peek();
-
-      match tok {
-        Operation::Node {
-          label,
-          directive,
-          attribute,
-          ..
-        } => {
-          let handle_repeat = || {
-            let label = label.expect("Label name is required");
-            let parname = format_ident!("handle_{label}");
-            let iname = format_ident!("CallOnce{count}");
-
-            Some(quote! {
-              #parname: #iname
-            })
-          };
-          if let Some(directive) = *directive {
-            match directive {
-              "merge" if nxt.is_some() => {
-                return handle_repeat();
-              }
-              // Ignore iter, merge
-              "iter" | "merge" => return None,
-              _ => unreachable!(),
-            }
-          }
-
-          match attribute {
-            Attribute::Repeat if nxt.is_some() => handle_repeat(),
-            _ => None,
-          }
-        }
-        _ => None,
-      }
-    })
-  };
+    }
+  }
 
   let instructions = {
     let mut ops = operations.iter().enumerate().peekable();
@@ -139,6 +89,10 @@ pub fn understand_sequence(
           attribute,
         } => {
           let name = label.map_or_else(|| format_ident!("param_{id}"), |x| format_ident!("{x}"));
+          let parname = label.map_or_else(
+            || format_ident!("handle_{id}"),
+            |x| format_ident!("handle_{x}"),
+          );
           let nodestruct = format_ident!("{}", &grammar[**node].name);
 
           if let Some(directive) = *directive {
@@ -148,31 +102,13 @@ pub fn understand_sequence(
                   let #name = core::iter::once(children.expect::<#nodestruct>());
                 });
               }
-              "merge" if next.is_none() => {
+              "merge" => {
                 return Some(quote! {
-                  let #name = #name.chain(
+                  let mut #name = #name.chain(
                     children.#loop_type #nodestruct>()
                       .map(|x|
                         x.map(|x| {
-                          let view = x.view();
-                          let data = x.understand(&mut view)?;
-
-                          Ok(data.#name)
-                        })
-                        .flatten()
-                      )
-                  );
-                });
-              }
-              "merge" if next.is_some() => {
-                let parname = format_ident!("handle_{id}");
-
-                return Some(quote! {
-                  let #name = #name.chain(
-                    children.#loop_type #nodestruct>()
-                      .map(|x|
-                        x.map(|x| {
-                          let view = x.view();
+                          let mut view = x.view();
                           let data = x.understand(&mut view)?;
 
                           data.#name
@@ -181,8 +117,9 @@ pub fn understand_sequence(
                       )
                   );
                   #parname(&mut #name);
-                  // Clean up the rest of the mess
+
                   while let Some(_) = #name.next() {}
+                  drop(#name);
                 });
               }
               _ => unreachable!(),
@@ -197,21 +134,14 @@ pub fn understand_sequence(
               let #name = children.is::<#nodestruct>();
             }),
             Attribute::Repeat => {
-              let expr = quote! {
-                let #name = children.loop_all::<#nodestruct>();
-              };
+              return Some(quote! {
+                let mut #name = children.loop_all::<#nodestruct>();
 
-              if next.is_some() {
-                let parname = format_ident!("handle_{id}");
-                return Some(quote! {
-                  #expr
-                  #parname(&mut #name);
-                  // Clean up the rest of the mess
-                  while let Some(_) = #name.next() {}
-                });
-              }
-
-              Some(expr)
+                #parname(&mut #name);
+                // Clean up the rest of the mess
+                while let Some(_) = #name.next() {}
+                drop(#name);
+              });
             }
           }
         }

@@ -11,7 +11,7 @@ lexical-core = { version = "^1", default-features = false, features = [
   "lexical-parse-float",
   "parse-floats",
 ] }
-phf = { version = "^0.13", features = ["macros"] }
+phf = { version = "^0.14", features = ["macros"] }
 rayon = "^1"
 
 sart = { path = "../../sart" }

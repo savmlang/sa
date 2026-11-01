@@ -1,3 +1,5 @@
+pub use logos;
+
 pub mod token;
 
 #[cfg(test)]
@@ -23,7 +25,15 @@ export(In) fn hello2() {
 }
     "##;
 
-    let tokens = SasmToken::lexer(basic).collect::<Vec<_>>();
+    let tokens = SasmToken::lexer(basic)
+      .spanned()
+      .map(|(x, v)| {
+        let x = x?;
+
+        Ok::<_, ()>((x, v))
+      })
+      .collect::<Result<Vec<_>, ()>>()
+      .unwrap();
     println!("{tokens:?}");
   }
 }

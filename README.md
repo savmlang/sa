@@ -23,7 +23,7 @@ The toolkit must compile on at least:
 ### Stable
 
 ```sh
-rustc 1.95.0
+rustc 1.97.0
 ```
 
 ### Nightly

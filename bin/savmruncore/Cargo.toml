@@ -12,18 +12,18 @@ sart = { path = "../../sart" }
 
 ahash = "^0.8"
 dashmap = "^6"
-rusqlite = { version = "^0.40", features = ["bundled", "blob", "backup"] }
+rusqlite = { version = "^0.41", features = ["bundled", "blob", "backup"] }
 
 blake3 = "^1"
 
-parking_lot = "^0.12"
+parking_lot = "^0.13"
 
 lexical-core = "^1"
 postcard = { version = "^1", default-features = false, features = ["alloc"] }
 
 [target.'cfg(unix)'.dependencies]
 libc = "^0.2"
-sysinfo = "^0.39"
+sysinfo = "^0.40"
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "^0.62", features = [

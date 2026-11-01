@@ -10,7 +10,9 @@ pub fn generate_token(
   tokens_map: &HashMap<&str, &str>,
   out: &mut TokenStream,
 ) {
-  let &name = tokens_map.get(name).expect("Could not map to name");
+  let &name = tokens_map
+    .get(name)
+    .expect(&format!("Could not map token {name} to name"));
 
   let ident = format_ident!("{name}Token");
   let syntaxkind = format_ident!("{name}");

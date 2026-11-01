@@ -2,7 +2,7 @@
 name = "savm"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.95"
+rust-version = "1.97"
 
 # license = "AGPL-3.0-only WITH LicenseRef-SaVM-Linking-Exception"
 license-file = "../LICENSE"
@@ -23,12 +23,12 @@ crossbeam-channel = { version = "^0.5", optional = true }
 pastey = "^0.2"
 
 # Sets of compiler
-cranelift = { version = "^0.135", features = [
+cranelift = { version = "^0.137", features = [
   "std",
   "native",
   "frontend",
 ], optional = true }
-llvm-sys = { version = "=221.0.1", default-features = false, features = [
+llvm-sys = { version = "=221.1.2", default-features = false, features = [
   "force-static",
   "disable-alltargets-init",
   "no-llvm-linking",

@@ -8,12 +8,12 @@ savmruncore = { path = "../savmruncore" }
 
 ahash = "^0.8"
 dashmap = "^6"
-rusqlite = { version = "^0.40", features = ["bundled", "blob", "backup"] }
+rusqlite = { version = "^0.41", features = ["bundled", "blob", "backup"] }
 
 blake3 = "^1"
 
 savm = { path = "../../savm" }
-parking_lot = "^0.12"
+parking_lot = "^0.13"
 
 lexical-core = "^1"
 postcard = { version = "^1", default-features = false, features = ["alloc"] }

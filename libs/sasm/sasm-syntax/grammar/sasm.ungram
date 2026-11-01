@@ -3,7 +3,7 @@ Root =
   Item*
 
 Item =
-  ImportDef | ConstDef | ExternDef | FnDef
+  ImportDef | ConstDef | ExternDef | FnDef | StructDef
 
 IdentData =
   Identifier | RawIdentifier
@@ -31,8 +31,32 @@ PathPartial =
   '.' segment:IdentData
 
 // Types
+ExtendedTypeRef =
+  TypeRef | InferDefault
+
 TypeRef =
-  '*'? AbsolutePath
+  PtrPrefix? AbsolutePath generics:GenericData? constants:ConstantData?
+
+PtrPrefix =
+  '*' 'mut'?
+
+GenericData =
+  '<' iter_generic:ExtendedTypeRef merge_generic:GenericDataExtended* '>'
+
+GenericDataExtended =
+  ',' generic:ExtendedTypeRef
+
+Constant =
+  InferDefault | BoolLiteral | NumLiteral | FpLiteral
+
+InferDefault =
+  '^'
+
+ConstantData =
+  '(' iter_constant:Constant merge_constant:ConstantDataExtended* ')'
+
+ConstantDataExtended =
+  ',' constant:Constant
 
 // Directives
 // @stackLimit(30)
@@ -58,14 +82,71 @@ UnitTypeRef =
   ':' returns:TypeRef
 
 AbiDataRef =
-  '(' abiinfo:AbiDataInfo ')'
-
-AbiDataInfo =
-  iter_abi:IdentData merge_abi:AbiDataExtendedRef*
+  '(' iter_abi:IdentData merge_abi:AbiDataExtendedRef* ')'
 
 AbiDataExtendedRef =
   ',' abi:IdentData
 
+// StructDef
+StructDef =
+  comments:CommentDoc*
+  'export'?
+  abi:AbiDataRef?
+  'struct'
+  name:IdentData
+  generics:GenericDef?
+  ConstantDef?
+  StructDecl
+
+StructDecl =
+  StructMarker | StructFields
+
+StructMarker =
+  ';'
+
+// Struct Fields
+StructFields =
+  '{' StructFieldData? '}'
+
+StructFieldData =
+  iter_fields:StructField merge_fields:StructFieldExtended* ','?
+
+StructFieldExtended =
+  ',' fields:StructField
+
+StructField =
+  name:IdentData ':' typedata:TypeRef
+
+// GenericDef
+GenericDef =
+  '<' iter_generics:GenericDecl merge_generics:GenericDeclExtended* '>'
+
+GenericDeclExtended =
+  ',' generics:GenericDecl
+
+GenericDecl =
+  name:IdentData ':' property:TypeRef GenericDeclDefault?
+
+GenericDeclDefault =
+  '=' typedata:TypeRef
+
+// ConstantDef
+ConstantDef =
+  '(' iter_generics:ConstantDecl merge_generics:ConstantDeclExtended* ')'
+
+ConstantDeclExtended =
+  ',' generics:ConstantDecl
+
+ConstantDeclData =
+  BoolLiteral | NumLiteral | FpLiteral
+
+ConstantDecl =
+  name:IdentData ':' typedata:TypeRef ConstantDeclDefault?
+
+ConstantDeclDefault =
+  '=' value:ConstantDeclData
+
+// ConstDef
 ConstDef =
   comments:CommentDoc*
   'export'?
@@ -111,7 +192,7 @@ ParamPart =
   ',' parameter:Param
 
 Param =
-  name:IdentData returns:UnitTypeRef?
+  name:IdentData typedata:UnitTypeRef?
 
 // Blocks
 Stmt =
@@ -130,11 +211,101 @@ ExprStmt =
   Expr ';'
 
 Expr =
-  LiteralExpr | AbsolutePath | CallExpr | BlockExpr
+  LiteralExpr | AbsolutePath | CallExpr | BlockExpr | BinaryExpr | PrefixExpr
 
+// PrefixExpr
+PrefixExpr =
+  prefix:PrefixOp val:Expr
+
+PrefixOp =
+  InvertOp | NegOp | BorrowOp | BorrowMutOp | PtrOp
+
+InvertOp =
+  '~'
+
+NegOp =
+  '-'
+
+BorrowOp =
+  '&'
+
+BorrowMutOp =
+  '&' 'mut'
+
+PtrOp =
+  '&' 'ptr'
+
+// Binary Expr
+BinaryExpr =
+  lhs:Expr op:BinaryOp rhs:Expr
+
+BinaryOp =
+  PlusOp
+| MinusOp
+| MulOp
+| DivOp
+| EqOp
+| NeOp
+| LtOp
+| GtOp
+| LeOp
+| GeOp
+| BitAnd
+| BitOr
+| BitXor
+| BitShl
+| BitShr
+
+BitAnd =
+  '&'
+
+BitOr =
+  '|'
+
+BitXor =
+  '^'
+
+BitShl =
+  '<' '<'
+
+BitShr =
+  '>' '>'
+
+PlusOp =
+  '+'
+
+MinusOp =
+  '-'
+
+MulOp =
+  '*'
+
+DivOp =
+  '/'
+
+EqOp =
+  '=' '='
+
+NeOp =
+  '!' '='
+
+LtOp =
+  '<'
+
+GtOp =
+  '>'
+
+LeOp =
+  '<' '='
+
+GeOp =
+  '>' '='
+
+// Block Expr
 BlockExpr =
   'aware'? '{' statements:Stmt* tail:Expr? '}'
 
+// Literal Expr
 LiteralExpr =
   BoolLiteral | StrLiteral | NumLiteral | FpLiteral
 
@@ -150,11 +321,9 @@ NumLiteral =
 FpLiteral =
   'FpLit'
 
+// CallExpr
 CallExpr =
-  callee:AbsolutePath ArgList
-
-ArgList =
-  '(' Args? ')'
+  callee:AbsolutePath '(' Args? ')'
 
 Args =
   iter_expr:Expr merge_expr:ArgsExtended*
