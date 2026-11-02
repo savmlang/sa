@@ -1100,7 +1100,7 @@ dependencies = [
 
 [[package]]
 name = "mixedradix"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "mixedradix_macros",
  "serde",
@@ -1108,7 +1108,7 @@ dependencies = [
 
 [[package]]
 name = "mixedradix_macros"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "proc-macro2",
  "quote",

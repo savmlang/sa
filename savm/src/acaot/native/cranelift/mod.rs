@@ -11,7 +11,7 @@ use crate::{
 use ahash::{HashMap, HashMapExt};
 use cranelift::{
   codegen::{
-    Context, FinalizedRelocTarget,
+    Context, RelocTarget,
     ir::{
       ArgumentPurpose, ConstantPool, FuncRef, Function, InstBuilderBase, LibCall, SigRef,
       StackSlot, UserExternalName, UserExternalNameRef,
@@ -281,7 +281,7 @@ impl<const T: bool> NativeCompiler<T> for SaVMCranelift {
           let addend = reloc.addend;
 
           match &reloc.target {
-            FinalizedRelocTarget::ExternalName(name) => match name {
+            RelocTarget::ExternalName(name) => match name {
               ExternalName::User(usr) => {
                 let srcloc = ws.vmimports.get(usr).unwrap();
 

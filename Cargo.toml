@@ -57,29 +57,29 @@ members = [
   "internal/lmdb",
 
   # SaVM Internal Building Crates
-  "savm_build", 
+  "savm_build",
 
   # SAsm
-  "libs/sasm/sasm-syntax", 
-  "libs/sasm/sasm-lexer", 
-  "libs/sasm/sasm-ast", 
-  "libs/sasm/sasm-macros", 
-  "libs/sasm/sasm-proc-macros", 
-  "libs/sasm/sasm-sema", 
-  
+  "libs/sasm/sasm-syntax",
+  "libs/sasm/sasm-lexer",
+  "libs/sasm/sasm-ast",
+  "libs/sasm/sasm-macros",
+  "libs/sasm/sasm-proc-macros",
+  "libs/sasm/sasm-sema",
+
   # SaVM Compiler Toolkit
-  "libs/toolkit/sair", 
-  "libs/toolkit/sair-backend", 
-  "libs/toolkit/sair-savm-backend", 
-  "libs/toolkit/salink", 
-  "libs/toolkit/sif", 
-  "libs/toolkit/sair-alloc", 
+  "libs/toolkit/sair",
+  "libs/toolkit/sair-backend",
+  "libs/toolkit/sair-savm-backend",
+  "libs/toolkit/salink",
+  "libs/toolkit/sif",
+  "libs/toolkit/sair-alloc",
   "libs/toolkit/sabin",
 ]
 resolver = "3"
 
 # These are testing and hence should not be directly bundled
-exclude = ["sajit/llvmtest", "saw"]
+exclude = ["sajit/llvmtest", "libs/sabin_spec", "saw"]
 
 [profile.debug]
 debug = "line-tables-only"

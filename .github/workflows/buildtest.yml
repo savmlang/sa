@@ -312,7 +312,6 @@ jobs:
         env:
           PACKAGE: savm-${{ matrix.target.rust }}-${{ matrix.target.feature }}
           TARGET: ${{ matrix.target.rust }}
-        continue-on-error: true
         run: |
           cargo install --force cargo-expand
           cargo install --force cbindgen
@@ -469,7 +468,6 @@ jobs:
         env:
           PACKAGE: savm-${{ matrix.config.target }}-${{ matrix.feature.build }}
           TARGET: ${{ matrix.config.target }}
-        continue-on-error: true
         run: |
           cargo install --force cargo-expand
           cargo install --force cbindgen

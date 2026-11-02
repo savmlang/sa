@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 mixedradix = { path = "../../mixedradix" }
-zip = { version = "^8", default-features = false, features = [
+zip = { version = "^9", default-features = false, features = [
   "deflate-flate2",
   "deflate-zopfli",
   "deflate-flate2-zlib-rs",
@@ -15,7 +15,7 @@ zip = { version = "^8", default-features = false, features = [
 windows = { version = "^0.62", features = [
   "Win32_Storage_FileSystem",
   "Win32_System_Memory",
-  "Win32_Security"
+  "Win32_Security",
 ] }
 
 [target.'cfg(unix)'.dependencies]
