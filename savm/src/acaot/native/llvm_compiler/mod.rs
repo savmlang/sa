@@ -231,8 +231,16 @@ impl SaVMLLVMBuilder {
     Box::new(
       Self::create(
         LLVMCodeGenOptLevel::LLVMCodeGenLevelDefault,
-        LLVMRelocMode::LLVMRelocPIC,
-        LLVMCodeModel::LLVMCodeModelLarge,
+        if cfg!(target_arch = "x86") {
+          LLVMRelocMode::LLVMRelocStatic
+        } else {
+          LLVMRelocMode::LLVMRelocPIC
+        },
+        if cfg!(target_arch = "x86") {
+          LLVMCodeModel::LLVMCodeModelSmall,
+        } else {
+          LLVMCodeModel::LLVMCodeModelLarge,
+        },
         CacheLevel::LLVMCrater,
         c"default<O1>".as_ptr(),
       )
