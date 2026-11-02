@@ -149,7 +149,7 @@ runs:
 
         ${{ inputs.builder }} build ${{ inputs.argv }} --release -p salloc -p savmasync
 
-        ${{ inputs.builder }} build ${{ inputs.argv }} --release --workspace --no-default-features --features savmrunshared/${{ inputs.feature }},satest/${{ inputs.feature }}
+        ${{ inputs.builder }} build ${{ inputs.argv }} --release --workspace --no-default-features --features savm/printir,savmrunshared/${{ inputs.feature }},satest/${{ inputs.feature }}
 
     - name: Package
       shell: pwsh
