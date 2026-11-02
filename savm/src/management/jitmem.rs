@@ -185,7 +185,7 @@ impl JITMemoryManager {
 
     let size_needed = MemoryExecutable::sizecalc(data, |needed| {
       needed
-        .map(|x| x.size + x.align.saturating_sub(1))
+        .map(|x| x.size.next_multiple_of(x.align) + x.align.saturating_sub(1))
         .sum::<usize>()
     })
     .expect("Unable to at all calculate size needed!");
