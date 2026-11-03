@@ -237,9 +237,9 @@ impl SaVMLLVMBuilder {
           LLVMRelocMode::LLVMRelocPIC
         },
         if cfg!(target_arch = "x86") {
-          LLVMCodeModel::LLVMCodeModelSmall,
+          LLVMCodeModel::LLVMCodeModelSmall
         } else {
-          LLVMCodeModel::LLVMCodeModelLarge,
+          LLVMCodeModel::LLVMCodeModelLarge
         },
         CacheLevel::LLVMCrater,
         c"default<O1>".as_ptr(),
@@ -252,7 +252,11 @@ impl SaVMLLVMBuilder {
     Box::new(
       Self::create(
         LLVMCodeGenOptLevel::LLVMCodeGenLevelAggressive,
-        LLVMRelocMode::LLVMRelocPIC,
+        if cfg!(target_arch = "x86") {
+          LLVMRelocMode::LLVMRelocStatic
+        } else {
+          LLVMRelocMode::LLVMRelocPIC
+        },
         if cfg!(target_arch = "riscv64") {
           LLVMCodeModel::LLVMCodeModelMedium
         } else {
