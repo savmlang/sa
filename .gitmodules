@@ -13,3 +13,6 @@
 [submodule "saw"]
 	path = saw
 	url = https://github.com/savmlang/saw
+[submodule "installers"]
+	path = installers
+	url = https://github.com/savmlang/sainstall.git

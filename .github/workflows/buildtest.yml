@@ -17,6 +17,11 @@ on:
 
   workflow_dispatch:
   workflow_call:
+    secrets:
+      WIN32_PFX_B64:
+        required: false
+      WIN32_PFX_PASS:
+        required: false
     inputs:
       artifact:
         description: "Force giving artifacts"
@@ -52,6 +57,10 @@ jobs:
             feature: pro_standard
 
     runs-on: windows-11-arm
+
+    env:
+      WIN32_PFX_BASE64: ${{ secrets.WIN32_PFX_B64 || secrets.WIN32_PFX_BASE64_DEBUG }}
+      WIN32_SIGN_PASSWORD: ${{ secrets.WIN32_PFX_PASS || secrets.WIN32_PFX_PASSWORD_DEBUG }}
 
     steps:
       - name: Checkout
@@ -327,7 +336,7 @@ jobs:
           with: |
             name: savm-${{ matrix.target.rust }}-${{ matrix.target.feature }}
             path: |
-              savm-${{ matrix.target.rust }}-${{ matrix.target.feature }}.zip
+              ./installers/dist/*
             archive: true
             compression-level: 9
 
@@ -483,105 +492,17 @@ jobs:
           with: |
             name: savm-${{ matrix.config.target }}-${{ matrix.feature.build }}
             path: |
-              savm-${{ matrix.config.target }}-${{ matrix.feature.build }}.zip
+              ./installers/dist/*
             archive: true
             compression-level: 9
 
-  package_m:
-    name: Package Installers (macOS)
-
-    runs-on: macos-latest
-
-    needs: [darwin]
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Rustup
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rust-src,rustfmt
-          toolchain: nightly
-
-      - name: Download & Build Installers
-        shell: pwsh
-        run: |
-          gh run download ${{ github.run_id }} --dir release
-
-          ./extract.ps1
-          ./build.ps1
-        env:
-          GH_TOKEN: ${{ github.token }}
-          LINBUILD: false
-        working-directory: scripts/build
-
-      - name: Upload Artifact
-        uses: Wandalen/wretry.action@e94c43bf2e865e7dbbd90b0c1061053f5888932a
-        with:
-          action: actions/upload-artifact@v7
-          with: |
-            name: macos-images
-            path: |
-              ./scripts/build/outputs/**/*
-            archive: true
-            compression-level: 9
-
-  package_w:
-    name: Package Installers (Windows)
-
-    runs-on: windows-latest
-
-    needs: [win32]
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Rustup
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rust-src,rustfmt
-          toolchain: nightly
-
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          cache-all-crates: true
-          key: savm_windows_builder
-          workspaces: |
-            ./scripts/build -> target
-
-      - name: Download & Build Installers
-        shell: pwsh
-        run: |
-          gh run download ${{ github.run_id }} --dir release
-
-          ./extract.ps1
-          ./build.ps1
-        env:
-          GH_TOKEN: ${{ github.token }}
-          LINBUILD: false
-        working-directory: scripts/build
-
-      - name: Upload Artifact
-        uses: Wandalen/wretry.action@e94c43bf2e865e7dbbd90b0c1061053f5888932a
-        with:
-          action: actions/upload-artifact@v7
-          with: |
-            name: windows-images
-            path: |
-              ./scripts/build/outputs/**/*
-            archive: true
-            compression-level: 9
-
-  package_wlm:
+  release:
     if: inputs.artifact != 'true'
 
-    name: Package Installers
+    name: Release Installers
     runs-on: ubuntu-26.04
 
-    needs: [win32, linux_crosscompile, linux, linux_musl, package_m, package_w]
+    needs: [win32, linux_crosscompile, linux, linux_musl]
 
     permissions:
       contents: write
@@ -606,17 +527,13 @@ jobs:
       - name: Install nFPM
         run: go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
 
-      - name: Download & Build Installers
+      - name: Download
         shell: pwsh
         run: |
           gh run download ${{ github.run_id }} --dir release
-
-          ./extract.ps1
-          ./build.ps1
         env:
           GH_TOKEN: ${{ github.token }}
           LINBUILD: true
-        working-directory: scripts/build
 
       - name: Generate timestamp
         id: time
@@ -642,8 +559,9 @@ jobs:
             SaVM dryrun builds are building tests and may or may not be 
             bug-free, or stable.
           files: |
-            ./scripts/build/outputs/**/*
-            ./scripts/build/release/**/*.zip
+            ./release/**/*
+            ./SaVM_Runtime_Win32.cer
+            ./SaVM_Runtime_Debug_Win32.cer
 
       - name: Undraft
         run: gh release edit savmdryrun-${{ steps.time.outputs.time }} --draft=false

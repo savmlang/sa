@@ -56,5 +56,6 @@
   ],
   "C_Cpp.default.compilerPath": "clang",
   "C_Cpp.default.cStandard": "c23",
-  "C_Cpp.default.cppStandard": "c++23"
+  "C_Cpp.default.cppStandard": "c++23",
+  "cmake.sourceDirectory": "E:/GitHub/ahqrt-asm-sa/installers/win32"
 }

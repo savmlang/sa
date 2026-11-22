@@ -75,6 +75,9 @@ members = [
   "libs/toolkit/sif",
   "libs/toolkit/sair-alloc",
   "libs/toolkit/sabin",
+
+  # SaVM CoreInstaller
+  "installers/coreinstaller",
 ]
 resolver = "3"
 
