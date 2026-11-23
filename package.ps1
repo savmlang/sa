@@ -18,7 +18,7 @@ if ([System.OperatingSystem]::IsWindows()) {
     "*.exe"
   )
 
-  $items = Get-ChildItem "./target/$tgt/release" -Include $signable
+  $items = Get-ChildItem "./target/$tgt/release/*" -Include $signable -File
 
   foreach ($item in $items) {
     $env:BINARY = $item.FullName
