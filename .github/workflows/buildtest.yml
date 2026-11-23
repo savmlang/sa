@@ -157,7 +157,7 @@ jobs:
     env:
       GPG_KEY: ${{ secrets.GPG_KEY || secrets.GPG_KEY_DEBUG }}
       GPG_KEY_ID: ${{ secrets.GPG_KEY_ID || secrets.GPG_KEY_ID_DEBUG }}
-      GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE || secrets.GPG_PASSPHRASE_DEBUG }}
+      NFPM_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE || secrets.GPG_PASSPHRASE_DEBUG }}
 
     steps:
       - name: Checkout
@@ -261,7 +261,7 @@ jobs:
     env:
       GPG_KEY: ${{ secrets.GPG_KEY || secrets.GPG_KEY_DEBUG }}
       GPG_KEY_ID: ${{ secrets.GPG_KEY_ID || secrets.GPG_KEY_ID_DEBUG }}
-      GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE || secrets.GPG_PASSPHRASE_DEBUG }}
+      NFPM_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE || secrets.GPG_PASSPHRASE_DEBUG }}
 
     steps:
       - name: Checkout
