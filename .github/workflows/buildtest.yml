@@ -17,17 +17,10 @@ on:
 
   workflow_dispatch:
   workflow_call:
-    secrets:
-      WIN32_PFX_B64:
-        required: false
-      WIN32_PFX_PASS:
-        required: false
     inputs:
-      artifact:
-        description: "Force giving artifacts"
-        required: true
+      environment:
+        description: "Environment Name"
         type: string
-        default: "true"
 
 permissions:
   contents: read
@@ -36,6 +29,8 @@ permissions:
 jobs:
   win32:
     name: Build SaVM ${{ matrix.feature }} (${{ matrix.target }})
+
+    environment: ${{ inputs.environment }}
 
     strategy:
       fail-fast: true
@@ -59,8 +54,8 @@ jobs:
     runs-on: windows-11-arm
 
     env:
-      WIN32_PFX_BASE64: ${{ secrets.WIN32_PFX_B64 || secrets.WIN32_PFX_BASE64_DEBUG }}
-      WIN32_SIGN_PASSWORD: ${{ secrets.WIN32_PFX_PASS || secrets.WIN32_PFX_PASSWORD_DEBUG }}
+      WIN32_PFX_BASE64: ${{ secrets.WIN32_PFX_BASE64 || secrets.WIN32_PFX_BASE64_DEBUG }}
+      WIN32_SIGN_PASSWORD: ${{ secrets.WIN32_PFX_PASSWORD || secrets.WIN32_PFX_PASSWORD_DEBUG }}
 
     steps:
       - name: Checkout
@@ -86,6 +81,8 @@ jobs:
 
   darwin:
     name: Build SaVM ${{ matrix.feature }} (${{ matrix.target[0] }})
+
+    environment: ${{ inputs.environment }}
 
     strategy:
       fail-fast: true
@@ -157,6 +154,11 @@ jobs:
 
     runs-on: ${{ matrix.os || 'ubuntu-26.04' }}
 
+    env:
+      GPG_KEY: ${{ secrets.GPG_KEY || secrets.GPG_KEY_DEBUG }}
+      GPG_KEY_ID: ${{ secrets.GPG_KEY_ID || secrets.GPG_KEY_ID_DEBUG }}
+      GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE || secrets.GPG_PASSPHRASE_DEBUG }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -195,6 +197,8 @@ jobs:
     name: Build SaVM ${{ matrix.target.feature }} (${{ matrix.target.rust }})
 
     runs-on: ubuntu-26.04
+
+    environment: ${{ inputs.environment }}
 
     strategy:
       fail-fast: false
@@ -253,6 +257,11 @@ jobs:
 
             arch: riscv64
             cpu: rv64
+
+    env:
+      GPG_KEY: ${{ secrets.GPG_KEY || secrets.GPG_KEY_DEBUG }}
+      GPG_KEY_ID: ${{ secrets.GPG_KEY_ID || secrets.GPG_KEY_ID_DEBUG }}
+      GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE || secrets.GPG_PASSPHRASE_DEBUG }}
 
     steps:
       - name: Checkout
@@ -342,6 +351,8 @@ jobs:
 
   linux_musl:
     name: Build SaVM ${{ matrix.feature.build }} (${{ matrix.config.target }})
+
+    environment: ${{ inputs.environment }}
 
     strategy:
       fail-fast: false
@@ -443,6 +454,11 @@ jobs:
 
     runs-on: ${{ matrix.config.os }}
 
+    env:
+      GPG_KEY: ${{ secrets.GPG_KEY || secrets.GPG_KEY_DEBUG }}
+      GPG_KEY_ID: ${{ secrets.GPG_KEY_ID || secrets.GPG_KEY_ID_DEBUG }}
+      NFPM_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE || secrets.GPG_PASSPHRASE_DEBUG }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -497,8 +513,6 @@ jobs:
             compression-level: 9
 
   release:
-    if: inputs.artifact != 'true'
-
     name: Release Installers
     runs-on: ubuntu-26.04
 
@@ -548,7 +562,7 @@ jobs:
         id: release
         with:
           tag_name: savmdryrun-${{ steps.time.outputs.time }}
-          prerelease: true
+          prerelease: ${{ inputs.environment != 'Publishing' }}
           draft: true
           body: |
             Uploaded at : ${{ steps.time.outputs.time }}
