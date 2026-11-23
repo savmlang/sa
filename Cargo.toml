@@ -75,14 +75,16 @@ members = [
   "libs/toolkit/sif",
   "libs/toolkit/sair-alloc",
   "libs/toolkit/sabin",
-
-  # SaVM CoreInstaller
-  "installers/coreinstaller",
 ]
 resolver = "3"
 
 # These are testing and hence should not be directly bundled
-exclude = ["sajit/llvmtest", "libs/sabin_spec", "saw"]
+exclude = [
+  "sajit/llvmtest",
+  "libs/sabin_spec",
+  "saw",
+  "installers/coreinstaller",
+]
 
 [profile.debug]
 debug = "line-tables-only"
