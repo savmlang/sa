@@ -18,12 +18,8 @@ if ([System.OperatingSystem]::IsWindows()) {
     "*.exe"
   )
 
-  $items = Get-ChildItem "./target/$tgt/release/*" -Include $signable -File
-
-  foreach ($item in $items) {
-    $env:BINARY = $item.FullName
-    ./installers/win32_sign.ps1
-  }
+  $binaries = Get-ChildItem "./target/$tgt/release/*" -Include $signable -File | Select-Object -ExpandProperty FullName
+  ./installers/win32_sign.ps1 @binaries
 }
 
 if (Test-Path "./target/$tgt/release") {
