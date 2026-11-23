@@ -51,6 +51,7 @@ if (Test-Path "./target/$tgt/release") {
 
   (Get-ChildItem -File -Path "./target/$tgt/release/*"), (Get-ChildItem -Recurse -Path "./target/c/") | 
   Compress-Archive -Update -DestinationPath "$env:PACKAGE.zip"
+  Copy-Item -Force -Path "./$env:PACKAGE.zip" -Destination "dist.zip"
 }
 
 Set-Location installers
